@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  const { APP_NAME, h, num, optionTile, startTimer, store, toast, announce, emit, keepAwake } = window.LQ;
+  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, store, toast, announce, emit, keepAwake } = window.LQ;
   const session = store('session');
   const SESSION_KEY = 'leaqiz.player';
   const app = document.getElementById('app');
@@ -65,9 +65,22 @@
 
   // ---------- Grundgerüst ----------
 
+  // Hintergrund des ganzen Bildschirms: dunkel (Standard) oder Farbflut einer Antwort
+  function setTone(tone, floodIndex) {
+    if (tone === 'flood') {
+      document.body.dataset.tone = 'flood';
+      document.body.dataset.flood = String(floodIndex);
+    } else {
+      delete document.body.dataset.tone;
+      delete document.body.dataset.flood;
+    }
+  }
+
   function frame(...content) {
     stopTimer();
     stopTimer = () => {};
+    setTone('ink');
+    app.classList.remove('screen--play');
     const banner = h('p', { class: 'banner', id: 'banner', role: 'status' });
     app.replaceChildren(
       h(
@@ -126,11 +139,11 @@
       h(
         'div',
         { class: 'screen__center' },
-        h('h1', { class: 'display big-word', text: 'Mitspielen' }),
+        h('h1', { class: 'title', text: 'Mitspielen' }),
         h('p', { class: 'hint', text: 'Die PIN steht auf der großen Leinwand.' }),
         form,
         error,
-        h('a', { class: 'btn btn--ghost', href: 'check/', text: 'Verbindung testen' }),
+        h('a', { class: 'btn btn--quiet', href: 'check/', text: 'Verbindung testen' }),
       ),
     );
     input.focus();
@@ -180,7 +193,7 @@
     const form = h(
       'form',
       { class: 'join-form', novalidate: true },
-      h('label', { class: 'field', for: 'nickname' }, h('span', { text: 'Dein Spielname' }), input),
+      h('label', { class: 'field', for: 'nickname' }, h('span', { text: 'Spielname' }), input),
       h('p', { class: 'hint', id: 'name-hint', text: 'Kein echter Name nötig. Höchstens 20 Zeichen.' }),
       button,
     );
@@ -202,12 +215,12 @@
       h(
         'div',
         { class: 'screen__center' },
-        h('p', { class: 'hint' }, `PIN ${joinStep.pin}`),
-        h('h1', { class: 'lead', text: joinStep.title }),
+        h('h1', { class: 'title', text: 'Wie willst du heißen?' }),
+        h('p', { class: 'hint', text: `Quiz „${joinStep.title}“, PIN ${joinStep.pin}` }),
         form,
         error,
         h('button', {
-          class: 'btn btn--ghost',
+          class: 'btn btn--quiet',
           type: 'button',
           text: 'Andere PIN eingeben',
           onclick: () => {
@@ -228,7 +241,7 @@
       h(
         'div',
         { class: 'screen__center' },
-        h('h1', { class: 'display big-word', text: title }),
+        h('h1', { class: 'title', text: title }),
         h('p', { class: 'lead', text }),
         h('button', { class: 'btn btn--big', type: 'button', text: 'Neuem Spiel beitreten', onclick: () => renderJoin() }),
       ),
@@ -271,8 +284,9 @@
       h(
         'div',
         { class: 'screen__center' },
-        h('h1', { class: 'display big-word', text: 'Du bist dabei' }),
+        h('h1', { class: 'title', text: 'Du bist dabei' }),
         h('p', { class: 'lead', text: `Gleich geht es los, ${s.nickname}.` }),
+        h('p', { class: 'waiting', text: 'Warte auf den Start' }),
         h('p', { class: 'hint', text: 'Schau auf die Leinwand. Die Fragen erscheinen dort und hier.' }),
       ),
     );
@@ -285,8 +299,7 @@
       h(
         'div',
         { class: 'screen__center' },
-        h('p', { class: 'hint', text: progress(s) }),
-        h('h1', { class: 'lead', text: s.question.text }),
+        h('div', { class: 'q-head' }, h('p', { class: 'hint', text: progress(s) }), h('h1', { class: 'player-cd', text: s.question.text })),
         h('div', { class: 'timebar', 'aria-hidden': 'true' }, fill),
         h('p', { class: 'hint', text: 'Lies schon mal. Gleich kannst du antworten.' }),
       ),
@@ -295,19 +308,20 @@
     announce(`${progress(s)}: ${s.question.text}`);
   }
 
+  // Controller: vier große Felder bis an den Rand
   function renderQuestion(s) {
     const q = s.question;
     const long = q.options.some((o) => o.length > 28);
-    const counter = h('span', { class: 'display', 'aria-hidden': 'true' });
+    const counter = h('span', { class: 'num', 'aria-hidden': 'true' });
     const grid = h('div', { class: `player-grid${long ? ' is-long' : ''}`, role: 'group', 'aria-label': 'Antworten' });
     q.options.forEach((text, i) => {
       grid.append(optionTile('button', text, i, { type: 'button', onclick: () => answer(i) }));
     });
     frame(
-      h('div', { class: 'screen__top' }, h('span', { class: 'hint', text: progress(s) }), counter),
-      h('h1', { class: 'player-q', text: q.text }),
+      h('div', { class: 'play-head' }, h('p', { class: 'play-head__meta' }, h('span', { text: progress(s) }), counter), h('h1', { class: 'player-q', text: q.text })),
       grid,
     );
+    app.classList.add('screen--play');
     stopTimer = startTimer({ remainingMs: s.remainingMs, totalMs: q.timeLimit * 1000, numberEl: counter });
   }
 
@@ -327,22 +341,26 @@
     }
   }
 
+  // Bestätigung in der Farbe der gewählten Antwort
   function renderAnswered(s) {
+    const choice = pendingChoice;
     frame(
       h(
         'div',
         { class: 'screen__center' },
-        h('h1', { class: 'display big-word', text: 'Gesendet' }),
+        choice !== null ? h('p', { class: 'big-letter num', 'aria-hidden': 'true', text: LETTERS[choice] }) : null,
+        h('h1', { class: 'title', text: 'Gesendet' }),
         h('p', { class: 'lead', text: 'Warte auf die anderen.' }),
         h('p', { class: 'hint', text: progress(s) }),
       ),
     );
+    if (choice !== null) setTone('flood', choice);
     announce('Antwort gesendet.');
   }
 
   function renderResult(s) {
     const r = s.result || { answered: false, correct: false, points: 0, streak: 0 };
-    const correctTexts = s.question ? s.question.correct.map((i) => s.question.options[i]).join(' / ') : '';
+    const q = s.question;
     let headline;
     if (r.correct) headline = 'Richtig';
     else if (r.answered) headline = 'Leider falsch';
@@ -354,17 +372,28 @@
         ? h('p', { class: 'lead', text: 'Du führst.' })
         : null;
 
+    // Bei falscher Antwort: richtige Lösung mit Buchstabe und Farbe zeigen
+    const answerWas =
+      !r.correct && q
+        ? h(
+            'div',
+            { class: 'answer-was' },
+            ...q.correct.map((i) => h('span', { class: 'opt__letter', dataset: { i: String(i) }, 'aria-hidden': 'true', text: LETTERS[i] })),
+            h('span', { text: `Richtig war: ${q.correct.map((i) => q.options[i]).join(' / ')}` }),
+          )
+        : null;
+
     frame(
       h(
         'div',
         { class: 'screen__center' },
         h(
           'section',
-          { class: `result${r.correct ? ' is-right' : ''}` },
-          h('h1', { class: 'lead', text: headline }),
-          h('p', { class: 'display result__points', text: `+${num(r.points)}` }),
-          r.correct && r.streak > 1 ? h('p', { text: `${r.streak} richtige Antworten in Folge` }) : null,
-          !r.correct && correctTexts ? h('p', { text: `Richtig war: ${correctTexts}` }) : null,
+          { class: 'result' },
+          h('h1', { class: 'title', text: headline }),
+          h('p', { class: 'result__points num', text: `+${num(r.points)}` }),
+          r.correct && r.streak > 1 ? h('p', { class: 'lead', text: `${r.streak} richtige Antworten in Folge` }) : null,
+          answerWas,
         ),
         h(
           'dl',
@@ -375,6 +404,7 @@
         behind,
       ),
     );
+    if (r.correct) setTone('flood', r.choice);
     announce(`${headline}. ${num(r.points)} Punkte. Platz ${s.rank} von ${s.playerCount}.`);
   }
 
@@ -386,7 +416,8 @@
       h(
         'div',
         { class: 'screen__center' },
-        h('h1', { class: 'display big-word', text: title }),
+        h('p', { class: 'final-rank num', 'aria-hidden': 'true', text: `${s.rank}.` }),
+        h('h1', { class: 'title', text: title }),
         h(
           'dl',
           { class: 'stats' },

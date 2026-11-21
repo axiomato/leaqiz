@@ -131,6 +131,7 @@
 
   function renderLibrary() {
     mode = 'library';
+    setPhase('work', 'light');
     renderedKey = '';
     stopTimer();
     keepAwake(false);
@@ -169,11 +170,11 @@
           ),
           h(
             'div',
-            { class: 'lib__actions' },
+            { class: 'actions' },
             h('button', { class: 'btn btn--small', type: 'button', text: 'Spiel starten', onclick: () => startGame(quiz) }),
-            h('button', { class: 'btn btn--small btn--ghost', type: 'button', text: 'Bearbeiten', onclick: () => openEditor(quiz) }),
+            h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Bearbeiten', onclick: () => openEditor(quiz) }),
             h('button', {
-              class: 'btn btn--small btn--ghost',
+              class: 'btn btn--small btn--quiet',
               type: 'button',
               text: 'Exportieren',
               onclick: () => {
@@ -199,7 +200,7 @@
     }
 
     root.replaceChildren(
-      h('header', { class: 'host-bar' }, h('span', { class: 'wordmark', text: APP_NAME }), h('span', { class: 'hint', text: 'Spielleitung' })),
+      h('header', { class: 'bar' }, h('span', { class: 'wordmark', text: APP_NAME }), h('span', { class: 'bar__info hint', text: 'Spielleitung' })),
       h(
         'main',
         { class: 'work' },
@@ -209,8 +210,8 @@
           h('h1', { text: 'Deine Quizze' }),
           h(
             'div',
-            { class: 'lib__actions' },
-            h('button', { class: 'btn btn--ghost', type: 'button', text: 'Datei importieren', onclick: () => fileInput.click() }),
+            { class: 'actions' },
+            h('button', { class: 'btn btn--quiet', type: 'button', text: 'Datei importieren', onclick: () => fileInput.click() }),
             fileInput,
             h('button', { class: 'btn', type: 'button', text: 'Neues Quiz', onclick: () => openEditor(null) }),
           ),
@@ -255,7 +256,8 @@
 
   function renderEditor(focusSelector) {
     mode = 'editor';
-    const errorBox = h('div', { class: 'error', id: 'editor-errors', role: 'alert' });
+    setPhase('work', 'light');
+    const errorBox = h('div', { class: 'error editor-errors', id: 'editor-errors', role: 'alert' });
     const titleInput = h('input', { class: 'input', id: 'quiz-title', maxlength: '120', value: draft.title, placeholder: 'z. B. Sicherheitsunterweisung 2026' });
     titleInput.addEventListener('input', () => {
       draft.title = titleInput.value;
@@ -267,28 +269,27 @@
     root.replaceChildren(
       h(
         'header',
-        { class: 'host-bar' },
+        { class: 'bar' },
         h('span', { class: 'wordmark', text: APP_NAME }),
-        h('div', { class: 'host-bar__meta' }, h('button', { class: 'btn btn--small btn--ghost', type: 'button', text: 'Zur Übersicht', onclick: leaveEditor })),
+        h('div', { class: 'bar__actions' }, h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Zur Übersicht', onclick: leaveEditor })),
       ),
       h(
         'main',
         { class: 'work' },
-        h('h1', { text: draft.title ? 'Quiz bearbeiten' : 'Neues Quiz' }),
+        h('div', { class: 'work__head' }, h('h1', { text: draft.title ? 'Quiz bearbeiten' : 'Neues Quiz' }), saveActions()),
+        errorBox,
         h('label', { class: 'field', for: 'quiz-title' }, h('span', { text: 'Titel' }), titleInput),
         ...cards,
         h(
           'div',
-          { class: 'lib__actions' },
-          h('button', { class: 'btn btn--ghost', type: 'button', text: 'Frage hinzufügen', onclick: () => addQuestion('quiz') }),
-          h('button', { class: 'btn btn--ghost', type: 'button', text: 'Wahr/Falsch-Frage hinzufügen', onclick: () => addQuestion('truefalse') }),
-        ),
-        h(
-          'div',
-          { class: 'toolbar' },
-          errorBox,
-          h('button', { class: 'btn btn--ghost', type: 'button', text: 'Speichern', onclick: () => saveDraft(false) }),
-          h('button', { class: 'btn', type: 'button', text: 'Speichern und Spiel starten', onclick: () => saveDraft(true) }),
+          { class: 'work__foot' },
+          h(
+            'div',
+            { class: 'actions' },
+            h('button', { class: 'btn btn--quiet', type: 'button', text: 'Frage hinzufügen', onclick: () => addQuestion('quiz') }),
+            h('button', { class: 'btn btn--quiet', type: 'button', text: 'Wahr/Falsch-Frage hinzufügen', onclick: () => addQuestion('truefalse') }),
+          ),
+          saveActions(),
         ),
       ),
     );
@@ -296,6 +297,16 @@
       const el = root.querySelector(focusSelector);
       if (el) el.focus();
     }
+  }
+
+  // Speichern oben und unten (nicht klebend), damit lange Quizze nicht verdeckt werden
+  function saveActions() {
+    return h(
+      'div',
+      { class: 'actions' },
+      h('button', { class: 'btn btn--quiet', type: 'button', text: 'Speichern', onclick: () => saveDraft(false) }),
+      h('button', { class: 'btn', type: 'button', text: 'Speichern und Spiel starten', onclick: () => saveDraft(true) }),
+    );
   }
 
   function addQuestion(type) {
@@ -380,8 +391,8 @@
         'div',
         { class: 'qcard__head' },
         h('h2', { class: 'qcard__num', id: `${id}-num`, text: `Frage ${index + 1}` }),
-        h('button', { class: 'btn btn--small btn--ghost', id: `${id}-up`, type: 'button', text: 'Nach oben', disabled: index === 0, onclick: () => move(-1) }),
-        h('button', { class: 'btn btn--small btn--ghost', id: `${id}-down`, type: 'button', text: 'Nach unten', disabled: index === count - 1, onclick: () => move(1) }),
+        h('button', { class: 'btn btn--small btn--quiet', id: `${id}-up`, type: 'button', text: 'Nach oben', disabled: index === 0, onclick: () => move(-1) }),
+        h('button', { class: 'btn btn--small btn--quiet', id: `${id}-down`, type: 'button', text: 'Nach unten', disabled: index === count - 1, onclick: () => move(1) }),
         h('button', {
           class: 'btn btn--small btn--danger',
           type: 'button',
@@ -475,6 +486,7 @@
   function busy(text) {
     mode = 'busy';
     renderedKey = '';
+    setPhase('work', 'light');
     root.replaceChildren(h('main', { class: 'work' }, h('p', { class: 'lead', role: 'status', text })));
   }
 
@@ -576,6 +588,17 @@
   }
 
   // ---------- Ansicht: laufendes Spiel (Beamer) ----------
+  // Dunkle Bühne (Lobby, Countdown, Podium), helle Lesefläche (Frage, Zwischenstand),
+  // Farbflut der richtigen Antwort (Auflösung).
+
+  const PHASE_TONE = { lobby: 'dark', countdown: 'dark', question: 'light', reveal: 'flood', leaderboard: 'light', podium: 'dark' };
+
+  function setPhase(phase, tone, floodIndex) {
+    root.dataset.phase = phase;
+    root.dataset.tone = tone;
+    if (floodIndex === null || floodIndex === undefined) delete root.dataset.flood;
+    else root.dataset.flood = String(floodIndex);
+  }
 
   function renderGame(s) {
     game = s;
@@ -585,19 +608,20 @@
     stopTimer();
     stopTimer = () => {};
     refs = {};
+    setPhase(s.state, PHASE_TONE[s.state] || 'light', s.state === 'reveal' && s.question ? s.question.correct[0] : null);
 
-    const progress = s.qIndex >= 0 && s.state !== 'podium' ? `Frage ${s.qIndex + 1} von ${s.qCount}` : s.title;
+    const inQuestion = s.qIndex >= 0 && s.state !== 'podium' && s.state !== 'lobby';
     const header = h(
       'header',
-      { class: 'host-bar' },
+      { class: 'bar' },
       h('span', { class: 'wordmark', text: APP_NAME }),
+      h('span', { class: 'bar__info', text: inQuestion ? `Frage ${s.qIndex + 1} von ${s.qCount}` : s.title }),
       h(
         'div',
-        { class: 'host-bar__meta' },
-        h('span', { text: progress }),
-        h('span', null, 'PIN ', h('span', { class: 'host-bar__pin', text: formatPin(s.pin) })),
-        h('button', { class: 'btn btn--small btn--ghost', type: 'button', text: 'Vollbild', onclick: toggleFullscreen }),
-        h('button', { class: 'btn btn--small btn--danger', type: 'button', text: 'Spiel beenden', onclick: () => endGame(true) }),
+        { class: 'bar__actions' },
+        h('span', { class: 'bar__pin' }, 'PIN ', h('strong', { text: formatPin(s.pin) })),
+        h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Vollbild', onclick: toggleFullscreen }),
+        h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Spiel beenden', onclick: () => endGame(true) }),
       ),
     );
     const netStatus = h('p', { class: 'banner', id: 'net-status', role: 'status' });
@@ -644,31 +668,32 @@
   }
 
   function nextButton(label, extra = {}) {
-    const btn = h('button', { class: 'btn btn--big', type: 'button', text: label, 'data-primary': true, ...extra });
+    const btn = h('button', { class: 'btn btn--big btn--primary', type: 'button', text: label, 'data-primary': true, ...extra });
     btn.addEventListener('click', () => next(btn));
     return btn;
+  }
+
+  function actions(...children) {
+    return h('div', { class: 'stage__actions' }, ...children);
   }
 
   function stageLobby(stage, s) {
     // Spieler-Seite liegt eine Ebene über /host/ (funktioniert auch unter github.io/leaqiz/)
     const appUrl = new URL('../', location.href);
-    const noNetwork = false;
     const joinUrl = `${appUrl.href}?pin=${s.pin}`;
     const shownHost = (appUrl.host + appUrl.pathname).replace(/\/$/, '');
     let qrImg = null;
-    if (!noNetwork) {
-      try {
-        const qr = window.qrcode(0, 'M');
-        qr.addData(joinUrl);
-        qr.make();
-        qrImg = h('img', { src: qr.createDataURL(8, 0), alt: `QR-Code zum Beitreten mit PIN ${s.pin}`, width: '240', height: '240' });
-      } catch {
-        qrImg = null;
-      }
+    try {
+      const qr = window.qrcode(0, 'M');
+      qr.addData(joinUrl);
+      qr.make();
+      qrImg = h('img', { src: qr.createDataURL(8, 0), alt: `QR-Code zum Beitreten mit PIN ${s.pin}`, width: '240', height: '240' });
+    } catch {
+      qrImg = null;
     }
 
-    refs.count = h('span', { class: 'display lobby__count' });
-    refs.countLabel = h('span', { class: 'lead' });
+    refs.count = h('span', { class: 'num' });
+    refs.countLabel = h('span');
     refs.chips = h('ul', { class: 'chips', 'aria-label': 'Beigetretene Spieler' });
     refs.start = nextButton('Spiel starten');
 
@@ -679,21 +704,13 @@
         h(
           'section',
           { class: 'lobby__join', 'aria-label': 'So spielst du mit' },
-          noNetwork
-            ? h('p', { class: 'banner', role: 'alert', text: 'Dieser Rechner ist in keinem Netzwerk. Verbinde ihn mit dem WLAN, in dem auch die Spieler sind, und starte leaqiz neu.' })
-            : null,
-          h('h1', { class: 'lobby__how' }, 'Öffne ', h('span', { class: 'lobby__url', text: shownHost || '…' }), ' und gib diese PIN ein:'),
-          h('p', { class: 'display lobby__pin', 'aria-label': `PIN ${s.pin.split('').join(' ')}`, text: formatPin(s.pin) }),
-          qrImg ? h('div', { class: 'lobby__qr' }, qrImg, h('p', { class: 'lead', text: 'Oder den Code mit der Handykamera scannen.' })) : null,
+          h('h1', { class: 'lobby__how' }, 'Mitspielen auf ', h('span', { class: 'lobby__url', text: shownHost })),
+          h('p', { class: 'lobby__pin num-pin', 'aria-label': `PIN ${s.pin.split('').join(' ')}`, text: formatPin(s.pin) }),
+          qrImg ? h('div', { class: 'lobby__qr' }, qrImg, h('p', { text: 'Oder den Code mit der Handykamera scannen' })) : null,
         ),
-        h(
-          'section',
-          { class: 'lobby__players', 'aria-label': 'Spieler' },
-          h('p', null, refs.count, ' ', refs.countLabel),
-          refs.chips,
-        ),
+        h('section', { class: 'lobby__players', 'aria-label': 'Spieler' }, h('p', { class: 'lobby__count' }, refs.count, refs.countLabel), refs.chips),
       ),
-      h('div', { class: 'host-actions' }, refs.start),
+      actions(refs.start),
     );
     updatePlayers(s);
   }
@@ -702,14 +719,20 @@
     if (!refs.chips) return;
     const n = s.players.length;
     refs.count.textContent = String(n);
-    refs.countLabel.textContent = n === 1 ? 'Spieler ist dabei' : 'Spieler sind dabei';
+    refs.countLabel.textContent = n === 1 ? 'Person ist dabei' : 'Personen sind dabei';
     refs.start.disabled = n === 0;
-    const items = s.players.map((p) =>
-      h(
+    // Bestehende Namen nicht neu aufbauen, damit nur neue Namen „aufploppen“
+    const existing = new Map([...refs.chips.querySelectorAll('.chip')].map((el) => [el.dataset.id, el]));
+    const items = s.players.map((p) => {
+      const old = existing.get(p.id);
+      if (old) {
+        old.classList.toggle('is-away', !p.connected);
+        return old;
+      }
+      return h(
         'li',
-        { class: `chip${p.connected ? '' : ' is-away'}` },
+        { class: `chip${p.connected ? '' : ' is-away'}`, dataset: { id: p.id } },
         h('span', { text: p.nickname }),
-        p.connected ? null : h('span', { class: 'visually-hidden', text: '(nicht verbunden)' }),
         h('button', {
           class: 'chip__kick',
           type: 'button',
@@ -724,19 +747,10 @@
             }
           },
         }),
-      ),
-    );
-    if (!n) items.push(h('li', { class: 'hint', text: 'Noch niemand da. Die Namen erscheinen hier, sobald jemand beitritt.' }));
+      );
+    });
+    if (!n) items.push(h('li', { class: 'lobby__empty', text: 'Noch niemand da. Die Namen erscheinen hier, sobald jemand beitritt.' }));
     refs.chips.replaceChildren(...items);
-  }
-
-  function questionHead(s, extraClass) {
-    return h(
-      'div',
-      { class: `q-head${extraClass ? ` ${extraClass}` : ''}` },
-      h('p', { class: 'q-progress', text: `Frage ${s.qIndex + 1} von ${s.qCount}` }),
-      h('h1', { class: 'q-text', text: s.question.text }),
-    );
   }
 
   function stageCountdown(stage, s) {
@@ -745,27 +759,33 @@
       h(
         'div',
         { class: 'countdown' },
-        h('p', { class: 'q-progress', text: `Frage ${s.qIndex + 1} von ${s.qCount}` }),
-        h('h1', { class: 'q-text', text: s.question.text }),
+        h('div', { class: 'q-head' }, h('p', { class: 'kicker', text: `Frage ${s.qIndex + 1} von ${s.qCount}` }), h('h1', { class: 'q-text', text: s.question.text })),
+        h('div', { class: 'timebar', 'aria-hidden': 'true' }, fill),
       ),
-      h('div', { class: 'timebar', 'aria-hidden': 'true' }, fill),
     );
     stopTimer = startTimer({ remainingMs: s.remainingMs, totalMs: s.remainingMs, fillEl: fill });
     announce(`Frage ${s.qIndex + 1}: ${s.question.text}`);
   }
 
   function stageQuestion(stage, s) {
-    const timer = h('span', { class: 'display q-timer', 'aria-hidden': 'true' });
+    const timer = h('span', { class: 'q-timer__num num', 'aria-hidden': 'true' });
     const fill = h('div', { class: 'timebar__fill' });
-    refs.answered = h('span', { class: 'display' });
+    refs.answered = h('strong', { class: 'num' });
     refs.answeredOf = h('span');
-    const grid = h('div', { class: 'opt-grid' }, s.question.options.map((text, i) => optionTile('div', text, i)));
     stage.append(
-      questionHead(s),
-      h('div', { class: 'q-status' }, timer, h('p', { class: 'q-answered', 'aria-live': 'off' }, refs.answered, refs.answeredOf)),
-      h('div', { class: 'timebar', 'aria-hidden': 'true' }, fill),
-      grid,
-      h('div', { class: 'host-actions' }, nextButton('Frage beenden', { class: 'btn btn--ghost' })),
+      h(
+        'div',
+        { class: 'question' },
+        h(
+          'div',
+          { class: 'q-top' },
+          h('div', { class: 'q-head' }, h('p', { class: 'kicker', text: `Frage ${s.qIndex + 1} von ${s.qCount}` }), h('h1', { class: 'q-text', text: s.question.text })),
+          h('div', { class: 'q-timer' }, timer, h('p', { class: 'q-answered' }, refs.answered, refs.answeredOf)),
+        ),
+        h('div', { class: 'timebar', 'aria-hidden': 'true' }, fill),
+        h('div', { class: 'opt-grid' }, s.question.options.map((text, i) => optionTile('div', text, i))),
+      ),
+      actions(nextButton('Frage beenden', { class: 'btn btn--quiet' })),
     );
     updateLive(s);
     stopTimer = startTimer({ remainingMs: s.remainingMs, totalMs: s.question.timeLimit * 1000, numberEl: timer, fillEl: fill });
@@ -773,35 +793,38 @@
 
   function stageReveal(stage, s) {
     const q = s.question;
+    const right = q.correct;
     const max = Math.max(1, ...s.counts);
-    const bars = h('div', { class: 'bars', 'aria-hidden': 'true' });
-    bars.style.setProperty('--n', String(q.options.length));
-    q.options.forEach((_, i) => {
-      const fillEl = h('div', { class: 'bar__fill' });
-      fillEl.style.height = `${(s.counts[i] / max) * 100}%`;
-      bars.append(
-        h(
-          'div',
-          { class: `bar${q.correct.includes(i) ? '' : ' is-dim'}`, dataset: { i: String(i) } },
-          h('span', { class: 'display bar__value', text: String(s.counts[i]) }),
-          h('div', { class: 'bar__track' }, fillEl),
-        ),
+    const word = (n) => (n === 1 ? 'Antwort' : 'Antworten');
+    const rows = q.options.map((text, i) => {
+      const fill = h('span', { class: 'dist__fill' });
+      fill.style.width = `${(s.counts[i] / max) * 100}%`;
+      const isRight = right.includes(i);
+      return h(
+        'li',
+        { class: `dist__row${isRight ? ' is-right' : ''}` },
+        h('span', { class: 'dist__letter', 'aria-hidden': 'true', text: LETTERS[i] }),
+        h('span', { class: 'dist__text' }, h('span', { class: 'visually-hidden', text: `Antwort ${LETTERS[i]}: ` }), text, isRight ? h('span', { class: 'visually-hidden', text: ' (richtig)' }) : null),
+        h('span', { class: 'dist__bar', 'aria-hidden': 'true' }, fill),
+        h('span', { class: 'dist__count num' }, String(s.counts[i]), h('span', { class: 'visually-hidden', text: ` ${word(s.counts[i])}` })),
       );
     });
-    const grid = h(
-      'div',
-      { class: 'opt-grid' },
-      q.options.map((text, i) => {
-        const right = q.correct.includes(i);
-        const tile = optionTile('div', text, i, { class: `opt opt--reveal${right ? '' : ' is-dim'}` });
-        tile.append(h('span', { class: 'opt__mark', text: right ? `✓ Richtig, ${s.counts[i]} ${s.counts[i] === 1 ? 'Antwort' : 'Antworten'}` : `${s.counts[i]} ${s.counts[i] === 1 ? 'Antwort' : 'Antworten'}` }));
-        return tile;
-      }),
+    stage.append(
+      h(
+        'div',
+        { class: 'reveal' },
+        h(
+          'div',
+          { class: 'reveal__hero' },
+          h('p', { class: 'reveal__letter num', 'aria-hidden': 'true', text: right.map((i) => LETTERS[i]).join('+') }),
+          h('p', { class: 'kicker', text: right.length > 1 ? 'Richtig sind' : 'Richtig ist' }),
+          h('h1', { class: 'reveal__answer', text: right.map((i) => q.options[i]).join(' / ') }),
+        ),
+        h('div', { class: 'reveal__side' }, h('p', { class: 'reveal__question', text: q.text }), h('ol', { class: 'bars dist', 'aria-label': 'Verteilung der Antworten' }, rows)),
+      ),
+      actions(nextButton(s.isLast ? 'Endergebnis zeigen' : 'Zwischenstand zeigen')),
     );
-    stage.classList.add('stage--reveal');
-    stage.append(questionHead(s), bars, grid, h('div', { class: 'host-actions' }, nextButton(s.isLast ? 'Endergebnis zeigen' : 'Zwischenstand zeigen')));
-    const rightTexts = q.correct.map((i) => `${LETTERS[i]}: ${q.options[i]}`).join(', ');
-    announce(`Richtig ist ${rightTexts}.`);
+    announce(`Richtig ist ${right.map((i) => `${LETTERS[i]}: ${q.options[i]}`).join(', ')}.`);
   }
 
   function stageLeaderboard(stage, s) {
@@ -816,9 +839,8 @@
       ),
     );
     stage.append(
-      h('h1', { class: 'display stage-title', text: 'Zwischenstand' }),
-      h('ol', { class: 'board', 'aria-label': 'Die besten fünf' }, rows),
-      h('div', { class: 'host-actions' }, nextButton('Nächste Frage')),
+      h('div', { class: 'board-wrap' }, h('h1', { class: 'stage-title', text: 'Zwischenstand' }), h('ol', { class: 'board', 'aria-label': 'Die besten fünf' }, rows)),
+      actions(nextButton('Nächste Frage')),
     );
   }
 
@@ -826,21 +848,18 @@
     const cols = [2, 1, 3].map((place) => {
       const entries = s.podium.filter((r) => r.rank === place);
       return h(
-        'div',
+        'li',
         { class: 'podium__col', dataset: { place: String(place) } },
-        h('p', { class: 'podium__name', text: entries.map((e) => e.nickname).join(', ') || ' ' }),
-        h('p', { class: 'podium__score', text: entries.length ? `${num(entries[0].score)} Punkte` : ' ' }),
-        h('div', { class: 'podium__block display', 'aria-hidden': 'true', text: String(place) }),
+        h('p', { class: 'podium__name', text: entries.map((e) => e.nickname).join(', ') || '–' }),
+        h('p', { class: 'podium__score', text: entries.length ? `${num(entries[0].score)} Punkte` : 'frei' }),
+        h('div', { class: 'podium__block num', 'aria-hidden': 'true', text: String(place) }),
       );
     });
     stage.append(
-      h('h1', { class: 'display stage-title', text: 'Endergebnis' }),
-      h('div', { class: 'podium', role: 'list', 'aria-label': 'Podium' }, cols.map((c) => (c.setAttribute('role', 'listitem'), c))),
-      h(
-        'div',
-        { class: 'host-actions' },
-        h('button', { class: 'btn btn--ghost btn--big', type: 'button', text: 'Ergebnisse als CSV', onclick: () => exportCsv(s.report) }),
-        h('button', { class: 'btn btn--big', type: 'button', text: 'Spiel schließen', 'data-primary': true, onclick: () => endGame(false) }),
+      h('div', { class: 'podium-wrap' }, h('h1', { class: 'stage-title', text: 'Endergebnis' }), h('ol', { class: 'podium', 'aria-label': 'Podium' }, cols)),
+      actions(
+        h('button', { class: 'btn btn--big btn--quiet', type: 'button', text: 'Ergebnisse als CSV', onclick: () => exportCsv(s.report) }),
+        h('button', { class: 'btn btn--big btn--primary', type: 'button', text: 'Spiel schließen', 'data-primary': true, onclick: () => endGame(false) }),
       ),
     );
     const winners = s.podium.filter((r) => r.rank === 1).map((r) => r.nickname).join(' und ');
