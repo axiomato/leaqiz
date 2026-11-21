@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, keepAwake } = window.LQ;
+  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, keepAwake } = window.LQ;
   const session = store('session');
   const SESSION_KEY = 'leaqiz.player';
   const app = document.getElementById('app');
@@ -22,6 +22,7 @@
   let connectionLost = false;
   let pendingChoice = null;
   let waitRefs = null; // Warteansicht nach dem Antworten (Punkte, Zähler)
+  let resultShownFor = -1; // Frage, deren Ergebnis schon animiert gezeigt wurde
 
   // ---------- Verbindung ----------
 
@@ -87,7 +88,7 @@
     stopTimer();
     stopTimer = () => {};
     setTone('ink');
-    app.classList.remove('screen--play');
+    app.classList.remove('screen--play', 'is-urgent', 'result-in', 'result-in--win');
     const banner = h('p', { class: 'banner', id: 'banner', role: 'status' });
     app.replaceChildren(
       h(
@@ -337,7 +338,8 @@
     const counter = h('span', { class: 'num', 'aria-hidden': 'true' });
     const grid = h('div', { class: `player-grid${long ? ' is-long' : ''}`, role: 'group', 'aria-label': 'Antworten' });
     q.options.forEach((text, i) => {
-      grid.append(optionTile('button', text, i, { type: 'button', onclick: () => answer(i) }));
+      const tile = optionTile('button', text, i, { type: 'button', onclick: () => answer(i, tile) });
+      grid.append(tile);
     });
     frame(
       h(
@@ -349,15 +351,29 @@
       grid,
     );
     app.classList.add('screen--play');
-    stopTimer = startTimer({ remainingMs: s.remainingMs, totalMs: q.timeLimit * 1000, numberEl: counter });
+    stopTimer = startTimer({
+      remainingMs: s.remainingMs,
+      totalMs: q.timeLimit * 1000,
+      numberEl: counter,
+      onSecond: (sec) => {
+        if (sec > 0 && sec <= 5) {
+          app.classList.add('is-urgent');
+          pulse(counter);
+        }
+      },
+    });
   }
 
-  async function answer(choice) {
+  async function answer(choice, tile) {
     if (pendingChoice !== null || !state || state.state !== 'question') return;
     pendingChoice = choice;
-    renderedKey = '';
-    renderAnswered(state);
-    const res = await emit(socket, 'player:answer', { choice });
+    const sent = emit(socket, 'player:answer', { choice }); // sofort senden, nicht auf die Animation warten
+    await growToScreen(tile, choice);
+    if (pendingChoice === choice && !app.querySelector('.wait')) {
+      renderedKey = '';
+      renderAnswered(state);
+    }
+    const res = await sent;
     if (!res.ok) {
       toast(DEMO && !EMBEDDED && /Keine Antwort/.test(res.error) ? DEMO_TAB_HINT : res.error);
       if (state && state.state === 'question' && !state.answered && !/schon geantwortet|abgelaufen/.test(res.error)) {
@@ -366,6 +382,28 @@
         render();
       }
     }
+  }
+
+  // Das getippte Feld wächst in seiner Farbe zum ganzen Bildschirm: zeigt, dass die Wahl angekommen ist
+  function growToScreen(tile, choice) {
+    if (!tile || reducedMotion() || !tile.isConnected) return Promise.resolve();
+    const r = tile.getBoundingClientRect();
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const layer = h('div', { class: 'grow-layer', dataset: { i: String(choice) }, 'aria-hidden': 'true' });
+    document.body.append(layer);
+    const from = `inset(${r.top}px ${W - r.right}px ${H - r.bottom}px ${r.left}px round 16px)`;
+    const anim = layer.animate([{ clipPath: from }, { clipPath: 'inset(0px 0px 0px 0px round 0px)' }], {
+      duration: 320,
+      easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
+      fill: 'forwards',
+    });
+    return anim.finished
+      .catch(() => {})
+      .then(() => {
+        // Ebene erst nach dem Umschalten entfernen, damit kein Flackern entsteht
+        requestAnimationFrame(() => layer.remove());
+      });
   }
 
   // Bestätigung in der Farbe der gewählten Antwort, darunter das Warten auf die anderen:
@@ -414,6 +452,10 @@
   function renderResult(s) {
     const r = s.result || { answered: false, correct: false, points: 0, streak: 0 };
     const q = s.question;
+    // Animation nur beim ersten Anzeigen (Auflösung), nicht erneut beim Zwischenstand
+    const animate = resultShownFor !== s.qIndex;
+    resultShownFor = s.qIndex;
+    const points = h('p', { class: 'result__points num' });
     let headline;
     if (r.correct) headline = 'Richtig';
     else if (r.answered) headline = 'Leider falsch';
@@ -444,7 +486,7 @@
           'section',
           { class: 'result' },
           h('h1', { class: 'title', text: headline }),
-          h('p', { class: 'result__points num', text: `+${num(r.points)}` }),
+          points,
           r.correct && r.double ? doubleBadge(true) : null,
           r.correct && r.streak > 1 ? h('p', { class: 'lead streak-line' }, r.streak >= 3 ? flameIcon() : null, `${r.streak} richtige Antworten in Folge`) : null,
           r.move > 0 ? h('p', { class: 'lead move-line' }, h('span', { 'aria-hidden': 'true', text: '▲ ' }), `${r.move} ${r.move === 1 ? 'Platz' : 'Plätze'} nach vorn`) : null,
@@ -460,6 +502,20 @@
       ),
     );
     if (r.correct) setTone('flood', r.choice);
+    if (animate && !reducedMotion()) {
+      app.classList.add(r.correct ? 'result-in--win' : 'result-in');
+      if (r.correct) {
+        // Farbfläche wischt von links herein wie auf der Leinwand
+        document.body.classList.add('is-wiping');
+        setTimeout(() => document.body.classList.remove('is-wiping'), 560);
+      }
+    }
+    const stopCount = countUp(points, animate ? 0 : r.points, r.points, { prefix: '+', ms: 700, delay: 250 });
+    const prevStop = stopTimer;
+    stopTimer = () => {
+      prevStop();
+      stopCount();
+    };
     announce(`${headline}. ${num(r.points)} Punkte. Platz ${s.rank} von ${s.playerCount}.`);
   }
 

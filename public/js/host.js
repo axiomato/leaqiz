@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, toCsv, download, keepAwake } = window.LQ;
+  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, toCsv, download, keepAwake } = window.LQ;
   const FX = window.LQFX;
   const local = store('local');
   const session = store('session');
@@ -377,10 +377,19 @@
     if (el) el.textContent = editorMeta();
   }
 
+  let newCard = -1; // gerade hinzugefügte Frage (gleitet ein)
+
   function addQuestion(type) {
     draft.questions.push(blankQuestion(type));
     dirty = true;
-    renderEditor(`#q${draft.questions.length - 1}-text`);
+    newCard = draft.questions.length - 1;
+    renderEditor();
+    newCard = -1;
+    const card = document.getElementById(`q${draft.questions.length - 1}-card`);
+    if (card) {
+      card.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
+      document.getElementById(`q${draft.questions.length - 1}-text`).focus({ preventScroll: true });
+    }
   }
 
   function questionCard(q, index) {
@@ -475,7 +484,7 @@
 
     return h(
       'section',
-      { class: 'qcard', id: `${id}-card`, 'aria-labelledby': `${id}-num` },
+      { class: `qcard${index === newCard ? ' is-new' : ''}`, id: `${id}-card`, 'aria-labelledby': `${id}-num` },
       h(
         'div',
         { class: 'qcard__head' },
@@ -489,9 +498,22 @@
             class: 'tool tool--danger',
             onclick: () => {
               if ((q.text || q.options.some((o) => o && o !== 'Wahr' && o !== 'Falsch')) && !window.confirm(`Frage ${num} entfernen?`)) return;
-              draft.questions.splice(index, 1);
-              dirty = true;
-              renderEditor();
+              const remove = () => {
+                draft.questions.splice(index, 1);
+                dirty = true;
+                renderEditor(`#q${Math.max(0, index - 1)}-text`);
+              };
+              const card = document.getElementById(`${id}-card`);
+              if (!card || reducedMotion()) return remove();
+              // Karte klappt zusammen, dann rücken die anderen nach
+              const anim = card.animate(
+                [
+                  { opacity: 1, transform: 'none' },
+                  { opacity: 0, transform: 'scale(0.96)' },
+                ],
+                { duration: 180, easing: 'ease-in' },
+              );
+              anim.finished.then(remove, remove);
             },
           }),
         ),
@@ -983,7 +1005,12 @@
       numberEl: timer,
       fillEl: fill,
       onSecond: (sec) => {
-        if (sec > 0 && sec <= 5) FX.play('tick');
+        if (sec > 0 && sec <= 5) {
+          FX.play('tick');
+          // Zeitdruck auch ohne Ton: Zahl pulsiert, Zeitleiste wird kräftiger
+          stage.querySelector('.question')?.classList.add('is-urgent');
+          pulse(timer);
+        }
       },
     });
   }
@@ -997,7 +1024,7 @@
       const fill = h('span', { class: 'dist__fill' });
       fill.style.width = `${(s.counts[i] / max) * 100}%`;
       const isRight = right.includes(i);
-      return h(
+      const row = h(
         'li',
         { class: `dist__row${isRight ? ' is-right' : ''}` },
         h('span', { class: 'dist__letter', 'aria-hidden': 'true', text: LETTERS[i] }),
@@ -1005,6 +1032,8 @@
         h('span', { class: 'dist__bar', 'aria-hidden': 'true' }, fill),
         h('span', { class: 'dist__count num' }, String(s.counts[i]), h('span', { class: 'visually-hidden', text: ` ${word(s.counts[i])}` })),
       );
+      row.style.setProperty('--i', String(i)); // Balken wachsen nacheinander
+      return row;
     });
     stage.append(
       h(
@@ -1027,6 +1056,8 @@
 
   function stageLeaderboard(stage, s) {
     const n = s.leaderboard.length;
+    const counters = [];
+    stopTimer = () => counters.forEach((stop) => stop());
     const rows = s.leaderboard.map((r, i) => {
       const streak =
         r.streak >= 3
@@ -1043,8 +1074,11 @@
         h('span', { class: 'board__name' }, h('span', { text: r.nickname }), streak),
         h('span', { class: 'board__movecell' }, move),
         h('span', { class: 'board__delta', text: r.delta > 0 ? `+${num(r.delta)}` : '' }),
-        h('span', { class: 'board__score', text: num(r.score) }),
+        h('span', { class: 'board__score' }),
       );
+      const score = row.lastChild;
+      const stop = countUp(score, Math.max(0, r.score - (r.delta || 0)), r.score, { ms: 900, delay: 300 });
+      counters.push(stop);
       // Zeilen starten an ihrer alten Position (FLIP); wer von außerhalb kommt, gleitet von unten herein
       const from = r.posBefore === null ? i : Math.min(r.posBefore, n);
       row.dataset.shift = String(from - i);
@@ -1063,7 +1097,10 @@
       });
       list.classList.add('is-sorting');
       const t = setTimeout(() => FX.play('shuffle'), 350);
-      stopTimer = () => clearTimeout(t);
+      stopTimer = () => {
+        clearTimeout(t);
+        counters.forEach((stop) => stop());
+      };
     }
   }
 

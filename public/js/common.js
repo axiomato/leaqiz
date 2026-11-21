@@ -62,6 +62,45 @@ window.LQ = (function () {
     return () => cancelAnimationFrame(frame);
   }
 
+  // ---------- Bewegung ----------
+  const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Zahl zählt von „from“ auf „to“ hoch (ease-out). Bei reduzierter Bewegung sofort der Endwert.
+  // Screenreader lesen über aria-label immer den Endwert.
+  function countUp(el, from, to, { ms = 700, delay = 0, prefix = '' } = {}) {
+    const text = (v) => `${prefix}${num(v)}`;
+    el.setAttribute('aria-label', text(to));
+    if (reducedMotion() || from === to) {
+      el.textContent = text(to);
+      return () => {};
+    }
+    el.textContent = text(from);
+    let raf = 0;
+    const timer = setTimeout(() => {
+      const start = performance.now();
+      const step = (now) => {
+        const t = Math.min(1, (now - start) / ms);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = text(Math.round(from + (to - from) * eased));
+        if (t < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }, delay);
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(raf);
+      el.textContent = text(to);
+    };
+  }
+
+  // Einmaliger Puls (z. B. jede der letzten Sekunden): Klasse neu setzen startet die Animation neu
+  function pulse(el) {
+    if (!el || reducedMotion()) return;
+    el.classList.remove('pulse');
+    void el.offsetWidth;
+    el.classList.add('pulse');
+  }
+
   // Auszeichnungen: gleiche Namen und Texte auf Leinwand und Handy.
   const AWARD_TITLES = { fastest: 'Schnellste Antwort', streak: 'Längste Serie', jump: 'Aufholjagd', perfect: 'Fehlerfrei' };
 
@@ -217,5 +256,5 @@ window.LQ = (function () {
     }
   }
 
-  return { APP_NAME, LETTERS, h, num, optionTile, startTimer, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, toCsv, download, keepAwake };
+  return { APP_NAME, LETTERS, h, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, toCsv, download, keepAwake };
 })();
