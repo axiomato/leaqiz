@@ -1,8 +1,8 @@
-# Render Blueprint für Quizrunde
+# Render Blueprint für leaqiz
 # Genau EINE Instanz: Spiele liegen im Arbeitsspeicher.
 services:
   - type: web
-    name: quizrunde
+    name: leaqiz
     runtime: node
     region: frankfurt
     plan: free

@@ -1,8 +1,8 @@
-# Quizrunde
+# leaqiz
 
 Live-Quiz für Unterricht und Schulungen. Die Spielleitung zeigt Fragen am Beamer, die Teilnehmenden antworten am Handy. Sie brauchen keinen Account, nur PIN und Spielname.
 
-> **Arbeitstitel.** „Quizrunde“ ist noch nicht markenrechtlich geprüft. Das Projekt hat keine Verbindung zu Kahoot! ASA und nutzt weder deren Namen noch deren Gestaltung.
+> **Name.** „leaqiz“ ist noch nicht markenrechtlich geprüft. Das Projekt hat keine Verbindung zu Kahoot! ASA und nutzt weder deren Namen noch deren Gestaltung.
 
 ## Funktionsumfang (Version 0.1)
 
@@ -52,10 +52,10 @@ Tests: `npm test` (Spiel-Logik und komplette Spiele über echte WebSocket-Verbin
 ### Mit Docker
 
 ```bash
-docker build -t quizrunde .
-docker run -d --name quizrunde -p 3000:3000 \
+docker build -t leaqiz .
+docker run -d --name leaqiz -p 3000:3000 \
   -e HOST_PASSWORD='bitte-ändern' -e TRUST_PROXY=1 \
-  --restart unless-stopped quizrunde
+  --restart unless-stopped leaqiz
 ```
 
 ### HTTPS und Reverse Proxy

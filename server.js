@@ -7,7 +7,7 @@ const host = process.env.HOST || '0.0.0.0';
 const app = createApp();
 
 app.server.listen(port, host, () => {
-  console.log(`Quizrunde läuft auf http://localhost:${port}  (Host-Ansicht: /host)`);
+  console.log(`leaqiz läuft auf http://localhost:${port}  (Host-Ansicht: /host)`);
   if (!app.config.hostPassword) {
     console.log('Hinweis: HOST_PASSWORD ist nicht gesetzt – jeder mit dem Link kann Spiele starten.');
   }

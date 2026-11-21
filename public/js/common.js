@@ -3,7 +3,8 @@
 // Gemeinsame Helfer für Host und Spieler. Nutzerinhalte landen nur über
 // textContent im DOM (nie innerHTML) – Schutz vor eingeschleustem HTML.
 
-window.QR = (function () {
+window.LQ = (function () {
+  const APP_NAME = 'leaqiz';
   const LETTERS = ['A', 'B', 'C', 'D'];
   const numberFormat = new Intl.NumberFormat('de-DE');
 
@@ -162,5 +163,5 @@ window.QR = (function () {
     }
   }
 
-  return { LETTERS, h, num, optionTile, startTimer, store, toast, announce, emit, toCsv, download, keepAwake };
+  return { APP_NAME, LETTERS, h, num, optionTile, startTimer, store, toast, announce, emit, toCsv, download, keepAwake };
 })();

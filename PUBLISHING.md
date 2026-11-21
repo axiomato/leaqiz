@@ -7,7 +7,7 @@ Stand: Version 0.1.0
 ```
 Push auf main ──► GitHub Actions (npm test) ──► grün ──► Render baut und startet neu
                                                           │
-Spielleitung (/host) ◄──── HTTPS + WebSockets ────────────┤  quizrunde.onrender.com
+Spielleitung (/host) ◄──── HTTPS + WebSockets ────────────┤  leaqiz.onrender.com
 Spieler (Handy)      ◄────────────────────────────────────┘  Region Frankfurt
 ```
 
@@ -65,7 +65,7 @@ Render deployt automatisch, sobald die Tests in GitHub Actions grün sind (`auto
 
 **Offen vor öffentlichem Einsatz:**
 - Datenschutzerklärung und Impressum (bei öffentlichem Angebot) verlinken
-- Markenprüfung „Quizrunde“
+- Markenprüfung „leaqiz“
 - Lizenz des eigenen Codes festlegen (aktuell `UNLICENSED`)
 - Bei Einsatz an Schulen: Abstimmung mit der bzw. dem Datenschutzbeauftragten
 

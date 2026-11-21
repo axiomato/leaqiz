@@ -1,9 +1,9 @@
 'use strict';
 
 (function () {
-  const { h, num, optionTile, startTimer, store, toast, announce, emit, keepAwake } = window.QR;
+  const { APP_NAME, h, num, optionTile, startTimer, store, toast, announce, emit, keepAwake } = window.LQ;
   const session = store('session');
-  const SESSION_KEY = 'quizrunde.player';
+  const SESSION_KEY = 'leaqiz.player';
   const app = document.getElementById('app');
 
   const socket = io({ reconnectionDelayMax: 4000 });
@@ -64,7 +64,7 @@
       h(
         'div',
         { class: 'screen__top' },
-        h('span', { class: 'wordmark', text: 'Quizrunde' }),
+        h('span', { class: 'wordmark', text: APP_NAME }),
         state ? h('span', { text: state.nickname }) : null,
       ),
       banner,

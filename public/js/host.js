@@ -1,12 +1,12 @@
 'use strict';
 
 (function () {
-  const { LETTERS, h, num, optionTile, startTimer, store, toast, announce, emit, toCsv, download, keepAwake } = window.QR;
+  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, store, toast, announce, emit, toCsv, download, keepAwake } = window.LQ;
   const local = store('local');
   const session = store('session');
-  const LIB_KEY = 'quizrunde.quizzes';
-  const GAME_KEY = 'quizrunde.hostGame';
-  const PW_KEY = 'quizrunde.hostPassword';
+  const LIB_KEY = 'leaqiz.quizzes';
+  const GAME_KEY = 'leaqiz.hostGame';
+  const PW_KEY = 'leaqiz.hostPassword';
   const TIME_LIMITS = [5, 10, 20, 30, 45, 60, 90, 120, 240];
 
   const root = document.getElementById('app');
@@ -46,6 +46,11 @@
   // ---------- Bibliothek (nur im Browser des Hosts gespeichert) ----------
 
   function loadQuizzes() {
+    // Einmalige Übernahme aus der Zeit vor der Umbenennung
+    if (local.get(LIB_KEY, null) === null && Array.isArray(local.get('quizrunde.quizzes', null))) {
+      local.set(LIB_KEY, local.get('quizrunde.quizzes'));
+      local.remove('quizrunde.quizzes');
+    }
     const list = local.get(LIB_KEY, null);
     if (!Array.isArray(list)) {
       const seeded = [sampleQuiz()];
@@ -176,7 +181,7 @@
               text: 'Exportieren',
               onclick: () => {
                 const { id, ...data } = quiz;
-                download(`${slug(quiz.title)}.quizrunde.json`, JSON.stringify(data, null, 2), 'application/json');
+                download(`${slug(quiz.title)}.leaqiz.json`, JSON.stringify(data, null, 2), 'application/json');
               },
             }),
             h('button', {
@@ -197,7 +202,7 @@
     }
 
     root.replaceChildren(
-      h('header', { class: 'host-bar' }, h('span', { class: 'wordmark', text: 'Quizrunde' }), h('span', { class: 'hint', text: 'Spielleitung' })),
+      h('header', { class: 'host-bar' }, h('span', { class: 'wordmark', text: APP_NAME }), h('span', { class: 'hint', text: 'Spielleitung' })),
       h(
         'main',
         { class: 'work' },
@@ -266,7 +271,7 @@
       h(
         'header',
         { class: 'host-bar' },
-        h('span', { class: 'wordmark', text: 'Quizrunde' }),
+        h('span', { class: 'wordmark', text: APP_NAME }),
         h('div', { class: 'host-bar__meta' }, h('button', { class: 'btn btn--small btn--ghost', type: 'button', text: 'Zur Übersicht', onclick: leaveEditor })),
       ),
       h(
@@ -536,7 +541,7 @@
     const header = h(
       'header',
       { class: 'host-bar' },
-      h('span', { class: 'wordmark', text: 'Quizrunde' }),
+      h('span', { class: 'wordmark', text: APP_NAME }),
       h(
         'div',
         { class: 'host-bar__meta' },
