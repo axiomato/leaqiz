@@ -21,6 +21,7 @@
   let stopTimer = () => {};
   let connectionLost = false;
   let pendingChoice = null;
+  let waitRefs = null; // Warteansicht nach dem Antworten (Punkte, Zähler)
 
   // ---------- Verbindung ----------
 
@@ -263,7 +264,10 @@
     const s = state;
     if (!s) return;
     const key = [s.state, s.qIndex, s.answered, s.score, s.rank, s.hostOnline].join('|');
-    if (key === renderedKey) return refreshBanner();
+    if (key === renderedKey) {
+      updateWaiting(s);
+      return refreshBanner();
+    }
     renderedKey = key;
     if (s.state !== 'question') pendingChoice = null;
 
@@ -273,7 +277,15 @@
       case 'countdown':
         return renderCountdown(s);
       case 'question':
-        return s.answered || pendingChoice !== null ? renderAnswered(s) : renderQuestion(s);
+        if (s.answered || pendingChoice !== null) {
+          // Warteansicht steht schon: nur Fortschritt aktualisieren (kein erneutes Einblenden)
+          if (waitRefs && waitRefs.qIndex === s.qIndex && app.querySelector('.wait')) {
+            updateWaiting(s);
+            return refreshBanner();
+          }
+          return renderAnswered(s);
+        }
+        return renderQuestion(s);
       case 'reveal':
       case 'leaderboard':
         return renderResult(s);
@@ -356,21 +368,47 @@
     }
   }
 
-  // Bestätigung in der Farbe der gewählten Antwort
+  // Bestätigung in der Farbe der gewählten Antwort, darunter das Warten auf die anderen:
+  // ein Punkt je Person, gefüllt = hat geantwortet, offene Punkte pulsieren als Welle
+
   function renderAnswered(s) {
-    const choice = pendingChoice;
+    const choice = pendingChoice !== null ? pendingChoice : Number.isInteger(s.choice) ? s.choice : null;
+    const dots = h('div', { class: 'wait__dots', 'aria-hidden': 'true' });
+    const count = h('p', { class: 'wait__count' });
+    const fill = h('div', { class: 'timebar__fill' });
     frame(
       h(
         'div',
-        { class: 'screen__center' },
+        { class: 'screen__center answered' },
         choice !== null ? h('p', { class: 'big-letter num', 'aria-hidden': 'true', text: LETTERS[choice] }) : null,
         h('h1', { class: 'title', text: 'Gesendet' }),
-        h('p', { class: 'lead', text: 'Warte auf die anderen.' }),
+        h('div', { class: 'wait' }, h('p', { class: 'wait__label', text: 'Warte auf die anderen' }), dots, count),
+        h('div', { class: 'timebar', 'aria-hidden': 'true' }, fill),
         h('p', { class: 'hint', text: progress(s) }),
       ),
     );
     if (choice !== null) setTone('flood', choice);
-    announce('Antwort gesendet.');
+    waitRefs = { qIndex: s.qIndex, dots, count };
+    updateWaiting(s);
+    stopTimer = startTimer({ remainingMs: s.remainingMs, totalMs: s.question.timeLimit * 1000, fillEl: fill });
+    announce('Antwort gesendet. Warte auf die anderen.');
+  }
+
+  function updateWaiting(s) {
+    if (!waitRefs || !s || s.state !== 'question' || waitRefs.qIndex !== s.qIndex || !s.progress) return;
+    const total = Math.max(s.progress.active, s.progress.answered, 1);
+    // Eigene Antwort ist schon unterwegs, auch wenn die Bestätigung noch fehlt
+    const done = Math.min(s.progress.answered + (s.answered ? 0 : 1), total);
+    waitRefs.count.textContent = `${done} von ${total} haben geantwortet`;
+    const dots = waitRefs.dots;
+    dots.hidden = total > 40; // sehr große Gruppen: nur die Zahl
+    if (dots.hidden) return;
+    while (dots.children.length < total) dots.append(h('span', { class: 'wait__dot' }));
+    while (dots.children.length > total) dots.lastChild.remove();
+    [...dots.children].forEach((dot, i) => {
+      dot.style.setProperty('--i', String(i));
+      dot.classList.toggle('is-done', i < done);
+    });
   }
 
   function renderResult(s) {

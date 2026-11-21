@@ -299,3 +299,27 @@ test('Last: 200 Spieler, eine Runde', () => {
   assert.deepEqual(lastHost().counts, [50, 50, 50, 50]);
   assert.ok(ms < 2000, `zu langsam: ${ms} ms`);
 });
+
+test('Wartefortschritt: wer geantwortet hat, sieht gebündelt, wie viele schon fertig sind', () => {
+  const { engine, clock, player } = setup();
+  const [a, b, c] = ['p1', 'p2', 'p3'].map(player);
+  a.req('player:join', { nickname: 'Anna' });
+  b.req('player:join', { nickname: 'Ben' });
+  c.req('player:join', { nickname: 'Cem' });
+  engine.next();
+  clock.advance(1000);
+  assert.deepEqual(a.lastState().progress, { answered: 0, active: 3 });
+  a.req('player:answer', { choice: 1 });
+  assert.equal(a.lastState().answered, true);
+  assert.deepEqual(a.lastState().progress, { answered: 1, active: 3 });
+  const before = a.messages().length;
+  const cStates = () => c.messages().filter((m) => m.k === 'state').length;
+  const cBefore = cStates();
+  b.req('player:answer', { choice: 0 });
+  assert.equal(a.messages().length, before, 'noch nicht gesendet: wird gebündelt');
+  clock.advance(300);
+  assert.deepEqual(a.lastState().progress, { answered: 2, active: 3 }, 'Anna sieht Bens Antwort');
+  assert.equal(cStates(), cBefore, 'Cem (noch ohne Antwort) bekommt keine Zwischenstände');
+  engine.end();
+  clock.advance(1000);
+});

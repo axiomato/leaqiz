@@ -1966,6 +1966,9 @@ html.embedded .screen__top {
   .play-head__meta > .num {
     font-size: var(--t-4);
   }
+  .answered .big-letter {
+    font-size: var(--t-7);
+  }
   .player-grid .opt__letter {
     font-size: var(--t-3);
   }
@@ -2043,6 +2046,71 @@ html.embedded .screen__top {
 
 .player-grid .opt:active {
   transform: scale(0.97);
+}
+
+/* Warten nach dem Antworten: Punkt je Person, offene pulsieren als Welle */
+.wait {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.wait__label {
+  font-size: var(--t-1);
+  font-weight: 700;
+}
+
+.wait__dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  padding: var(--s-1) 0;
+}
+
+.wait__dot {
+  width: var(--s-2);
+  height: var(--s-2);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  animation: wait-wave 1.4s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+.wait__dot.is-done {
+  background: #fff;
+  animation: dot-done 320ms ease-out both;
+}
+
+@keyframes wait-wave {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.7);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes dot-done {
+  from {
+    transform: scale(1.7);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.wait__count {
+  font-weight: 700;
+}
+
+.answered .timebar {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.answered .timebar__fill {
+  background: #fff;
 }
 
 /* Gesendet / Ergebnis */

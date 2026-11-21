@@ -22,6 +22,7 @@
     sweepMs: 30_000,
     closeGraceMs: 200, // Frage schließt kurz nach Ablauf, damit späte Pakete noch zählen
     restoreGraceMs: 15_000, // nach Neuladen der Host-Seite: Spieler erst zurückkommen lassen
+    progressMs: 300, // Bündelung des Wartefortschritts
   });
 
   function randomPin() {
@@ -44,6 +45,7 @@
       this.conns = new Map(); // connId -> { playerId, tokens, refilledAt }
       this.timer = null;
       this.sweeper = null;
+      this.progressTimer = null;
       this.closed = false;
       this.restoredAt = null;
       this.startSweep();
@@ -93,7 +95,10 @@
       player.connId = null;
       this.game.setConnected(player, false, this.now());
       if (this.game.allAnswered()) this.closeQuestionEarly();
-      else this.changed();
+      else {
+        this.changed();
+        if (this.game.state === 'question') this.scheduleProgress();
+      }
     }
 
     // Eingehende Nachricht eines Spielers: { k: 'req', id, ev, p }
@@ -170,6 +175,7 @@
             else {
               this.emitPlayer(player);
               this.changed(false);
+              this.scheduleProgress();
             }
           };
           return {};
@@ -241,6 +247,7 @@
       this.closed = true;
       this.clearTimer(this.timer);
       this.clearTimer(this.sweeper);
+      this.clearTimer(this.progressTimer);
       for (const p of this.game.players.values()) {
         if (p.connId) this.send(p.connId, { k: 'closed', reason });
       }
@@ -325,6 +332,21 @@
     }
 
     // ---------- Senden ----------
+
+    // Wer schon geantwortet hat, sieht live, wie viele noch fehlen.
+    // Gebündelt (höchstens alle 300 ms), damit große Gruppen das Netz nicht fluten.
+    scheduleProgress() {
+      if (this.progressTimer || this.closed) return;
+      this.progressTimer = this.setTimer(() => {
+        this.progressTimer = null;
+        const g = this.game;
+        if (this.closed || g.state !== 'question' || !g.round) return;
+        const ranking = g.ranking();
+        for (const p of g.players.values()) {
+          if (g.round.answers.has(p.id)) this.emitPlayer(p, ranking);
+        }
+      }, this.opts.progressMs);
+    }
 
     emitPlayer(player, ranking) {
       if (!player.connId || !player.connected) return;

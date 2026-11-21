@@ -381,7 +381,13 @@ class Game {
       view.question = { type: q.type, text: q.text, options: q.options, timeLimit: q.timeLimit, double: Boolean(q.double) };
       if (this.state === 'reveal' || this.state === 'leaderboard') view.question.correct = q.correct;
     }
-    if (this.state === 'question') view.answered = this.round.answers.has(playerId);
+    if (this.state === 'question') {
+      const mine = this.round.answers.get(playerId);
+      view.answered = Boolean(mine);
+      if (mine) view.choice = mine.choice; // eigene Wahl (nach Neuladen weiter sichtbar)
+      // Wartefortschritt für alle, die schon geantwortet haben
+      view.progress = { answered: this.round.answers.size, active: this.connectedPlayers().length };
+    }
     if ((this.state === 'reveal' || this.state === 'leaderboard') && p.last) {
       view.result = { ...p.last, rankNow: me.rank };
     }
