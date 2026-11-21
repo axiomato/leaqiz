@@ -31,7 +31,9 @@
       const started = performance.now();
       let peer;
       try {
-        peer = new window.Peer({ debug: 0, ...((window.LEAQIZ_CONFIG || {}).peer || {}) });
+        // Nur der Vermittlungsserver wird geprüft: Optionen ohne Relais-Abruf
+        const base = (window.LEAQIZ_CONFIG || {}).peer || {};
+        peer = new window.Peer({ debug: 0, ...base });
       } catch (err) {
         resolve({ ok: false, text: err.message });
         return;
@@ -76,16 +78,44 @@
     return { ok: types.has(wanted), types: [...types] };
   }
 
-  async function run() {
-    const servers = ((window.LEAQIZ_CONFIG || {}).peer || {}).config || window.peerjs.util.defaultConfig;
-    const ice = servers.iceServers || [];
-    const stun = ice.filter((s) => [].concat(s.urls).some((u) => u.startsWith('stun:')));
-    const turn = ice.filter((s) => [].concat(s.urls).some((u) => u.startsWith('turn:')));
+  // Beschreibt einen TURN-Weg kurz: „UDP 3478“, „TLS 443“ …
+  function routeLabel(url) {
+    const m = /^(turns?):([^:?]+)(?::(\d+))?(?:\?transport=(\w+))?/.exec(url);
+    if (!m) return url;
+    const tls = m[1] === 'turns';
+    const proto = tls ? 'TLS' : (m[4] || 'udp').toUpperCase();
+    return `${m[2]} ${proto} ${m[3] || (tls ? '5349' : '3478')}`;
+  }
 
+  // Jeden TURN-Weg einzeln prüfen, damit sichtbar wird, was das Netz durchlässt
+  async function testTurnRoutes(turnServers) {
+    const routes = [];
+    for (const s of turnServers) {
+      for (const url of [].concat(s.urls)) {
+        if (/^turns?:/.test(url)) routes.push({ url, server: { ...s, urls: url } });
+      }
+    }
+    const results = await Promise.all(
+      routes.map((r) =>
+        gather([r.server], 'relay', 'relay')
+          .then((res) => ({ label: routeLabel(r.url), ok: res.ok }))
+          .catch(() => ({ label: routeLabel(r.url), ok: false })),
+      ),
+    );
+    return { ok: results.some((r) => r.ok), routes: results, types: results.some((r) => r.ok) ? ['relay'] : [] };
+  }
+
+  async function run() {
     const setWebrtc = row('webrtc', 'WebRTC im Browser');
     const setSignal = row('signal', 'Vermittlungsserver');
     const setStun = row('stun', 'Direktverbindung (STUN)');
     const setTurn = row('turn', 'Relais (TURN)');
+
+    const ice = await window.LQIce.resolve();
+    const servers = ice.iceServers || [];
+    const stun = servers.filter((s) => [].concat(s.urls).some((u) => u.startsWith('stun:')));
+    const turn = servers.filter((s) => [].concat(s.urls).some((u) => /^turns?:/.test(u)));
+    const sourceText = { 'peer-config': 'eigene Einstellung', eigen: 'eigenes Relais', peerjs: 'Relais des PeerJS-Projekts' }[ice.source] || ice.source;
 
     const hasRtc = Boolean(window.RTCPeerConnection);
     setWebrtc(hasRtc, hasRtc ? '' : 'Dieser Browser kann keine Direktverbindungen.');
@@ -93,11 +123,15 @@
     const [signal, stunRes, turnRes] = await Promise.all([
       testSignal(),
       hasRtc && stun.length ? gather(stun, 'srflx').catch((e) => ({ ok: false, types: [], err: e.message })) : { ok: false, types: [] },
-      hasRtc && turn.length ? gather(turn, 'relay', 'relay').catch((e) => ({ ok: false, types: [], err: e.message })) : { ok: false, types: [] },
+      hasRtc && turn.length ? testTurnRoutes(turn) : { ok: false, types: [], routes: [] },
     ]);
     setSignal(signal.ok, signal.text);
     setStun(stunRes.ok, stunRes.ok ? '' : 'Keine öffentliche Adresse ermittelt: UDP ist vermutlich gesperrt.');
-    setTurn(turnRes.ok, turnRes.ok ? '' : 'Relais nicht erreichbar: gesperrt oder Server nicht verfügbar.');
+    const routeText = turnRes.routes.map((r) => `${r.label} ${r.ok ? 'OK' : 'nicht erreichbar'}`).join(', ');
+    setTurn(
+      turnRes.ok,
+      [sourceText, routeText, ice.error, turnRes.ok ? '' : turn.length ? 'Relais nicht erreichbar.' : 'Kein Relais eingerichtet.'].filter(Boolean).join('. '),
+    );
 
     let text;
     if (!hasRtc) text = 'Dieser Browser ist nicht geeignet. Bitte einen aktuellen Browser nutzen.';
@@ -111,7 +145,7 @@
     const yes = (v) => (v ? 'ja' : 'nein');
     code.textContent =
       `leaqiz-Test: WebRTC ${yes(hasRtc)}, Vermittlung ${signal.ok ? signal.text : 'nein'}, ` +
-      `STUN ${yes(stunRes.ok)}, TURN ${yes(turnRes.ok)}, Kandidaten ${[...new Set([...stunRes.types, ...turnRes.types])].join('/') || '-'}, ` +
+      `STUN ${yes(stunRes.ok)}, TURN ${yes(turnRes.ok)} (${ice.source}${routeText ? `: ${routeText}` : ''}), Kandidaten ${[...new Set([...stunRes.types, ...turnRes.types])].join('/') || '-'}, ` +
       `${navigator.userAgent.replace(/\s*\(.*?\)\s*/g, ' ').slice(0, 80)}`;
   }
 

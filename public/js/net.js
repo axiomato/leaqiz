@@ -6,7 +6,8 @@
 
 window.LQNet = (function () {
   const PREFIX = 'leaqiz-';
-  const peerOptions = () => ({ debug: 0, ...((window.LEAQIZ_CONFIG || {}).peer || {}) });
+  // STUN/TURN-Server kommen aus ice.js (Konfiguration in config.js)
+  const peerOptions = () => window.LQIce.peerOptions();
 
   // ---------- Spielleitung ----------
 
@@ -20,9 +21,10 @@ window.LQNet = (function () {
     }
 
     // Meldet die PIN beim Vermittlungsserver an. Fehler-Code 'taken': PIN schon vergeben.
-    open() {
+    async open() {
+      const options = await peerOptions();
       return new Promise((resolve, reject) => {
-        const peer = new window.Peer(PREFIX + this.pin, peerOptions());
+        const peer = new window.Peer(PREFIX + this.pin, options);
         this.peer = peer;
         let settled = false;
         const timer = setTimeout(() => {
@@ -124,10 +126,11 @@ window.LQNet = (function () {
       return Boolean(this.conn && this.conn.open);
     }
 
-    ensurePeer() {
-      if (this.peer && !this.peer.destroyed) return Promise.resolve(this.peer);
+    async ensurePeer() {
+      if (this.peer && !this.peer.destroyed) return this.peer;
+      const options = await peerOptions();
       return new Promise((resolve, reject) => {
-        const peer = new window.Peer(peerOptions());
+        const peer = new window.Peer(options);
         // Der kostenlose Vermittlungsserver ist manchmal langsam: großzügig warten
         const timer = setTimeout(() => {
           peer.destroy();
