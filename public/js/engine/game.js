@@ -1,9 +1,13 @@
-'use strict';
-
-// Reine Spiel-Logik: keine Sockets, keine Timer. Die Zeit kommt immer als
+// Reine Spiel-Logik: kein Netzwerk, keine Timer. Die Zeit kommt immer als
 // Parameter `now` (ms) herein – dadurch ist alles deterministisch testbar.
-
-const crypto = require('node:crypto');
+// Läuft im Browser der Spielleitung (window.LeaqizGame) und in Node (Tests).
+(function (root, factory) {
+  'use strict';
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.LeaqizGame = api;
+})(typeof self !== 'undefined' ? self : globalThis, function () {
+'use strict';
 
 const MAX_POINTS = 1000; // richtige Sofort-Antwort
 const MIN_POINTS = 500; // richtige Antwort in letzter Sekunde
@@ -13,8 +17,19 @@ const LATE_GRACE_MS = 500; // Netzwerk-Toleranz nach Ablauf des Timers
 
 class GameError extends Error {}
 
+// Kryptografisch sichere Zufallswerte (Web Crypto, in Browser und Node 20+ vorhanden).
 function randomToken(bytes = 16) {
-  return crypto.randomBytes(bytes).toString('hex');
+  const buf = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(buf);
+  return Array.from(buf, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Vergleich in konstanter Zeit, damit Tokens nicht über Laufzeiten erraten werden.
+function safeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 // Punkte: 1000 bei sofortiger, 500 bei Antwort in letzter Sekunde, linear dazwischen.
@@ -105,19 +120,14 @@ class Game {
 
   findPlayerByToken(token) {
     if (typeof token !== 'string' || token.length !== 32) return null;
-    const probe = Buffer.from(token);
     for (const p of this.players.values()) {
-      const candidate = Buffer.from(p.token);
-      if (candidate.length === probe.length && crypto.timingSafeEqual(candidate, probe)) return p;
+      if (safeEqual(p.token, token)) return p;
     }
     return null;
   }
 
   checkHostToken(token) {
-    if (typeof token !== 'string') return false;
-    const a = Buffer.from(token);
-    const b = Buffer.from(this.hostToken);
-    return a.length === b.length && crypto.timingSafeEqual(a, b);
+    return safeEqual(this.hostToken, token);
   }
 
   removePlayer(id) {
@@ -285,11 +295,11 @@ class Game {
     return view;
   }
 
-  playerView(playerId, now) {
+  // ranking optional übergeben: beim Senden an alle Spieler nur einmal sortieren.
+  playerView(playerId, now, ranking = this.ranking()) {
     const p = this.players.get(playerId);
     if (!p) return null;
     const q = this.question;
-    const ranking = this.ranking();
     const idx = ranking.findIndex((r) => r.id === playerId);
     const me = ranking[idx];
     const view = {
@@ -348,4 +358,41 @@ class Game {
   }
 }
 
-module.exports = { Game, GameError, scoreAnswer, rankPlayers, randomToken, LATE_GRACE_MS };
+// ---------- Sichern und Wiederherstellen (Neuladen der Host-Seite) ----------
+
+Game.prototype.toJSON = function toJSON() {
+  return {
+    v: 1,
+    pin: this.pin,
+    quiz: this.quiz,
+    hostToken: this.hostToken,
+    maxPlayers: this.maxPlayers,
+    state: this.state,
+    qIndex: this.qIndex,
+    players: [...this.players.values()].map((p) => {
+      const { connId, ...rest } = p;
+      return rest;
+    }),
+    round: this.round ? { ...this.round, answers: [...this.round.answers] } : null,
+    countdownEndsAt: this.countdownEndsAt,
+    createdAt: this.createdAt,
+    lastActivity: this.lastActivity,
+  };
+};
+
+Game.fromJSON = function fromJSON(data, now) {
+  if (!data || data.v !== 1) throw new GameError('Gespeichertes Spiel ist nicht lesbar.');
+  const g = new Game({ pin: data.pin, quiz: data.quiz, now: data.createdAt, maxPlayers: data.maxPlayers });
+  g.hostToken = data.hostToken;
+  g.state = data.state;
+  g.qIndex = data.qIndex;
+  g.countdownEndsAt = data.countdownEndsAt;
+  g.lastActivity = data.lastActivity;
+  // Nach dem Neuladen ist zunächst niemand verbunden; Spieler melden sich mit ihrem Token zurück.
+  g.players = new Map(data.players.map((p) => [p.id, { ...p, connected: false, disconnectedAt: now }]));
+  g.round = data.round ? { ...data.round, answers: new Map(data.round.answers) } : null;
+  return g;
+};
+
+return { Game, GameError, scoreAnswer, rankPlayers, randomToken, safeEqual, LATE_GRACE_MS };
+});

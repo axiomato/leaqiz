@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com http://localhost:* ws://localhost:*; object-src 'none'; base-uri 'none'; form-action 'self'" />
+    <meta name="referrer" content="no-referrer" />
+    <title>leaqiz – Spielleitung</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="../fonts/archivo-wdth.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="../css/app.css" />
+  </head>
+  <body class="host">
+    <div id="app">
+      <noscript><p>Bitte JavaScript aktivieren, um Spiele zu leiten.</p></noscript>
+    </div>
+    <div id="live" class="visually-hidden" aria-live="polite"></div>
+    <div id="toast" class="toast" role="status"></div>
+    <script src="../js/config.js"></script>
+    <script src="../js/vendor/peerjs.min.js"></script>
+    <script src="../js/vendor/qrcode.js"></script>
+    <script src="../js/net.js"></script>
+    <script src="../js/engine/validate.js"></script>
+    <script src="../js/engine/game.js"></script>
+    <script src="../js/engine/host-engine.js"></script>
+    <script src="../js/common.js"></script>
+    <script src="../js/host.js"></script>
+  </body>
+</html>

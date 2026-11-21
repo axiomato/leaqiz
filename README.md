@@ -1,125 +1,103 @@
 # leaqiz
 
-Live-Quiz für Unterricht und Schulungen. Die Spielleitung zeigt Fragen am Beamer, die Teilnehmenden antworten am Handy. Sie brauchen keinen Account, nur PIN und Spielname.
+Live-Quiz für Unterricht und Schulungen. Die Spielleitung zeigt Fragen am Beamer, die Teilnehmenden antworten am Handy. Sie brauchen keinen Account und keine App, nur PIN und Spielnamen.
 
+> **Status: Prototyp.** Statische Webseite auf GitHub Pages, ohne eigenen Server. Die Geräte verbinden sich direkt miteinander (WebRTC). Vor dem Einsatz mit Klassen bitte die Grenzen unten lesen.
+>
 > **Name.** „leaqiz“ ist noch nicht markenrechtlich geprüft. Das Projekt hat keine Verbindung zu Kahoot! ASA und nutzt weder deren Namen noch deren Gestaltung.
 
-## Funktionsumfang (Version 0.1)
+## Für Lehrkräfte
+
+1. Spielleitung öffnen: `https://axiomato.github.io/leaqiz/host/` (als Lesezeichen speichern)
+2. Quiz wählen → **Spiel starten**
+3. Die Klasse scannt den QR-Code an der Leinwand oder öffnet `axiomato.github.io/leaqiz` und tippt die PIN ein.
+
+**Wichtig:** Den Tab der Spielleitung während des Spiels offen und möglichst im Vordergrund lassen. Dieser Tab *ist* das Spiel. Neu laden ist erlaubt, schließen beendet das Spiel.
+
+## Funktionsumfang
 
 | Bereich | Umfang |
 |---|---|
-| Quiz-Editor | Multiple Choice (2–4 Antworten, auch mehrere richtig) und Wahr/Falsch, Zeitlimit 5–240 s, Reihenfolge ändern |
+| Quiz-Editor | Multiple Choice (2–4 Antworten, auch mehrere richtig) und Wahr/Falsch, Zeitlimit 5–240 s |
 | Ablage | Quizze bleiben im Browser der Spielleitung, Export und Import als JSON-Datei |
-| Beitritt | 6-stellige PIN oder QR-Code, Spielname bis 20 Zeichen, kein Login |
-| Spielablauf | Lobby → Countdown → Frage → Auflösung mit Verteilung → Zwischenstand (Top 5) → … → Podium |
-| Punkte | Richtig: 1.000 sofort bis 500 in letzter Sekunde (linear). Serien-Bonus +100 je weiterer richtiger Antwort in Folge, max. +500 |
-| Steuerung | Host kann Spieler entfernen, Frage vorzeitig beenden, Spiel beenden. „Weiter“ auch per Pfeil rechts / Bild runter (Präsentations-Fernbedienung) |
-| Ausfälle | Spieler und Host können neu laden oder die Verbindung verlieren und kommen automatisch zurück |
-| Auswertung | CSV-Export für Excel (Platz, Punkte, jede Antwort mit Zeit und Punkten) |
+| Beitritt | 6-stellige PIN oder QR-Code, Spielname bis 20 Zeichen |
+| Ablauf | Lobby → Countdown → Frage → Auflösung → Zwischenstand (Top 5) → Podium |
+| Punkte | Richtig: 1.000 sofort bis 500 in letzter Sekunde. Serien-Bonus +100 je weiterer richtiger Antwort, max. +500 |
+| Steuerung | Spieler entfernen, Frage vorzeitig beenden, „Weiter“ auch per Pfeil rechts / Bild runter |
+| Ausfälle | Spieler und Spielleitung können neu laden, das Spiel läuft weiter |
+| Auswertung | CSV-Export für Excel |
 
-## Am Laptop starten (ohne Hosting)
+## So funktioniert es
 
-So läuft leaqiz aktuell. Der Laptop der Spielleitung ist der Server, die Spieler verbinden sich über das WLAN.
+```
+GitHub Pages ──► liefert nur die Dateien (HTML, CSS, JS)
 
-**Einmalig vorbereiten**
-1. Node.js in der LTS-Version von nodejs.org installieren.
-2. Den Code holen: auf GitHub im Repo auf **Code → Download ZIP** klicken und die ZIP-Datei entpacken.
+Browser der Spielleitung = Spiel-Server
+   │  meldet sich als „leaqiz-<PIN>“ beim Vermittlungsserver an (PeerJS)
+   ▼
+Handys der Spieler ──► finden die Spielleitung über die PIN
+                   ──► danach Daten direkt per WebRTC, sonst über TURN-Relais
+```
 
-**Vor jedem Einsatz**
-1. Laptop und Handys der Spieler ins **selbe WLAN** bringen.
-2. Im entpackten Ordner doppelklicken:
-   - Windows: `start-windows.bat`
-   - macOS: `start-mac.command`. Beim ersten Mal blockiert macOS die Datei, weil sie nicht von Apple beglaubigt ist. Dann **Systemeinstellungen → Datenschutz & Sicherheit** öffnen und bei der blockierten Datei das Öffnen bestätigen („Open Anyway“). Ab macOS 15 geht das nicht mehr per Rechtsklick. Alternative: Terminal öffnen, `bash ` eintippen (mit Leerzeichen), die Datei ins Fenster ziehen, Enter.
-3. Beim ersten Start fragt die Firewall nach Netzwerkzugriff für Node.js. **Zugriff erlauben** (Windows: „Private Netzwerke“).
-4. Der Browser öffnet die Spielleitung. Die Lobby zeigt die Adresse für die Spieler und einen QR-Code.
-5. Zum Beenden das schwarze Fenster schließen. Laufende Spiele enden damit.
+- Spiel-Logik: `public/js/engine/` (läuft im Browser der Spielleitung und in den Tests)
+- Spieler bekommen die richtige Antwort erst nach dem Schließen der Frage. Punkte berechnet nur die Spielleitung.
 
-**Wenn Spieler nicht beitreten können**
+## Grenzen des Prototyps
 
-| Ursache | Lösung |
+| Thema | Auswirkung |
 |---|---|
-| Handy im falschen WLAN oder in mobilen Daten | Handy ins selbe WLAN wie der Laptop |
-| Firewall-Abfrage abgelehnt | Windows: Einstellungen → Windows-Sicherheit → Firewall → „App durch Firewall zulassen“ → Node.js für private Netzwerke erlauben |
-| Netz ist bei Windows als „Öffentlich“ eingestuft | Netzwerkprofil auf „Privat“ stellen oder Node.js auch für öffentliche Netzwerke erlauben |
-| Gäste- oder Schul-WLAN trennt Geräte voneinander | anderes WLAN nutzen oder Hotspot (nur für kleine Gruppen) |
-| VPN auf dem Laptop aktiv | VPN ausschalten |
-
-Wer lieber im Terminal arbeitet: `npm install`, dann `npm start`. Tests: `npm test`.
-
-## Konfiguration (Umgebungsvariablen)
-
-| Variable | Standard | Zweck |
-|---|---|---|
-| `PORT` | `3000` | HTTP-Port |
-| `PUBLIC_URL` | leer | Feste Adresse für Spieler (Lobby und QR-Code), z. B. `https://quiz.example.de`. Leer: Beim Aufruf über `localhost` zeigt die Lobby automatisch die WLAN-Adresse des Rechners |
-| `HOST_PASSWORD` | leer | Ist es gesetzt, dürfen nur Personen mit Passwort Spiele starten. **Für jeden öffentlich erreichbaren Server setzen.** |
-| `TRUST_PROXY` | aus | `1` setzen, wenn ein Reverse Proxy davor läuft (für korrekte IP-Begrenzung und Origin-Prüfung) |
-| `ALLOWED_ORIGINS` | leer | Weitere erlaubte Origins, kommagetrennt (nur nötig bei abweichender Domain) |
-| `MAX_PLAYERS` | `200` | Spieler pro Spiel |
-| `MAX_GAMES` | `100` | Gleichzeitige Spiele pro Server |
-| `COUNTDOWN_MS` | `4000` | Lesezeit vor jeder Frage |
-
-## Betrieb
-
-**Hosting im Internet (später, z. B. Render):** siehe [PUBLISHING.md](PUBLISHING.md). Aktuell läuft leaqiz am Laptop, siehe oben.
-
-**Wichtig:** Spiele liegen nur im Arbeitsspeicher. Es darf **genau eine** Instanz laufen. Ein Neustart beendet laufende Spiele, die Quizze im Browser der Spielleitung bleiben erhalten.
-
-### Mit Docker
-
-```bash
-docker build -t leaqiz .
-docker run -d --name leaqiz -p 3000:3000 \
-  -e HOST_PASSWORD='bitte-ändern' -e TRUST_PROXY=1 \
-  --restart unless-stopped leaqiz
-```
-
-### HTTPS und Reverse Proxy
-
-Für den Einsatz im Internet HTTPS vorschalten. Der Proxy muss WebSockets durchreichen. Beispiel mit Caddy (holt Zertifikate automatisch):
-
-```
-quiz.example.de {
-    reverse_proxy 127.0.0.1:3000
-}
-```
-
-Bei nginx die Header `Upgrade` und `Connection` für den Pfad `/socket.io/` weiterleiten.
+| Schul- und Firmen-WLANs | Direktverbindungen und der TURN-Port 3478 sind dort oft gesperrt. Dann können Spieler nicht beitreten. **Vor dem ersten Einsatz im echten Netz testen.** Notlösung: mobile Daten |
+| Kostenlose PeerJS-Server | Vermittlung (0.peerjs.com) und TURN-Relais sind ein Gratis-Angebot des PeerJS-Projekts ohne Garantie für Verfügbarkeit |
+| Gruppengröße | Jede Verbindung läuft über den Browser der Spielleitung. Für Klassengröße gedacht, große Gruppen sind nicht getestet |
+| Tab der Spielleitung | Im Hintergrund drosseln Browser die Timer, Fragen können dann etwas später schließen. Schließen des Tabs beendet das Spiel |
+| Kein Host-Passwort | Jede Person mit dem Link kann Spiele starten. Das betrifft nur eigene Spiele, keine fremden Daten |
 
 ## Datenschutz (DSGVO)
 
-*Technische Einordnung, keine Rechtsberatung.*
+*Technische Einordnung, keine Rechtsberatung.* leaqiz selbst speichert nichts auf einem Server. Spielname, Antworten und Punkte liegen nur im Browser der Spielleitung (Tab-Speicher) und verschwinden mit dem Spielende. Aber drei Fremddienste sehen IP-Adressen:
 
-| Daten | Wo | Wie lange |
+| Dienst | Was er sieht | Vertrag zur Auftragsverarbeitung |
 |---|---|---|
-| Spielname, Antworten, Punkte | Arbeitsspeicher des Servers | bis das Spiel geschlossen wird (spätestens 30 min nach Spielende, 15 min ohne Host oder 2 h ohne Aktivität) |
-| IP-Adresse | Arbeitsspeicher, nur bei falscher PIN (Schutz vor PIN-Raten) | 1–2 Minuten |
-| Wiederverbindungs-Token | `sessionStorage` im Browser | bis der Tab geschlossen wird |
-| Quizze | `localStorage` im Browser der Spielleitung | bis zum Löschen |
+| GitHub Pages (USA) | IP-Adressen beim Laden der Seite (laut GitHub zu Sicherheitszwecken) | über GitHub-Bedingungen |
+| PeerJS-Vermittlung und TURN (Betreiber: PeerJS-Projekt) | IP-Adressen, zufällige Kennungen. TURN leitet verschlüsselte Daten weiter | keiner |
+| Google STUN | IP-Adressen | keiner |
 
-- Keine Datenbank, keine Cookies, kein Tracking, keine externen Schriften oder CDNs. Alle Dateien kommen vom eigenen Server.
-- Die Anwendung schreibt keine Spielnamen oder IP-Adressen ins Log. **Prüfen:** Logs von Hoster und Reverse Proxy.
-- **Offen für den Betrieb:** Datenschutzerklärung, Impressum bei öffentlichem Angebot, Vertrag zur Auftragsverarbeitung mit dem Hoster, Hosting in der EU.
-- Empfehlung für Lehrkräfte: Kinder und Jugendliche sollen Spitznamen statt Klarnamen nutzen. Die Spielleitung kann unpassende Namen entfernen.
+Die Spieldaten selbst laufen verschlüsselt (WebRTC ist immer verschlüsselt). **Für den Einsatz mit Schülerinnen und Schülern** reicht das voraussichtlich nicht: vorher mit der bzw. dem Datenschutzbeauftragten klären. Ausweg für später: eigener Vermittlungs- und TURN-Server in der EU (Einstellung in `public/js/config.js`).
 
 ## Barrierefreiheit
 
-- Antworten unterscheiden sich durch Buchstabe A–D, Farbe und Text, nie nur durch Farbe.
-- Alle Farbkombinationen erreichen mindestens 4,5:1 Kontrast (WCAG AA).
-- Komplett per Tastatur bedienbar, sichtbarer Fokus. Spieler können mit 1–4 oder A–D antworten.
-- Screenreader-Ansagen bei Fragewechsel, Ergebnis und Endstand. Keine dekorativen Animationen, die einzige Bewegung ist der Zeitbalken.
-- Automatischer Test mit axe-core (WCAG 2.2 AA): 0 Befunde.
-- **Grenzen:** Ein automatischer Test findet nur einen Teil der Probleme. Ein manueller Test mit Screenreader (VoiceOver, TalkBack, NVDA) steht aus. Zeitdruck gehört zum Spielprinzip. Die Spielleitung kann bis zu 240 s pro Frage einstellen, eine Verlängerung für einzelne Personen gibt es nicht.
+- Antworten unterscheiden sich durch Buchstabe A–D, Farbe und Text, nie nur durch Farbe. Kontrast überall mindestens 4,5:1.
+- Komplett per Tastatur bedienbar. Spieler können mit 1–4 oder A–D antworten. Screenreader-Ansagen bei Fragewechsel und Ergebnis.
+- Automatischer Test mit axe-core (WCAG 2.2 AA): 0 Befunde. Ein manueller Screenreader-Test steht aus.
 
-## Sicherheit
+## Einrichtung GitHub Pages (einmalig)
 
-- Der Server prüft alle Eingaben und begrenzt Länge und Menge (Quiz max. 100 Fragen, Nachrichten max. 256 KB).
-- Spieler erhalten die richtige Antwort erst nach dem Schließen der Frage. Über die Entwicklertools lässt sich also nicht schummeln.
-- Antwortzeit und Punkte berechnet nur der Server.
-- Nutzertexte gelangen nur als Text ins Dokument (kein `innerHTML`). Dazu kommt eine strenge Content-Security-Policy.
-- Begrenzung bei falschen PINs (20 pro Minute und IP) und gegen Nachrichtenfluten pro Verbindung.
-- WebSocket-Verbindungen nur von der eigenen Domain. Tokens zufällig (128 Bit), Vergleich in konstanter Zeit.
-- CSV-Export entschärft Formeln (Schutz vor CSV-Injection).
+1. Repo auf **öffentlich** stellen: Settings → General → Danger Zone → *Change visibility*. GitHub Pages ist im Gratis-Plan nur für öffentliche Repos verfügbar.
+2. Settings → Pages → *Build and deployment* → Source: **GitHub Actions**.
+3. Unter Actions den letzten Lauf „Tests und GitHub Pages“ neu starten (*Re-run all jobs*).
+
+Danach veröffentlicht jeder Push auf `main` automatisch, aber nur, wenn die Tests grün sind.
+
+## Entwicklung
+
+```bash
+npm install
+npm run dev     # http://localhost:8080/leaqiz/host/  mit lokalem Vermittlungsserver, offline
+npm test        # Spiel-Logik und Host-Engine (Node)
+```
+
+```
+public/                 die veröffentlichte Seite
+  index.html            Spieler (Handy)
+  host/index.html       Spielleitung (Bibliothek, Editor, Beamer)
+  js/engine/            Spiel-Logik, Eingabeprüfung, Host-Engine
+  js/net.js             Direktverbindung (PeerJS)
+  js/config.js          Vermittlungsserver (leer = öffentlicher PeerJS-Server)
+dev/serve.js            lokaler Entwicklungsserver
+test/                   Tests (node:test)
+```
+
+Die frühere Variante mit eigenem Node.js-Server liegt im Git-Verlauf (Commit `875fb9e`).
 
 ## Quiz-Dateiformat
 
@@ -133,34 +111,10 @@ Bei nginx die Header `Upgrade` und `Connection` für den Pfad `/socket.io/` weit
 }
 ```
 
-`correct` enthält die Positionen der richtigen Antworten (ab 0). Erlaubte Zeitlimits: 5, 10, 20, 30, 45, 60, 90, 120, 240 Sekunden.
-
-## Aufbau
-
-```
-server.js          Start, Signale
-src/app.js         HTTP (statische Dateien, Sicherheits-Header) und WebSocket-Ereignisse, Timer, Aufräumen
-src/game.js        Spiel-Logik als reine Zustandsmaschine (ohne Netzwerk, testbar)
-src/validate.js    Prüfung und Bereinigung aller Eingaben
-public/host.html   Spielleitung: Bibliothek, Editor, Beamer-Ansicht
-public/index.html  Spieler-Ansicht (Handy)
-public/js/         Browser-Code; vendor/qrcode.js für den QR-Code
-test/              Unit- und Ende-zu-Ende-Tests (node:test)
-```
-
-## Nächste sinnvolle Schritte
-
-1. Pilot mit einer echten Gruppe im Zielnetz (Schul-WLAN, Firmennetz)
-2. Weitere Fragetypen: Freitext, Schieberegler, Reihenfolge, Umfrage ohne Punkte
-3. Bilder zu Fragen
-4. Teammodus und selbstgesteuerte Aufgaben (ohne Live-Host)
-5. Gemeinsame Quiz-Ablage für ein Team (braucht Accounts und Datenbank)
-6. Musik und Soundeffekte (abschaltbar)
-
 ## Lizenzen von Drittkomponenten
 
-- Socket.IO, MIT-Lizenz
+- PeerJS, MIT-Lizenz (`public/js/vendor/peerjs.min.js`, `LICENSE-peerjs.txt`)
 - qrcode-generator von Kazuhiko Arase, MIT-Lizenz (`public/js/vendor/qrcode.js`)
 - Schrift Archivo, SIL Open Font License 1.1 (`public/fonts/OFL-Archivo.txt`)
 
-Die Lizenz des eigenen Codes ist noch nicht festgelegt (`UNLICENSED`).
+Die Lizenz des eigenen Codes ist noch nicht festgelegt. Ein öffentliches Repo ohne Lizenz heißt: einsehbar, aber nicht zur Weiterverwendung freigegeben.

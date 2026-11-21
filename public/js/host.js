@@ -1,16 +1,14 @@
 'use strict';
 
 (function () {
-  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, store, toast, announce, emit, toCsv, download, keepAwake } = window.LQ;
+  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, store, toast, announce, toCsv, download, keepAwake } = window.LQ;
   const local = store('local');
   const session = store('session');
   const LIB_KEY = 'leaqiz.quizzes';
   const GAME_KEY = 'leaqiz.hostGame';
-  const PW_KEY = 'leaqiz.hostPassword';
   const TIME_LIMITS = [5, 10, 20, 30, 45, 60, 90, 120, 240];
 
   const root = document.getElementById('app');
-  const socket = io({ reconnectionDelayMax: 4000 });
 
   let mode = 'library'; // library | editor | game
   let draft = null; // Quiz im Editor
@@ -19,8 +17,6 @@
   let renderedKey = '';
   let refs = {};
   let stopTimer = () => {};
-  let endingByMe = false;
-  let joinBase = null; // Adresse für Spieler; null = eigene Adresse des Browsers
 
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
@@ -432,6 +428,55 @@
   }
 
   // ---------- Spiel starten und fortsetzen ----------
+  // Dieser Browser ist der Spiel-Server: Host-Engine + Direktverbindung zu den Spielern.
+
+  const { HostEngine, randomPin } = window.LeaqizEngine;
+  const { validateQuiz } = window.LeaqizValidate;
+  let engine = null;
+  let link = null;
+  let netOnline = true;
+
+  function engineHooks() {
+    return {
+      send: (connId, msg) => {
+        if (link) link.send(connId, msg);
+      },
+      onChange: (view) => {
+        saveGame();
+        if (mode === 'game') renderGame(view);
+      },
+    };
+  }
+
+  // Spielstand im Tab sichern, damit Neuladen das Spiel nicht beendet
+  function saveGame() {
+    if (engine && !engine.closed) session.set(GAME_KEY, engine.snapshot());
+  }
+
+  function openLink(pin) {
+    link = new window.LQNet.HostLink({
+      pin,
+      onConnection: (id) => engine && engine.attach(id),
+      onData: (id, msg) => engine && engine.handle(id, msg),
+      onClose: (id) => engine && engine.detach(id),
+      onStatus: (status) => {
+        netOnline = status === 'online';
+        updateNetStatus();
+      },
+    });
+    return link.open();
+  }
+
+  function dropLink() {
+    if (link) link.destroy();
+    link = null;
+  }
+
+  function busy(text) {
+    mode = 'busy';
+    renderedKey = '';
+    root.replaceChildren(h('main', { class: 'work' }, h('p', { class: 'lead', role: 'status', text })));
+  }
 
   async function startGame(quiz) {
     const found = problems(quiz);
@@ -441,87 +486,88 @@
       setTimeout(() => saveDraft(false), 0);
       return;
     }
-    const payload = toPayload(quiz);
-    let res = await emit(socket, 'host:create', { quiz: payload, password: session.get(PW_KEY, '') });
-    if (!res.ok && res.code === 'password') {
-      const pw = await askPassword(session.get(PW_KEY) ? 'Das Passwort stimmt nicht.' : '');
-      if (pw === null) return;
-      session.set(PW_KEY, pw);
-      return startGame(quiz);
+    let payload;
+    try {
+      payload = validateQuiz(toPayload(quiz));
+    } catch (err) {
+      toast(err.message);
+      return;
     }
-    if (!res.ok) return toast(res.error);
-    joinBase = res.joinUrl;
-    session.set(GAME_KEY, { pin: res.pin, hostToken: res.hostToken, title: payload.title, questions: payload.questions.length });
-    mode = 'game';
-    keepAwake(true);
-  }
-
-  function askPassword(errorText) {
-    const dialog = document.getElementById('pw-dialog');
-    const input = document.getElementById('pw-input');
-    document.getElementById('pw-error').textContent = errorText || '';
-    input.value = '';
-    return new Promise((resolve) => {
-      dialog.addEventListener(
-        'close',
-        () => {
-          resolve(dialog.returnValue === 'ok' && input.value ? input.value : null);
-        },
-        { once: true },
-      );
-      dialog.showModal();
-      input.focus();
-    });
-  }
-
-  socket.on('connect', async () => {
-    const saved = session.get(GAME_KEY);
-    if (!saved) return;
-    const res = await emit(socket, 'host:resume', saved);
-    if (!res.ok) {
-      session.remove(GAME_KEY);
-      toast(res.error);
-      if (mode === 'game') renderLibrary();
-    } else {
-      joinBase = res.joinUrl;
+    busy('Spiel wird vorbereitet …');
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const pin = randomPin();
+      try {
+        await openLink(pin);
+      } catch (err) {
+        dropLink();
+        if (err.code === 'taken') continue; // PIN schon vergeben: neue würfeln
+        toast('Keine Verbindung zum Vermittlungsserver. Bitte Internet prüfen und erneut versuchen.');
+        renderLibrary();
+        return;
+      }
+      engine = HostEngine.create({ quiz: payload, pin, ...engineHooks() });
       mode = 'game';
       keepAwake(true);
+      saveGame();
+      renderGame(engine.hostView());
+      return;
     }
-  });
-
-  socket.on('disconnect', () => {
-    if (mode === 'game') toast('Verbindung zum Server unterbrochen. Ich verbinde neu …');
-  });
-
-  socket.on('host:state', (s) => {
-    if (mode !== 'game') mode = 'game';
-    renderGame(s);
-  });
-
-  socket.on('game:closed', ({ reason }) => {
-    session.remove(GAME_KEY);
-    game = null;
-    if (!endingByMe) toast(reason || 'Das Spiel wurde beendet.');
-    endingByMe = false;
+    toast('Gerade ist keine Spiel-PIN frei. Bitte erneut versuchen.');
     renderLibrary();
-  });
-
-  async function next(button) {
-    if (button) button.disabled = true;
-    const res = await emit(socket, 'host:next');
-    if (button) button.disabled = false;
-    if (!res.ok) toast(res.error);
   }
 
-  async function endGame(ask) {
-    if (ask && !window.confirm('Spiel wirklich beenden? Alle Spieler werden getrennt.')) return;
-    endingByMe = true;
-    const res = await emit(socket, 'host:end');
-    if (!res.ok) {
-      endingByMe = false;
+  async function resumeGame(snapshot) {
+    try {
+      engine = HostEngine.restore(snapshot, engineHooks());
+    } catch {
       session.remove(GAME_KEY);
       renderLibrary();
+      return;
     }
+    mode = 'game';
+    netOnline = false;
+    renderGame(engine.hostView());
+    updateNetStatus();
+    // Die PIN kann nach dem Neuladen noch kurz belegt sein: bis zu 1 Minute erneut versuchen
+    for (let i = 0; i < 20 && engine; i += 1) {
+      try {
+        await openLink(engine.pin);
+        keepAwake(true);
+        return;
+      } catch {
+        dropLink();
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
+    if (engine) toast('Das Spiel ist nicht mehr erreichbar. Bitte neu starten.');
+  }
+
+  function updateNetStatus() {
+    const el = document.getElementById('net-status');
+    if (!el) return;
+    el.textContent = netOnline ? '' : 'Vermittlung getrennt: Neue Spieler können gerade nicht beitreten. Ich verbinde neu …';
+  }
+
+  function next() {
+    if (!engine) return;
+    try {
+      engine.next();
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+
+  function endGame(ask) {
+    if (ask && !window.confirm('Spiel wirklich beenden? Alle Spieler werden getrennt.')) return;
+    if (engine) engine.end();
+    engine = null;
+    game = null;
+    session.remove(GAME_KEY);
+    // Kurz warten, damit die Abschiedsnachricht bei den Spielern ankommt
+    const old = link;
+    link = null;
+    setTimeout(() => old && old.destroy(), 800);
+    renderLibrary();
   }
 
   function toggleFullscreen() {
@@ -554,8 +600,10 @@
         h('button', { class: 'btn btn--small btn--danger', type: 'button', text: 'Spiel beenden', onclick: () => endGame(true) }),
       ),
     );
+    const netStatus = h('p', { class: 'banner', id: 'net-status', role: 'status' });
     const stage = h('main', { class: 'stage' });
-    root.replaceChildren(header, stage);
+    root.replaceChildren(header, netStatus, stage);
+    updateNetStatus();
 
     switch (s.state) {
       case 'lobby':
@@ -602,12 +650,11 @@
   }
 
   function stageLobby(stage, s) {
-    // Bei Aufruf über localhost liefert der Server die WLAN-Adresse des Laptops.
-    // Leerer String: kein Netzwerk gefunden.
-    const base = joinBase === null || joinBase === undefined ? location.origin : joinBase;
-    const noNetwork = base === '';
-    const joinUrl = `${base}/?pin=${s.pin}`;
-    const shownHost = noNetwork ? '' : new URL(base).host;
+    // Spieler-Seite liegt eine Ebene über /host/ (funktioniert auch unter github.io/leaqiz/)
+    const appUrl = new URL('../', location.href);
+    const noNetwork = false;
+    const joinUrl = `${appUrl.href}?pin=${s.pin}`;
+    const shownHost = (appUrl.host + appUrl.pathname).replace(/\/$/, '');
     let qrImg = null;
     if (!noNetwork) {
       try {
@@ -669,9 +716,12 @@
           'aria-label': `${p.nickname} entfernen`,
           title: 'Entfernen',
           text: '×',
-          onclick: async () => {
-            const res = await emit(socket, 'host:kick', { playerId: p.id });
-            if (!res.ok) toast(res.error);
+          onclick: () => {
+            try {
+              if (engine) engine.kick(p.id);
+            } catch (err) {
+              toast(err.message);
+            }
           },
         }),
       ),
@@ -829,16 +879,17 @@
   });
 
   window.addEventListener('beforeunload', (e) => {
-    if (mode === 'editor' && dirty) {
+    // Neuladen setzt das Spiel fort, Schließen beendet es: deshalb nachfragen
+    if ((mode === 'editor' && dirty) || (mode === 'game' && engine)) {
       e.preventDefault();
       e.returnValue = '';
     }
   });
 
   // Start: laufendes Spiel fortsetzen oder Bibliothek zeigen
-  if (session.get(GAME_KEY)) {
-    mode = 'game';
-    root.replaceChildren(h('main', { class: 'work' }, h('p', { class: 'lead', text: 'Verbinde mit deinem laufenden Spiel …' })));
+  const savedGame = session.get(GAME_KEY);
+  if (savedGame && savedGame.v === 1) {
+    resumeGame(savedGame);
   } else {
     renderLibrary();
   }

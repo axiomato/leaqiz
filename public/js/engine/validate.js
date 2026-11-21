@@ -1,6 +1,14 @@
+// Eingabeprüfung. Läuft im Browser (window.LeaqizValidate) und in Node (require):
+// eine Quelle für Host-Engine und Tests.
+(function (root, factory) {
+  'use strict';
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.LeaqizValidate = api;
+})(typeof self !== 'undefined' ? self : globalThis, function () {
 'use strict';
 
-// Eingaben vom Client sind nie vertrauenswürdig: alles hier normalisieren und begrenzen.
+// Eingaben von Spielern sind nie vertrauenswürdig: alles hier normalisieren und begrenzen.
 
 const LIMITS = Object.freeze({
   titleMax: 120,
@@ -88,7 +96,7 @@ function isPin(value) {
   return typeof value === 'string' && /^\d{6}$/.test(value);
 }
 
-module.exports = {
+return {
   LIMITS,
   TIME_LIMITS,
   TYPES,
@@ -98,3 +106,4 @@ module.exports = {
   validateNickname,
   isPin,
 };
+});

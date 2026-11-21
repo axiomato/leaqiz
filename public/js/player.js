@@ -6,9 +6,10 @@
   const SESSION_KEY = 'leaqiz.player';
   const app = document.getElementById('app');
 
-  const socket = io({ reconnectionDelayMax: 4000 });
+  // Direktverbindung zum Browser der Spielleitung (siehe net.js)
+  const socket = new window.LQNet.PlayerLink();
 
-  let state = null; // letzter Spielzustand vom Server
+  let state = null; // letzter Spielzustand von der Spielleitung
   let joinStep = { pin: '', title: '' };
   let renderedKey = '';
   let stopTimer = () => {};
@@ -42,7 +43,15 @@
     render();
   });
 
+  socket.on('gave-up', () => {
+    session.remove(SESSION_KEY);
+    state = null;
+    stopTimer();
+    renderMessage('Verbindung verloren', 'Die Verbindung zum Spiel ist abgebrochen. Frag die Spielleitung, ob das Spiel noch läuft, und tritt neu bei.');
+  });
+
   socket.on('game:closed', ({ reason }) => {
+    socket.stop();
     session.remove(SESSION_KEY);
     state = null;
     stopTimer();
@@ -131,7 +140,18 @@
       renderJoin('Die PIN hat 6 Ziffern.');
       return;
     }
-    const res = await emit(socket, 'player:check', { pin });
+    const busy = document.querySelector('.join-form button[type="submit"]');
+    if (busy) {
+      busy.disabled = true;
+      busy.textContent = 'Verbinde …';
+    }
+    let res;
+    try {
+      await socket.connect(pin);
+      res = await emit(socket, 'player:check', { pin });
+    } catch (err) {
+      res = { ok: false, error: connectError(err) };
+    }
     if (!res.ok) {
       joinStep = { pin: '', title: '' };
       if (fromLink) history.replaceState(null, '', location.pathname);
@@ -378,9 +398,19 @@
     announce(`${title}. Platz ${s.rank} von ${s.playerCount} mit ${num(s.score)} Punkten.`);
   }
 
-  // Erste Ansicht sofort zeigen, nicht erst nach dem Verbindungsaufbau.
-  if (session.get(SESSION_KEY)) {
+  function connectError(err) {
+    if (err && err.code === 'no-game') return 'Zu dieser PIN läuft kein Spiel. Bitte prüfen.';
+    return 'Keine Verbindung zum Spiel. Prüfe das Internet am Handy. Manche WLANs sperren Direktverbindungen: dann mobile Daten probieren.';
+  }
+
+  // Erste Ansicht: laufendes Spiel fortsetzen oder PIN abfragen
+  const saved = session.get(SESSION_KEY);
+  if (saved && saved.pin && saved.token) {
     frame(h('div', { class: 'screen__center' }, h('p', { class: 'lead', text: 'Verbinde mit deinem Spiel …' })));
+    socket.connect(saved.pin).catch((err) => {
+      session.remove(SESSION_KEY);
+      renderJoin(connectError(err));
+    });
   } else {
     renderJoin();
   }

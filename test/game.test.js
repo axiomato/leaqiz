@@ -2,8 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { Game, GameError, scoreAnswer, rankPlayers } = require('../src/game');
-const { validateQuiz, validateNickname, ValidationError } = require('../src/validate');
+const { Game, GameError, scoreAnswer, rankPlayers } = require('../public/js/engine/game.js');
+const { validateQuiz, validateNickname, ValidationError } = require('../public/js/engine/validate.js');
 
 const quiz = validateQuiz({
   title: 'Test',
