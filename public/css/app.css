@@ -1744,7 +1744,10 @@ textarea.input {
   z-index: 10;
   left: 0;
   right: 0;
-  bottom: 0;
+  /* am unteren Rand der sichtbaren Fläche (nicht unter der Browserleiste) */
+  top: 100vh;
+  top: 100dvh;
+  transform: translateY(-100%);
   padding: var(--s-1) 0 calc(var(--s-1) + env(safe-area-inset-bottom));
   border-top: 2px solid var(--line);
   background: rgba(255, 255, 255, 0.96);
@@ -2224,7 +2227,9 @@ html.embedded .screen__top {
   z-index: 20;
   top: 0;
   right: 0;
-  bottom: 0;
+  /* Sichtbare Höhe statt bottom: 0 – Safari (iOS) legt den unteren Rand sonst unter seine Leiste */
+  height: 100vh;
+  height: 100dvh;
   width: 400px;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -2296,7 +2301,9 @@ html.embedded .screen__top {
     z-index: 21;
     left: 16px;
     right: 16px;
-    bottom: 16px;
+    top: calc(100vh - 16px);
+    top: calc(100dvh - 16px);
+    transform: translateY(-100%);
     min-height: 56px;
     border: 2px solid #fff;
     background: rgba(18, 24, 38, 0.94);
