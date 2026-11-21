@@ -601,6 +601,7 @@
     if (engine) engine.end();
     if (demo) demo.bots.stop();
     demo = null;
+    closeDock();
     engine = null;
     game = null;
     session.remove(GAME_KEY);
@@ -624,6 +625,7 @@
 
   function setPhase(phase, tone, floodIndex) {
     document.documentElement.dataset.view = phase === 'work' || phase === 'home' ? 'work' : 'stage';
+    document.documentElement.dataset.tone = tone;
     root.dataset.phase = phase;
     root.dataset.tone = tone;
     if (floodIndex === null || floodIndex === undefined) delete root.dataset.flood;
@@ -635,6 +637,7 @@
     const key = `${s.state}|${s.qIndex}`;
     if (key === renderedKey) return updateLive(s);
     renderedKey = key;
+    followPhase(s.state);
     stopTimer();
     stopTimer = () => {};
     refs = {};
@@ -651,7 +654,7 @@
         { class: 'bar__actions' },
         h('span', { class: 'bar__pin' }, 'PIN ', h('strong', { text: formatPin(s.pin) })),
         soundButton(),
-        h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Vollbild', onclick: toggleFullscreen }),
+        h('button', { class: 'btn btn--quiet btn--small bar__fs', type: 'button', text: 'Vollbild', onclick: toggleFullscreen }),
         h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Spiel beenden', onclick: () => endGame(true) }),
       ),
     );
@@ -747,7 +750,7 @@
           { class: 'lobby__join', 'aria-label': 'Demo' },
           h('h1', { class: 'lobby__how', text: 'Demo mit simulierten Mitspielenden' }),
           h('p', { class: 'lobby__pin num-pin', 'aria-label': `PIN ${s.pin.split('').join(' ')}`, text: formatPin(s.pin) }),
-          h('div', { class: 'lobby__self' }, selfPlayLink(s.pin), h('p', { text: 'Öffnet die Handy-Ansicht in einem zweiten Fenster dieses Browsers.' })),
+          h('div', { class: 'lobby__self' }, selfPlayButton(s.pin), h('p', { text: 'Zeigt deine Handy-Ansicht neben der Leinwand.' })),
         )
       : h(
           'section',
@@ -768,20 +771,54 @@
     updatePlayers(s);
   }
 
-  // Demo: Spieleransicht im selben Browser öffnen (kleines Fenster, sonst neuer Tab)
-  function selfPlayLink(pin) {
-    const href = new URL(`../?pin=${pin}&demo=1`, location.href).href;
-    return h('a', {
-      class: 'btn btn--quiet',
-      href,
-      target: 'leaqiz-spieler',
-      rel: 'opener',
-      text: 'Selbst mitspielen',
-      onclick: (e) => {
-        const win = window.open(href, 'leaqiz-spieler', 'popup,width=400,height=820');
-        if (win) e.preventDefault();
-      },
-    });
+  // ---------- Demo: eigene Handy-Ansicht im selben Fenster ----------
+  // Die Spielerseite läuft eingebettet neben (breiter Bildschirm) oder über (Handy) der Leinwand.
+  // So bleiben beide aktiv: Browser pausieren Hintergrund-Tabs, besonders auf dem Handy.
+
+  let dock = null;
+  const narrow = () => window.matchMedia('(max-width: 1099px)').matches;
+
+  function setDockOpen(open) {
+    if (!dock) return;
+    document.documentElement.dataset.dock = open ? 'open' : 'closed';
+    dock.el.toggleAttribute('inert', !open && narrow());
+    if (open && narrow()) dock.back.focus({ preventScroll: true });
+  }
+
+  function openDock(pin) {
+    if (dock) return setDockOpen(true);
+    const src = new URL(`../?pin=${pin}&demo=1`, location.href).href;
+    const back = h('button', { class: 'btn btn--quiet btn--small dock__back', type: 'button', text: 'Zur Leinwand', onclick: () => setDockOpen(false) });
+    const close = h('button', { class: 'btn btn--quiet btn--small dock__close', type: 'button', text: 'Schließen', onclick: () => closeDock() });
+    const el = h(
+      'aside',
+      { class: 'dock', 'aria-label': 'Deine Handy-Ansicht' },
+      h('div', { class: 'dock__bar' }, h('span', { text: 'Dein Handy' }), back, close),
+      h('iframe', { class: 'dock__frame', title: 'Deine Handy-Ansicht', src }),
+    );
+    const toggle = h('button', { class: 'btn btn--primary dock__toggle', type: 'button', text: 'Mein Handy', onclick: () => setDockOpen(true) });
+    document.body.append(el, toggle);
+    dock = { el, toggle, back };
+    setDockOpen(true);
+  }
+
+  function closeDock() {
+    if (!dock) return;
+    dock.el.remove();
+    dock.toggle.remove();
+    dock = null;
+    delete document.documentElement.dataset.dock;
+  }
+
+  // Auf dem Handy automatisch wechseln: Fragen beantwortest du im Handy, Ergebnisse siehst du auf der Leinwand
+  function followPhase(state) {
+    if (!dock || !narrow()) return;
+    if (state === 'question') setDockOpen(true);
+    else if (state === 'reveal' || state === 'podium') setDockOpen(false);
+  }
+
+  function selfPlayButton(pin) {
+    return h('button', { class: 'btn btn--quiet', type: 'button', text: 'Selbst mitspielen', onclick: () => openDock(pin) });
   }
 
   function updatePlayers(s) {

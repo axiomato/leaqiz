@@ -76,6 +76,13 @@ html.host[data-view='work'] {
   font-size: 100%;
 }
 
+/* Demo mit eingeblendeter Handy-Ansicht: Bühne skaliert auf die verbleibende Breite */
+@media (min-width: 1100px) {
+  html.host[data-view='stage'][data-dock] {
+    font-size: clamp(14px, calc((100vw - 400px) * 0.011112), 30px);
+  }
+}
+
 [hidden] {
   display: none !important;
 }
@@ -1852,6 +1859,102 @@ body.player[data-flood='3'] {
 
 /* ---------- Kleine Bildschirme ---------- */
 
+/* ---------- Demo: eingebettete Handy-Ansicht ---------- */
+
+.dock {
+  position: fixed;
+  z-index: 20;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: var(--ink);
+  border-left: 2px solid rgba(255, 255, 255, 0.24);
+  color: #fff;
+  font-size: 16px;
+}
+
+.dock__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 8px 16px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.24);
+  font-weight: 700;
+}
+
+.dock__bar span {
+  margin-right: auto;
+}
+
+.dock__bar .btn {
+  min-height: 44px;
+  font-size: 16px;
+}
+
+.dock__frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--ink);
+}
+
+.dock__back,
+.dock__toggle {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  html[data-dock] #app {
+    margin-right: 400px;
+  }
+}
+
+/* Schmale Bildschirme: Handy-Ansicht liegt über der Leinwand, Wechsel per Knopf */
+@media (max-width: 1099px) {
+  .dock {
+    left: 0;
+    width: auto;
+    border-left: 0;
+    transition: transform 240ms ease-out;
+  }
+  html[data-dock='closed'] .dock {
+    visibility: hidden;
+    transform: translateY(100%);
+    transition: transform 240ms ease-out, visibility 0s 240ms;
+  }
+  .dock__back {
+    display: inline-flex;
+  }
+  .dock__close {
+    display: none;
+  }
+  /* Wechsel-Knopf als Leiste am unteren Rand; die Bühne macht ihm Platz */
+  html[data-dock='closed'] .dock__toggle {
+    display: flex;
+    position: fixed;
+    z-index: 21;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    min-height: 56px;
+    border: 2px solid #fff;
+    background: rgba(18, 24, 38, 0.94);
+    color: #fff;
+  }
+  /* Auf heller Bühne: Umriss in Tinte, damit er sich vom gefüllten Hauptknopf abhebt */
+  html[data-dock='closed'][data-tone='light'] .dock__toggle {
+    border-color: var(--ink);
+    background: rgba(244, 246, 249, 0.94);
+    color: var(--ink);
+  }
+  html[data-dock='closed'] #app {
+    padding-bottom: 88px;
+  }
+}
+
 @media (max-width: 760px) {
   .lobby,
   .reveal,
@@ -1890,6 +1993,183 @@ body.player[data-flood='3'] {
   }
   .stage {
     padding: var(--s-3) var(--s-2);
+  }
+
+  /* Leinwand auf dem Handy: normale Grundgröße, kleinere Bühnenschriften, eine Spalte */
+  html.host[data-view='stage'] {
+    font-size: 100%;
+  }
+  .host .bar {
+    gap: var(--s-2);
+  }
+  .host .bar__info,
+  .host .bar__pin,
+  .host .bar__fs {
+    display: none;
+  }
+  .host .bar__actions {
+    gap: var(--s-1);
+  }
+  .host .bar .btn--small {
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  .stage {
+    gap: var(--s-3);
+  }
+  .stage__actions {
+    flex-wrap: wrap;
+  }
+  .stage__actions .btn {
+    flex: 1 1 auto;
+  }
+  .btn--big {
+    min-height: 56px;
+    padding: var(--s-1) var(--s-3);
+    font-size: var(--t-0);
+  }
+  .stage-title {
+    font-size: var(--t-3);
+    font-stretch: 100%;
+  }
+  .stage {
+    padding-top: var(--s-4);
+  }
+  .board-wrap,
+  .awards-wrap {
+    gap: var(--s-2);
+    align-content: start;
+  }
+
+  .lobby {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+    align-content: start;
+  }
+  .lobby__how {
+    font-size: var(--t-1);
+  }
+  .lobby__pin {
+    font-size: var(--t-5);
+  }
+  .lobby__count .num {
+    font-size: var(--t-4);
+  }
+  .lobby__self {
+    flex-wrap: wrap;
+    gap: var(--s-2);
+  }
+  .lobby__self p,
+  .lobby__qr p {
+    font-size: var(--t-0);
+  }
+  .lobby__qr img {
+    width: 7rem;
+    height: 7rem;
+  }
+  .chip {
+    font-size: var(--t-0);
+  }
+
+  .countdown .q-text {
+    font-size: var(--t-3);
+  }
+  .double {
+    margin-bottom: var(--s-4);
+    font-size: var(--t-1);
+  }
+  .double__x {
+    font-size: var(--t-2);
+  }
+
+  .q-top {
+    gap: var(--s-2);
+  }
+  .q-text {
+    font-size: var(--t-2);
+  }
+  .q-timer__num {
+    font-size: var(--t-5);
+  }
+  .q-answered {
+    font-size: var(--t-0);
+  }
+  .question .opt {
+    gap: var(--s-2);
+    padding: var(--s-2);
+  }
+  .question .opt__text {
+    font-size: var(--t-1);
+  }
+
+  .reveal {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-4);
+    align-content: start;
+  }
+  .reveal__letter {
+    font-size: var(--t-7);
+  }
+  .reveal__answer {
+    font-size: var(--t-3);
+  }
+  .dist__row {
+    grid-template-columns: auto minmax(0, 1fr) 3rem;
+    font-size: var(--t-0);
+  }
+
+  .board__row {
+    grid-template-columns: 2.5rem minmax(0, 1fr) auto 5rem;
+    gap: var(--s-1);
+    padding: var(--s-1) var(--s-2);
+    font-size: var(--t-1);
+  }
+  .board__delta {
+    display: none;
+  }
+
+  .podium-wrap {
+    gap: var(--s-4);
+  }
+  .podium {
+    gap: var(--s-1);
+  }
+  .podium__name {
+    font-size: var(--t-1);
+  }
+  .podium__score {
+    font-size: var(--t-0);
+  }
+  .podium__col[data-place='1'] .podium__block {
+    height: 11rem;
+    font-size: var(--t-5);
+  }
+  .podium__col[data-place='2'] .podium__block {
+    height: 8rem;
+    font-size: var(--t-4);
+  }
+  .podium__col[data-place='3'] .podium__block {
+    height: 5.5rem;
+    font-size: var(--t-3);
+  }
+
+  .awards-wrap {
+    padding-top: var(--s-3);
+  }
+  .awards {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-1);
+  }
+  .award {
+    min-height: 0;
+    padding: var(--s-3);
+  }
+  .award__names {
+    font-size: var(--t-2);
+  }
+  .award__title,
+  .award__detail {
+    font-size: var(--t-0);
   }
 }
 
