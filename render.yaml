@@ -1,0 +1,19 @@
+# Render Blueprint für Quizrunde
+# Genau EINE Instanz: Spiele liegen im Arbeitsspeicher.
+services:
+  - type: web
+    name: quizrunde
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    # Erst deployen, wenn die Tests in GitHub Actions grün sind
+    autoDeployTrigger: checksPass
+    envVars:
+      # Render fragt den Wert beim ersten Einrichten ab. Nie ins Repo schreiben.
+      - key: HOST_PASSWORD
+        sync: false
+      - key: TRUST_PROXY
+        value: "1"
