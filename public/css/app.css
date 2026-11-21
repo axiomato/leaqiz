@@ -71,6 +71,10 @@ html.host {
   font-size: clamp(14px, 1.1112vw, 30px);
 }
 
+[hidden] {
+  display: none !important;
+}
+
 *,
 *::before,
 *::after {
@@ -799,7 +803,7 @@ textarea.input {
 }
 
 .stage-title {
-  font-size: var(--t-4);
+  font-size: var(--t-5);
   font-weight: 850;
   font-stretch: var(--wide);
   line-height: 1.1;
@@ -811,8 +815,9 @@ textarea.input {
 }
 
 .board__row {
+  position: relative;
   display: grid;
-  grid-template-columns: 4rem minmax(0, 1fr) auto 9rem;
+  grid-template-columns: 4rem minmax(0, 1fr) 5rem auto 9rem;
   gap: var(--s-3);
   align-items: center;
   padding: var(--s-2) var(--s-3);
@@ -840,7 +845,72 @@ textarea.input {
 }
 
 .board__name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* Serie ab 3 richtigen Antworten in Folge */
+.streak {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 0 var(--s-2) 0 var(--s-1);
+  border-radius: 999px;
+  background: var(--opt-1);
+  color: #fff;
+  font-size: var(--t-0);
+  font-weight: 850;
+  line-height: 2;
+}
+
+.flame {
+  width: 0.75em;
+  height: 1em;
+}
+
+.board__move {
+  color: var(--opt-0);
+  font-size: var(--t-1);
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.board__row:first-child .board__move {
+  color: #8fdde2;
+}
+
+/* Rangliste sortiert sich um: Zeilen gleiten von der alten an die neue Position */
+.board.is-sorting .board__row {
+  animation: board-move 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 250ms backwards;
+}
+
+.board.is-sorting .board__row.is-rising {
+  z-index: 2;
+}
+
+.board.is-sorting .board__row.is-new {
+  animation-name: board-in;
+}
+
+.board.is-sorting .board__move {
+  animation: pop 320ms 1150ms ease-out backwards;
+}
+
+@keyframes board-move {
+  from {
+    transform: translateY(var(--from, 0));
+  }
+}
+
+@keyframes board-in {
+  from {
+    transform: translateY(var(--from, 0));
+    opacity: 0;
+  }
 }
 
 .board__delta {
@@ -877,17 +947,139 @@ textarea.input {
   display: grid;
   gap: var(--s-1);
   text-align: center;
-  animation: rise 480ms ease-out backwards;
 }
 
-.podium__col[data-place='3'] {
-  animation-delay: 0ms;
+/* Finale: Plätze erscheinen nacheinander (gesteuert per Skript) */
+.podium.is-staged .podium__col {
+  visibility: hidden;
 }
-.podium__col[data-place='2'] {
-  animation-delay: 240ms;
+
+.podium.is-staged .podium__col.is-shown {
+  visibility: visible;
+  animation: rise 520ms ease-out backwards;
 }
-.podium__col[data-place='1'] {
-  animation-delay: 520ms;
+
+.podium.is-staged .podium__col[data-place='1'].is-shown {
+  animation: podium-win 760ms cubic-bezier(0.2, 1.3, 0.3, 1) backwards;
+}
+
+@keyframes podium-win {
+  from {
+    opacity: 0;
+    transform: translateY(48px) scale(0.92);
+  }
+}
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---------- Auszeichnungen ---------- */
+
+.awards-wrap {
+  display: grid;
+  align-content: center;
+  gap: var(--s-6);
+  width: min(100%, 64rem);
+  margin-inline: auto;
+}
+
+.awards-wrap .stage-title {
+  text-align: center;
+}
+
+.awards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.award {
+  --c: var(--opt-0);
+  display: grid;
+  align-content: start;
+  gap: var(--s-1);
+  min-height: 11rem;
+  padding: var(--s-4);
+  border-radius: var(--radius-m);
+  background: var(--c);
+  color: #fff;
+  visibility: hidden;
+}
+
+.award[data-i='1'] {
+  --c: var(--opt-1);
+}
+.award[data-i='2'] {
+  --c: var(--opt-2);
+}
+.award[data-i='3'] {
+  --c: var(--opt-3);
+}
+
+.award.is-shown {
+  visibility: visible;
+  animation: pop 420ms cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+
+.award__title,
+.award__detail {
+  font-size: var(--t-1);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.award__names {
+  font-size: var(--t-3);
+  font-weight: 850;
+  font-stretch: var(--wide);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Doppelte Punkte ---------- */
+
+.double {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-6);
+  padding: 0 var(--s-3) 0 var(--s-2);
+  border-radius: 999px;
+  background: var(--opt-1);
+  color: #fff;
+  font-size: var(--t-2);
+  font-weight: 850;
+  line-height: 1.5;
+  animation: pop 420ms 200ms cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+
+.double__x {
+  font-size: var(--t-4);
+  font-stretch: var(--wide);
+  line-height: 1.25;
+}
+
+.double--small {
+  justify-self: end;
+  margin: var(--s-1) 0 0;
+  padding: 0 var(--s-2) 0 var(--s-1);
+  font-size: var(--t-0);
+  animation: none;
+}
+
+.double--small .double__x {
+  font-size: var(--t-1);
+  line-height: 1.5;
 }
 
 .podium__name {
@@ -1079,6 +1271,10 @@ textarea.input {
   accent-color: var(--opt-0);
 }
 
+.check--line {
+  justify-self: start;
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -1252,7 +1448,7 @@ body.player[data-flood='3'] {
   font-weight: 700;
 }
 
-.play-head__meta .num {
+.play-head__meta > .num {
   color: #fff;
   font-size: var(--t-5);
   line-height: 1;
@@ -1376,6 +1572,72 @@ body.player[data-flood='3'] {
   font-size: var(--t-8);
   font-stretch: 100%;
   line-height: 0.8;
+}
+
+.play-head__info {
+  display: grid;
+  justify-items: start;
+  gap: var(--s-1);
+}
+
+.play-head__info .double--small,
+.result .double--small {
+  justify-self: start;
+  margin: 0;
+}
+
+.player .double:not(.double--small) {
+  font-size: var(--t-1);
+}
+
+.player .double:not(.double--small) .double__x {
+  font-size: var(--t-2);
+}
+
+.player[data-tone='flood'] .double {
+  background: #fff;
+  color: var(--ink);
+}
+
+.streak-line,
+.move-line {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.my-awards {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.my-awards__title {
+  font-size: var(--t-1);
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.my-awards__list {
+  display: grid;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.award--mini {
+  min-height: 0;
+  gap: 0;
+  padding: var(--s-2);
+}
+
+.award--mini .award__title,
+.award--mini .award__detail {
+  font-size: var(--t-0);
+}
+
+.award--mini .award__title {
+  font-weight: 850;
 }
 
 /* ---------- Verbindungstest ---------- */

@@ -72,8 +72,9 @@ function validateQuestion(raw, index) {
   if (type === 'truefalse' && correct.length !== 1) fail(`${label}: bei Wahr/Falsch genau eine richtige Antwort markieren.`);
 
   const timeLimit = TIME_LIMITS.includes(raw.timeLimit) ? raw.timeLimit : 20;
+  const double = raw.double === true;
 
-  return { type, text, options, correct, timeLimit };
+  return { type, text, options, correct, timeLimit, double };
 }
 
 function validateQuiz(raw) {

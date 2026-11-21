@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, store, toast, announce, emit, keepAwake } = window.LQ;
+  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, keepAwake } = window.LQ;
   const session = store('session');
   const SESSION_KEY = 'leaqiz.player';
   const app = document.getElementById('app');
@@ -299,13 +299,14 @@
       h(
         'div',
         { class: 'screen__center' },
+        s.question.double ? doubleBadge() : null,
         h('div', { class: 'q-head' }, h('p', { class: 'hint', text: progress(s) }), h('h1', { class: 'player-cd', text: s.question.text })),
         h('div', { class: 'timebar', 'aria-hidden': 'true' }, fill),
         h('p', { class: 'hint', text: 'Lies schon mal. Gleich kannst du antworten.' }),
       ),
     );
     stopTimer = startTimer({ remainingMs: s.remainingMs, totalMs: s.remainingMs, fillEl: fill });
-    announce(`${progress(s)}: ${s.question.text}`);
+    announce(`${s.question.double ? 'Doppelte Punkte. ' : ''}${progress(s)}: ${s.question.text}`);
   }
 
   // Controller: vier große Felder bis an den Rand
@@ -318,7 +319,12 @@
       grid.append(optionTile('button', text, i, { type: 'button', onclick: () => answer(i) }));
     });
     frame(
-      h('div', { class: 'play-head' }, h('p', { class: 'play-head__meta' }, h('span', { text: progress(s) }), counter), h('h1', { class: 'player-q', text: q.text })),
+      h(
+        'div',
+        { class: 'play-head' },
+        h('div', { class: 'play-head__meta' }, h('div', { class: 'play-head__info' }, h('p', { text: progress(s) }), q.double ? doubleBadge(true) : null), counter),
+        h('h1', { class: 'player-q', text: q.text }),
+      ),
       grid,
     );
     app.classList.add('screen--play');
@@ -392,7 +398,9 @@
           { class: 'result' },
           h('h1', { class: 'title', text: headline }),
           h('p', { class: 'result__points num', text: `+${num(r.points)}` }),
-          r.correct && r.streak > 1 ? h('p', { class: 'lead', text: `${r.streak} richtige Antworten in Folge` }) : null,
+          r.correct && r.double ? doubleBadge(true) : null,
+          r.correct && r.streak > 1 ? h('p', { class: 'lead streak-line' }, r.streak >= 3 ? flameIcon() : null, `${r.streak} richtige Antworten in Folge`) : null,
+          r.move > 0 ? h('p', { class: 'lead move-line' }, h('span', { 'aria-hidden': 'true', text: '▲ ' }), `${r.move} ${r.move === 1 ? 'Platz' : 'Plätze'} nach vorn`) : null,
           answerWas,
         ),
         h(
@@ -424,10 +432,34 @@
           h('div', null, h('dt', { text: 'Endstand' }), h('dd', { text: num(s.score) })),
           h('div', null, h('dt', { text: 'Platz' }), h('dd', { text: `${s.rank} / ${s.playerCount}` })),
         ),
+        myAwards(s.awards),
         h('p', { class: 'hint', text: 'Danke fürs Mitspielen.' }),
       ),
     );
-    announce(`${title}. Platz ${s.rank} von ${s.playerCount} mit ${num(s.score)} Punkten.`);
+    const names = (s.awards || []).map((a) => awardTitle(a.key));
+    announce(`${title}. Platz ${s.rank} von ${s.playerCount} mit ${num(s.score)} Punkten.${names.length ? ` Auszeichnungen: ${names.join(', ')}.` : ''}`);
+  }
+
+  // Eigene Auszeichnungen in der festen Farbe jeder Auszeichnung
+  function myAwards(list) {
+    if (!Array.isArray(list) || !list.length) return null;
+    return h(
+      'section',
+      { class: 'my-awards', 'aria-labelledby': 'my-awards-title' },
+      h('h2', { class: 'my-awards__title', id: 'my-awards-title', text: list.length === 1 ? 'Deine Auszeichnung' : 'Deine Auszeichnungen' }),
+      h(
+        'ul',
+        { class: 'my-awards__list' },
+        list.map((a) =>
+          h(
+            'li',
+            { class: 'award award--mini is-shown', dataset: { i: String(awardColor(a.key)) } },
+            h('p', { class: 'award__title', text: awardTitle(a.key) }),
+            h('p', { class: 'award__detail', text: awardDetail(a) + (a.shared > 0 ? `, geteilt mit ${a.shared} ${a.shared === 1 ? 'anderen Person' : 'anderen'}` : '') }),
+          ),
+        ),
+      ),
+    );
   }
 
   // Fehlertexte nach Stufe: V = Vermittlung, D = Direktverbindung. Der Code hilft bei Rückfragen.

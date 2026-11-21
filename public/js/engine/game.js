@@ -33,13 +33,44 @@ function safeEqual(a, b) {
 }
 
 // Punkte: 1000 bei sofortiger, 500 bei Antwort in letzter Sekunde, linear dazwischen.
-// Serien-Bonus ab der zweiten richtigen Antwort in Folge.
-function scoreAnswer({ correct, elapsedMs, limitMs, streak }) {
+// Serien-Bonus ab der zweiten richtigen Antwort in Folge. Doppelte-Punkte-Fragen verdoppeln die Summe.
+function scoreAnswer({ correct, elapsedMs, limitMs, streak, double = false }) {
   if (!correct) return 0;
   const ratio = limitMs > 0 ? Math.min(Math.max(elapsedMs / limitMs, 0), 1) : 1;
   const base = Math.round(MAX_POINTS - (MAX_POINTS - MIN_POINTS) * ratio);
   const bonus = Math.min(Math.max(streak - 1, 0) * STREAK_STEP, STREAK_MAX);
-  return base + bonus;
+  return (base + bonus) * (double ? 2 : 1);
+}
+
+// Auszeichnungen am Spielende. Jede nur, wenn sie etwas aussagt; Gleichstand = mehrere Gewinner.
+const AWARD_MIN = Object.freeze({ streak: 2, jump: 1, perfectQuestions: 2 });
+
+function computeAwards(players, playedCount) {
+  const list = [...players];
+  const best = (key, valueOf, better, min) => {
+    let top = null;
+    for (const p of list) {
+      const v = valueOf(p);
+      if (v == null || (min != null && v < min)) continue;
+      if (top === null || better(v, top)) top = v;
+    }
+    if (top === null) return null;
+    const winners = list.filter((p) => valueOf(p) === top).map((p) => ({ id: p.id, nickname: p.nickname }));
+    return { key, value: top, winners };
+  };
+  const awards = [
+    best('fastest', (p) => (p.fastestMs == null ? null : p.fastestMs), (a, b) => a < b, null),
+    best('streak', (p) => p.bestStreak || 0, (a, b) => a > b, AWARD_MIN.streak),
+    best('jump', (p) => p.bestJump || 0, (a, b) => a > b, AWARD_MIN.jump),
+  ];
+  if (playedCount >= AWARD_MIN.perfectQuestions) {
+    const perfect = list.filter((p) => p.correctCount === playedCount).map((p) => ({ id: p.id, nickname: p.nickname }));
+    if (perfect.length) awards.push({ key: 'perfect', value: playedCount, winners: perfect });
+  }
+  return awards.filter(Boolean).map((a) => ({
+    ...a,
+    winners: a.winners.sort((x, y) => x.nickname.localeCompare(y.nickname, 'de')),
+  }));
 }
 
 // Wettkampf-Rangfolge (1, 2, 2, 4). Bei Gleichstand alphabetisch für eine stabile Anzeige.
@@ -106,6 +137,9 @@ class Game {
       nickname,
       score: 0,
       streak: 0,
+      bestStreak: 0,
+      bestJump: 0,
+      fastestMs: null, // schnellste richtige Antwort
       correctCount: 0,
       last: null, // Ergebnis der letzten Frage
       answers: [],
@@ -192,16 +226,29 @@ class Game {
   closeQuestion(now) {
     if (this.state !== 'question') throw new GameError('Es läuft gerade keine Frage.');
     const q = this.question;
-    const before = new Map(rankPlayers(this.players.values()).map((r) => [r.id, r.rank]));
+    const double = Boolean(q.double);
+    const before = new Map(rankPlayers(this.players.values()).map((r, i) => [r.id, { rank: r.rank, pos: i }]));
     for (const p of this.players.values()) {
       const a = this.round.answers.get(p.id);
       const correct = Boolean(a) && q.correct.includes(a.choice);
       p.streak = correct ? p.streak + 1 : 0;
-      const points = scoreAnswer({ correct, elapsedMs: a ? a.elapsedMs : 0, limitMs: this.round.limitMs, streak: p.streak });
-      if (correct) p.correctCount += 1;
+      p.bestStreak = Math.max(p.bestStreak || 0, p.streak);
+      const points = scoreAnswer({ correct, elapsedMs: a ? a.elapsedMs : 0, limitMs: this.round.limitMs, streak: p.streak, double });
+      if (correct) {
+        p.correctCount += 1;
+        if (p.fastestMs == null || a.elapsedMs < p.fastestMs) p.fastestMs = a.elapsedMs;
+      }
       p.score += points;
       p.answers[this.qIndex] = a ? { choice: a.choice, elapsedMs: a.elapsedMs, correct, points } : null;
-      p.last = { answered: Boolean(a), choice: a ? a.choice : null, correct, points, streak: p.streak, rankBefore: before.get(p.id) };
+      const b = before.get(p.id);
+      p.last = { answered: Boolean(a), choice: a ? a.choice : null, correct, points, double, streak: p.streak, rankBefore: b.rank, posBefore: b.pos };
+    }
+    // Rangbewegung erst ab der zweiten Frage: vor der ersten stehen alle gleichauf.
+    for (const r of rankPlayers(this.players.values())) {
+      const p = this.players.get(r.id);
+      p.last.rankAfter = r.rank;
+      p.last.move = this.qIndex > 0 ? p.last.rankBefore - r.rank : 0;
+      p.bestJump = Math.max(p.bestJump || 0, p.last.move);
     }
     this.state = 'reveal';
     this.touch(now);
@@ -278,18 +325,27 @@ class Game {
       report: null,
     };
     if (q && this.state !== 'lobby' && this.state !== 'podium') {
-      view.question = { type: q.type, text: q.text, options: q.options, timeLimit: q.timeLimit };
+      view.question = { type: q.type, text: q.text, options: q.options, timeLimit: q.timeLimit, double: Boolean(q.double) };
       if (this.state === 'reveal' || this.state === 'leaderboard') view.question.correct = q.correct;
     }
     if (this.state === 'reveal') view.counts = this.answerCounts();
     if (this.state === 'leaderboard') {
       view.leaderboard = ranking.slice(0, 5).map((r) => {
         const p = this.players.get(r.id);
-        return { ...r, delta: p.last ? p.last.points : 0, streak: p.streak };
+        const last = p.last || {};
+        return {
+          ...r,
+          delta: last.points || 0,
+          streak: p.streak,
+          move: last.move || 0,
+          // Position in der vorigen Rangliste (für die Umsortier-Animation)
+          posBefore: this.qIndex > 0 && Number.isInteger(last.posBefore) ? last.posBefore : null,
+        };
       });
     }
     if (this.state === 'podium') {
       view.podium = ranking.filter((r) => r.rank <= 3);
+      view.awards = this.awards();
       view.report = this.report();
     }
     return view;
@@ -322,7 +378,7 @@ class Game {
     };
     // Richtige Antworten erst nach dem Schließen der Frage senden (kein Schummeln über DevTools).
     if (q && (this.state === 'countdown' || this.state === 'question' || this.state === 'reveal' || this.state === 'leaderboard')) {
-      view.question = { type: q.type, text: q.text, options: q.options, timeLimit: q.timeLimit };
+      view.question = { type: q.type, text: q.text, options: q.options, timeLimit: q.timeLimit, double: Boolean(q.double) };
       if (this.state === 'reveal' || this.state === 'leaderboard') view.question.correct = q.correct;
     }
     if (this.state === 'question') view.answered = this.round.answers.has(playerId);
@@ -333,8 +389,24 @@ class Game {
       const above = ranking[idx - 1];
       if (above.score > p.score) view.behind = { nickname: above.nickname, gap: above.score - p.score };
     }
-    if (this.state === 'podium') view.podium = ranking.filter((r) => r.rank <= 3);
+    if (this.state === 'podium') {
+      view.podium = ranking.filter((r) => r.rank <= 3);
+      // Nur die eigenen Auszeichnungen, ohne Namen anderer
+      view.awards = this.awards()
+        .filter((a) => a.winners.some((w) => w.id === playerId))
+        .map((a) => ({ key: a.key, value: a.value, shared: a.winners.length - 1 }));
+    }
     return view;
+  }
+
+  playedCount() {
+    // Gespielt = geschlossene Fragen. Im Podium ist auch die letzte geschlossen.
+    if (this.qIndex < 0) return 0;
+    return this.state === 'countdown' || this.state === 'question' ? this.qIndex : this.qIndex + 1;
+  }
+
+  awards() {
+    return computeAwards(this.players.values(), this.playedCount());
   }
 
   // Auswertung für den CSV-Export des Hosts.
@@ -394,5 +466,5 @@ Game.fromJSON = function fromJSON(data, now) {
   return g;
 };
 
-return { Game, GameError, scoreAnswer, rankPlayers, randomToken, safeEqual, LATE_GRACE_MS };
+return { Game, GameError, scoreAnswer, rankPlayers, computeAwards, randomToken, safeEqual, LATE_GRACE_MS, AWARD_MIN };
 });

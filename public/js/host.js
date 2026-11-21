@@ -1,7 +1,8 @@
 'use strict';
 
 (function () {
-  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, store, toast, announce, toCsv, download, keepAwake } = window.LQ;
+  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, toCsv, download, keepAwake } = window.LQ;
+  const FX = window.LQFX;
   const local = store('local');
   const session = store('session');
   const LIB_KEY = 'leaqiz.quizzes';
@@ -33,7 +34,7 @@
         { type: 'quiz', text: 'Welcher Planet ist der Sonne am nächsten?', options: ['Venus', 'Merkur', 'Mars', 'Erde'], correct: [1], timeLimit: 20 },
         { type: 'truefalse', text: 'Ein Oktopus hat drei Herzen.', options: ['Wahr', 'Falsch'], correct: [0], timeLimit: 10 },
         { type: 'quiz', text: 'Wie viele Bundesländer hat Deutschland?', options: ['14', '15', '16', '17'], correct: [2], timeLimit: 20 },
-        { type: 'quiz', text: 'Welches Element hat das chemische Symbol Fe?', options: ['Fluor', 'Gold', 'Blei', 'Eisen'], correct: [3], timeLimit: 20 },
+        { type: 'quiz', text: 'Welches Element hat das chemische Symbol Fe?', options: ['Fluor', 'Gold', 'Blei', 'Eisen'], correct: [3], timeLimit: 20, double: true },
         { type: 'truefalse', text: 'Die Chinesische Mauer ist vom Mond aus mit bloßem Auge zu sehen.', options: ['Wahr', 'Falsch'], correct: [1], timeLimit: 10 },
         { type: 'quiz', text: 'Wer schrieb „Faust“?', options: ['Friedrich Schiller', 'Johann Wolfgang von Goethe', 'Gotthold Ephraim Lessing', 'Heinrich von Kleist'], correct: [1], timeLimit: 20 },
       ],
@@ -84,7 +85,7 @@
   // Leere Antwortfelder entfernen und richtige Antworten neu zuordnen.
   function cleanQuestion(q) {
     if (q.type === 'truefalse') {
-      return { type: 'truefalse', text: q.text.trim(), options: ['Wahr', 'Falsch'], correct: [q.correct[0] === 1 ? 1 : 0], timeLimit: q.timeLimit };
+      return { type: 'truefalse', text: q.text.trim(), options: ['Wahr', 'Falsch'], correct: [q.correct[0] === 1 ? 1 : 0], timeLimit: q.timeLimit, double: q.double === true };
     }
     const options = [];
     const correct = [];
@@ -94,7 +95,7 @@
       if (q.correct.includes(i)) correct.push(options.length);
       options.push(text);
     });
-    return { type: 'quiz', text: q.text.trim(), options, correct, timeLimit: q.timeLimit };
+    return { type: 'quiz', text: q.text.trim(), options, correct, timeLimit: q.timeLimit, double: q.double === true };
   }
 
   function toPayload(quiz) {
@@ -122,7 +123,7 @@
       const options = type === 'truefalse' ? ['Wahr', 'Falsch'] : Array.from({ length: 4 }, (_, i) => String((q && q.options && q.options[i]) || '').slice(0, 90));
       const correct = (Array.isArray(q && q.correct) ? q.correct : []).filter((i) => Number.isInteger(i) && i >= 0 && i < options.length);
       const timeLimit = TIME_LIMITS.includes(q && q.timeLimit) ? q.timeLimit : 20;
-      return { type, text: String((q && q.text) || '').slice(0, 300), options, correct, timeLimit };
+      return { type, text: String((q && q.text) || '').slice(0, 300), options, correct, timeLimit, double: Boolean(q && q.double === true) };
     });
     return { id: uid(), title: String(raw.title || 'Importiertes Quiz').slice(0, 120), updatedAt: Date.now(), questions };
   }
@@ -233,8 +234,8 @@
 
   function blankQuestion(type) {
     return type === 'truefalse'
-      ? { type: 'truefalse', text: '', options: ['Wahr', 'Falsch'], correct: [0], timeLimit: 10 }
-      : { type: 'quiz', text: '', options: ['', '', '', ''], correct: [], timeLimit: 20 };
+      ? { type: 'truefalse', text: '', options: ['Wahr', 'Falsch'], correct: [0], timeLimit: 10, double: false }
+      : { type: 'quiz', text: '', options: ['', '', '', ''], correct: [], timeLimit: 20, double: false };
   }
 
   function openEditor(quiz) {
@@ -328,6 +329,7 @@
     typeSelect.addEventListener('change', () => {
       const next = blankQuestion(typeSelect.value);
       next.text = q.text;
+      next.double = q.double === true;
       draft.questions[index] = next;
       dirty = true;
       renderEditor(`#${id}-type`);
@@ -347,6 +349,12 @@
     );
     time.addEventListener('change', () => {
       q.timeLimit = Number(time.value);
+      dirty = true;
+    });
+
+    const doubleBox = h('input', { type: 'checkbox', id: `${id}-double`, checked: q.double === true });
+    doubleBox.addEventListener('change', () => {
+      q.double = doubleBox.checked;
       dirty = true;
     });
 
@@ -412,6 +420,7 @@
         h('label', { class: 'field', for: `${id}-type` }, h('span', { text: 'Fragetyp' }), typeSelect),
         h('label', { class: 'field', for: `${id}-time` }, h('span', { text: 'Zeit zum Antworten' }), time),
       ),
+      h('label', { class: 'check check--line', for: `${id}-double` }, doubleBox, h('span', { text: 'Doppelte Punkte für diese Frage' })),
       h('p', { class: 'hint', text: q.type === 'truefalse' ? 'Markiere die richtige Aussage.' : 'Trage 2 bis 4 Antworten ein und markiere mindestens eine als richtig.' }),
       opts,
     );
@@ -620,6 +629,7 @@
         'div',
         { class: 'bar__actions' },
         h('span', { class: 'bar__pin' }, 'PIN ', h('strong', { text: formatPin(s.pin) })),
+        soundButton(),
         h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Vollbild', onclick: toggleFullscreen }),
         h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Spiel beenden', onclick: () => endGame(true) }),
       ),
@@ -653,6 +663,19 @@
     }
     const primary = stage.querySelector('[data-primary]');
     if (primary) primary.focus({ preventScroll: true });
+  }
+
+  function soundButton() {
+    const btn = h('button', { class: 'btn btn--quiet btn--small', type: 'button', title: 'Töne ein- oder ausschalten' });
+    const label = () => {
+      btn.textContent = FX.enabled ? 'Ton: an' : 'Ton: aus';
+    };
+    label();
+    btn.addEventListener('click', () => {
+      FX.setEnabled(!FX.enabled);
+      label();
+    });
+    return btn;
   }
 
   function updateLive(s) {
@@ -723,12 +746,14 @@
     refs.start.disabled = n === 0;
     // Bestehende Namen nicht neu aufbauen, damit nur neue Namen „aufploppen“
     const existing = new Map([...refs.chips.querySelectorAll('.chip')].map((el) => [el.dataset.id, el]));
+    let added = 0;
     const items = s.players.map((p) => {
       const old = existing.get(p.id);
       if (old) {
         old.classList.toggle('is-away', !p.connected);
         return old;
       }
+      added += 1;
       return h(
         'li',
         { class: `chip${p.connected ? '' : ' is-away'}`, dataset: { id: p.id } },
@@ -751,6 +776,8 @@
     });
     if (!n) items.push(h('li', { class: 'lobby__empty', text: 'Noch niemand da. Die Namen erscheinen hier, sobald jemand beitritt.' }));
     refs.chips.replaceChildren(...items);
+    if (added && refs.chipsReady) FX.play('join');
+    refs.chipsReady = true;
   }
 
   function stageCountdown(stage, s) {
@@ -759,13 +786,16 @@
       h(
         'div',
         { class: 'countdown' },
+        s.question.double ? doubleBadge() : null,
         h('div', { class: 'q-head' }, h('p', { class: 'kicker', text: `Frage ${s.qIndex + 1} von ${s.qCount}` }), h('h1', { class: 'q-text', text: s.question.text })),
         h('div', { class: 'timebar', 'aria-hidden': 'true' }, fill),
       ),
     );
     stopTimer = startTimer({ remainingMs: s.remainingMs, totalMs: s.remainingMs, fillEl: fill });
-    announce(`Frage ${s.qIndex + 1}: ${s.question.text}`);
+    FX.play(s.question.double ? 'double' : 'go');
+    announce(`${s.question.double ? 'Doppelte Punkte. ' : ''}Frage ${s.qIndex + 1}: ${s.question.text}`);
   }
+
 
   function stageQuestion(stage, s) {
     const timer = h('span', { class: 'q-timer__num num', 'aria-hidden': 'true' });
@@ -780,7 +810,7 @@
           'div',
           { class: 'q-top' },
           h('div', { class: 'q-head' }, h('p', { class: 'kicker', text: `Frage ${s.qIndex + 1} von ${s.qCount}` }), h('h1', { class: 'q-text', text: s.question.text })),
-          h('div', { class: 'q-timer' }, timer, h('p', { class: 'q-answered' }, refs.answered, refs.answeredOf)),
+          h('div', { class: 'q-timer' }, timer, h('p', { class: 'q-answered' }, refs.answered, refs.answeredOf), s.question.double ? doubleBadge(true) : null),
         ),
         h('div', { class: 'timebar', 'aria-hidden': 'true' }, fill),
         h('div', { class: 'opt-grid' }, s.question.options.map((text, i) => optionTile('div', text, i))),
@@ -788,7 +818,15 @@
       actions(nextButton('Frage beenden', { class: 'btn btn--quiet' })),
     );
     updateLive(s);
-    stopTimer = startTimer({ remainingMs: s.remainingMs, totalMs: s.question.timeLimit * 1000, numberEl: timer, fillEl: fill });
+    stopTimer = startTimer({
+      remainingMs: s.remainingMs,
+      totalMs: s.question.timeLimit * 1000,
+      numberEl: timer,
+      fillEl: fill,
+      onSecond: (sec) => {
+        if (sec > 0 && sec <= 5) FX.play('tick');
+      },
+    });
   }
 
   function stageReveal(stage, s) {
@@ -824,26 +862,53 @@
       ),
       actions(nextButton(s.isLast ? 'Endergebnis zeigen' : 'Zwischenstand zeigen')),
     );
+    FX.play('reveal');
     announce(`Richtig ist ${right.map((i) => `${LETTERS[i]}: ${q.options[i]}`).join(', ')}.`);
   }
 
   function stageLeaderboard(stage, s) {
-    const rows = s.leaderboard.map((r) =>
-      h(
+    const n = s.leaderboard.length;
+    const rows = s.leaderboard.map((r, i) => {
+      const streak =
+        r.streak >= 3
+          ? h('span', { class: 'streak' }, flameIcon(), h('span', { class: 'num', text: String(r.streak) }), h('span', { class: 'visually-hidden', text: ' richtige Antworten in Folge' }))
+          : null;
+      const move =
+        r.move > 0
+          ? h('span', { class: 'board__move' }, h('span', { 'aria-hidden': 'true', text: '▲ ' }), String(r.move), h('span', { class: 'visually-hidden', text: r.move === 1 ? ' Platz nach vorn' : ' Plätze nach vorn' }))
+          : null;
+      const row = h(
         'li',
         { class: 'board__row' },
         h('span', { class: 'board__rank', text: `${r.rank}.` }),
-        h('span', { class: 'board__name', text: r.nickname }),
+        h('span', { class: 'board__name' }, h('span', { text: r.nickname }), streak),
+        h('span', { class: 'board__movecell' }, move),
         h('span', { class: 'board__delta', text: r.delta > 0 ? `+${num(r.delta)}` : '' }),
         h('span', { class: 'board__score', text: num(r.score) }),
-      ),
-    );
-    stage.append(
-      h('div', { class: 'board-wrap' }, h('h1', { class: 'stage-title', text: 'Zwischenstand' }), h('ol', { class: 'board', 'aria-label': 'Die besten fünf' }, rows)),
-      actions(nextButton('Nächste Frage')),
-    );
+      );
+      // Zeilen starten an ihrer alten Position (FLIP); wer von außerhalb kommt, gleitet von unten herein
+      const from = r.posBefore === null ? i : Math.min(r.posBefore, n);
+      row.dataset.shift = String(from - i);
+      if (r.posBefore !== null && r.posBefore >= n) row.classList.add('is-new');
+      return row;
+    });
+    const list = h('ol', { class: 'board', 'aria-label': 'Die besten fünf' }, rows);
+    stage.append(h('div', { class: 'board-wrap' }, h('h1', { class: 'stage-title', text: 'Zwischenstand' }), list), actions(nextButton('Nächste Frage')));
+
+    if (rows.some((row) => row.dataset.shift !== '0') && !FX.reducedMotion()) {
+      const pitch = rows.length > 1 ? rows[1].offsetTop - rows[0].offsetTop : rows[0].offsetHeight;
+      rows.forEach((row) => {
+        const shift = Number(row.dataset.shift);
+        row.style.setProperty('--from', `${shift * pitch}px`);
+        if (shift > 0) row.classList.add('is-rising');
+      });
+      list.classList.add('is-sorting');
+      const t = setTimeout(() => FX.play('shuffle'), 350);
+      stopTimer = () => clearTimeout(t);
+    }
   }
 
+  // Finale: Platz 3, dann 2, Trommelwirbel, dann 1 mit Konfetti. Danach Auszeichnungen.
   function stagePodium(stage, s) {
     const cols = [2, 1, 3].map((place) => {
       const entries = s.podium.filter((r) => r.rank === place);
@@ -855,13 +920,88 @@
         h('div', { class: 'podium__block num', 'aria-hidden': 'true', text: String(place) }),
       );
     });
-    stage.append(
-      h('div', { class: 'podium-wrap' }, h('h1', { class: 'stage-title', text: 'Endergebnis' }), h('ol', { class: 'podium', 'aria-label': 'Podium' }, cols)),
-      actions(
-        h('button', { class: 'btn btn--big btn--quiet', type: 'button', text: 'Ergebnisse als CSV', onclick: () => exportCsv(s.report) }),
-        h('button', { class: 'btn btn--big btn--primary', type: 'button', text: 'Spiel schließen', 'data-primary': true, onclick: () => endGame(false) }),
-      ),
-    );
+    const byPlace = (place) => cols.find((c) => c.dataset.place === String(place));
+    const podiumList = h('ol', { class: 'podium is-staged', 'aria-label': 'Podium' }, cols);
+    const podiumView = h('div', { class: 'podium-wrap' }, h('h1', { class: 'stage-title', text: 'Endergebnis' }), podiumList);
+
+    const awards = Array.isArray(s.awards) ? s.awards : [];
+    const tiles = awards.map((a) => {
+      const shown = a.winners.slice(0, 3).map((w) => w.nickname);
+      const more = a.winners.length - shown.length;
+      return h(
+        'li',
+        { class: 'award', dataset: { i: String(awardColor(a.key)) } },
+        h('p', { class: 'award__title', text: awardTitle(a.key) }),
+        h('p', { class: 'award__names', text: shown.join(', ') + (more > 0 ? ` und ${more} weitere` : '') }),
+        h('p', { class: 'award__detail', text: awardDetail(a) }),
+      );
+    });
+    const awardsView = h('div', { class: 'awards-wrap', hidden: true }, h('h1', { class: 'stage-title', text: 'Auszeichnungen' }), h('ul', { class: 'awards' }, tiles));
+
+    const timers = [];
+    let stopConfetti = () => {};
+    const later = (ms, fn) => timers.push(setTimeout(fn, ms));
+    const showAll = () => {
+      timers.forEach(clearTimeout);
+      cols.forEach((c) => c.classList.add('is-shown'));
+    };
+    stopTimer = () => {
+      timers.forEach(clearTimeout);
+      stopConfetti();
+    };
+
+    const csvBtn = h('button', { class: 'btn btn--big btn--quiet', type: 'button', text: 'Ergebnisse als CSV', onclick: () => exportCsv(s.report) });
+    const closeBtn = h('button', { class: 'btn btn--big btn--primary', type: 'button', text: 'Spiel schließen', onclick: () => endGame(false) });
+    const backBtn = h('button', { class: 'btn btn--big btn--quiet', type: 'button', text: 'Zurück zum Podium', hidden: true });
+    const awardsBtn = h('button', { class: 'btn btn--big btn--primary', type: 'button', text: 'Auszeichnungen zeigen' });
+
+    const showView = (which, initial = false) => {
+      const toAwards = which === 'awards';
+      if (!initial) showAll();
+      podiumView.hidden = toAwards;
+      awardsView.hidden = !toAwards;
+      awardsBtn.hidden = toAwards || !tiles.length;
+      backBtn.hidden = !toAwards;
+      closeBtn.hidden = !toAwards && tiles.length > 0;
+      if (toAwards) {
+        tiles.forEach((t, i) => {
+          t.classList.remove('is-shown');
+          later(150 + i * 450, () => {
+            t.classList.add('is-shown');
+            FX.play('award');
+          });
+        });
+        closeBtn.focus({ preventScroll: true });
+      } else if (!initial) {
+        (tiles.length ? awardsBtn : closeBtn).focus({ preventScroll: true });
+      }
+    };
+    awardsBtn.addEventListener('click', () => showView('awards'));
+    backBtn.addEventListener('click', () => showView('podium'));
+
+    stage.append(podiumView, awardsView, actions(csvBtn, backBtn, awardsBtn, closeBtn));
+    showView('podium', true);
+    (tiles.length ? awardsBtn : closeBtn).dataset.primary = 'true';
+
+    if (FX.reducedMotion()) {
+      showAll();
+      FX.play('fanfare');
+    } else {
+      later(500, () => {
+        byPlace(3).classList.add('is-shown');
+        FX.play('place');
+      });
+      later(1800, () => {
+        byPlace(2).classList.add('is-shown');
+        FX.play('place');
+      });
+      later(2900, () => FX.play('drumroll', 2));
+      later(5000, () => {
+        byPlace(1).classList.add('is-shown');
+        FX.play('fanfare');
+        stopConfetti = FX.confetti(stage);
+      });
+    }
     const winners = s.podium.filter((r) => r.rank === 1).map((r) => r.nickname).join(' und ');
     announce(`Endergebnis. Platz 1: ${winners}.`);
     keepAwake(false);

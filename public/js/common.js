@@ -43,15 +43,16 @@ window.LQ = (function () {
   }
 
   // Zeitanzeige aus der Restzeit des Servers (keine Abhängigkeit von Uhren-Abweichungen).
-  function startTimer({ remainingMs, totalMs, numberEl, fillEl }) {
+  function startTimer({ remainingMs, totalMs, numberEl, fillEl, onSecond }) {
     const end = performance.now() + remainingMs;
     let frame = 0;
     let lastShown = null;
     function tick() {
       const left = Math.max(0, end - performance.now());
       const seconds = Math.ceil(left / 1000);
-      if (numberEl && seconds !== lastShown) {
-        numberEl.textContent = String(seconds);
+      if (seconds !== lastShown) {
+        if (numberEl) numberEl.textContent = String(seconds);
+        if (onSecond && lastShown !== null) onSecond(seconds);
         lastShown = seconds;
       }
       if (fillEl) fillEl.style.transform = `scaleX(${totalMs > 0 ? left / totalMs : 0})`;
@@ -59,6 +60,59 @@ window.LQ = (function () {
     }
     tick();
     return () => cancelAnimationFrame(frame);
+  }
+
+  // Auszeichnungen: gleiche Namen und Texte auf Leinwand und Handy.
+  const AWARD_TITLES = { fastest: 'Schnellste Antwort', streak: 'Längste Serie', jump: 'Aufholjagd', perfect: 'Fehlerfrei' };
+
+  // Feste Farbe je Auszeichnung (Antwortfarben 0–3), gleich auf Leinwand und Handy
+  const AWARD_COLOR = { fastest: 0, streak: 1, jump: 2, perfect: 3 };
+
+  function awardColor(key) {
+    return AWARD_COLOR[key] ?? 0;
+  }
+
+  function awardTitle(key) {
+    return AWARD_TITLES[key] || key;
+  }
+
+  function awardDetail(a) {
+    switch (a.key) {
+      case 'fastest':
+        return `In ${(a.value / 1000).toFixed(1).replace('.', ',')} Sekunden richtig`;
+      case 'streak':
+        return `${a.value} richtige Antworten in Folge`;
+      case 'jump':
+        return `${a.value} ${a.value === 1 ? 'Platz' : 'Plätze'} in einer Runde nach vorn`;
+      case 'perfect':
+        return `Alle ${a.value} Fragen richtig`;
+      default:
+        return '';
+    }
+  }
+
+  // Hinweis „Doppelte Punkte“ (groß im Countdown, klein während der Frage)
+  function doubleBadge(small) {
+    return h(
+      'p',
+      { class: `double${small ? ' double--small' : ''}` },
+      h('span', { class: 'double__x num', 'aria-hidden': 'true', text: '×2' }),
+      h('span', { class: 'double__label', text: 'Doppelte Punkte' }),
+    );
+  }
+
+  // Flammen-Symbol für Serien (SVG, Farbe über currentColor)
+  function flameIcon() {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 16 20');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('class', 'flame');
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', 'M8 0c1 3.5 6 6.2 6 11.6A6 6 0 0 1 2 11.6c0-2.4 1-4 2.4-5.4.2 1.9 1 3 2.2 3.5C6 6.5 6.8 3 8 0Z');
+    path.setAttribute('fill', 'currentColor');
+    svg.append(path);
+    return svg;
   }
 
   function store(kind) {
@@ -163,5 +217,5 @@ window.LQ = (function () {
     }
   }
 
-  return { APP_NAME, LETTERS, h, num, optionTile, startTimer, store, toast, announce, emit, toCsv, download, keepAwake };
+  return { APP_NAME, LETTERS, h, num, optionTile, startTimer, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, toCsv, download, keepAwake };
 })();
