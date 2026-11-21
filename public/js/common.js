@@ -4,7 +4,7 @@
 // textContent im DOM (nie innerHTML) – Schutz vor eingeschleustem HTML.
 
 window.LQ = (function () {
-  const APP_NAME = 'leaqiz';
+  const APP_NAME = 'leaqizz';
   const LETTERS = ['A', 'B', 'C', 'D'];
   const numberFormat = new Intl.NumberFormat('de-DE');
 

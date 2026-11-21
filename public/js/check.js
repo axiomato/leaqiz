@@ -1,6 +1,6 @@
 'use strict';
 
-// Verbindungstest: prüft auf diesem Gerät und in diesem Netz, ob leaqiz funktionieren kann.
+// Verbindungstest: prüft auf diesem Gerät und in diesem Netz, ob leaqizz funktionieren kann.
 // 1. WebRTC im Browser  2. Vermittlungsserver  3. STUN (Direktverbindung)  4. TURN (Relais)
 
 (function () {
@@ -144,7 +144,7 @@
 
     const yes = (v) => (v ? 'ja' : 'nein');
     code.textContent =
-      `leaqiz-Test: WebRTC ${yes(hasRtc)}, Vermittlung ${signal.ok ? signal.text : 'nein'}, ` +
+      `leaqizz-Test: WebRTC ${yes(hasRtc)}, Vermittlung ${signal.ok ? signal.text : 'nein'}, ` +
       `STUN ${yes(stunRes.ok)}, TURN ${yes(turnRes.ok)} (${ice.source}${routeText ? `: ${routeText}` : ''}), Kandidaten ${[...new Set([...stunRes.types, ...turnRes.types])].join('/') || '-'}, ` +
       `${navigator.userAgent.replace(/\s*\(.*?\)\s*/g, ' ').slice(0, 80)}`;
   }

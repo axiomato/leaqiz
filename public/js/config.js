@@ -7,7 +7,7 @@
 //   turnCredentialsUrl: Adresse, die eine Liste von iceServers liefert,
 //                       z. B. Metered Open Relay: 'https://<name>.metered.live/api/v1/turn/credentials?apiKey=<schlüssel>'
 //   iceServers:         feste Server mit Zugangsdaten, z. B. [{ urls: 'turn:…', username: '…', credential: '…' }]
-//   Hinweis: Beides ist im Browser jeder Person sichtbar, die leaqiz öffnet.
+//   Hinweis: Beides ist im Browser jeder Person sichtbar, die leaqizz öffnet.
 //   Leer = Relais des PeerJS-Projekts (laut Verbindungstest oft nicht erreichbar).
 window.LEAQIZ_CONFIG = {
   peer: {},

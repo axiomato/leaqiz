@@ -21,6 +21,7 @@
   let stopTimer = () => {};
   let connectionLost = false;
   let pendingChoice = null;
+  let growing = false; // getipptes Feld wächst gerade: Ansicht darunter erst danach wechseln
   let waitRefs = null; // Warteansicht nach dem Antworten (Punkte, Zähler)
   let resultShownFor = -1; // Frage, deren Ergebnis schon animiert gezeigt wurde
 
@@ -278,6 +279,11 @@
       case 'countdown':
         return renderCountdown(s);
       case 'question':
+        if (growing) {
+          // Sonst erscheint die Warteansicht schon unter der wachsenden Fläche und flackert
+          renderedKey = '';
+          return undefined;
+        }
         if (s.answered || pendingChoice !== null) {
           // Warteansicht steht schon: nur Fortschritt aktualisieren (kein erneutes Einblenden)
           if (waitRefs && waitRefs.qIndex === s.qIndex && app.querySelector('.wait')) {
@@ -368,7 +374,12 @@
     if (pendingChoice !== null || !state || state.state !== 'question') return;
     pendingChoice = choice;
     const sent = emit(socket, 'player:answer', { choice }); // sofort senden, nicht auf die Animation warten
-    await growToScreen(tile, choice);
+    growing = true;
+    try {
+      await growToScreen(tile, choice);
+    } finally {
+      growing = false;
+    }
     if (pendingChoice === choice && !app.querySelector('.wait')) {
       renderedKey = '';
       renderAnswered(state);
@@ -398,8 +409,9 @@
       easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
       fill: 'forwards',
     });
-    return anim.finished
-      .catch(() => {})
+    // Sicherheitsnetz: Läuft die Animation nicht (z. B. Seite im Hintergrund), nicht hängen bleiben
+    const fallback = new Promise((resolve) => setTimeout(resolve, 700));
+    return Promise.race([anim.finished.catch(() => {}), fallback])
       .then(() => {
         // Ebene erst nach dem Umschalten entfernen, damit kein Flackern entsteht
         requestAnimationFrame(() => layer.remove());

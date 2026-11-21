@@ -190,7 +190,7 @@
             'aria-describedby': titleId,
             onclick: () => {
               const { id, ...data } = quiz;
-              download(`${slug(quiz.title)}.leaqiz.json`, JSON.stringify(data, null, 2), 'application/json');
+              download(`${slug(quiz.title)}.leaqizz.json`, JSON.stringify(data, null, 2), 'application/json');
             },
           }),
           h('button', {

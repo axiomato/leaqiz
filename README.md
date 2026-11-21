@@ -1,10 +1,10 @@
-# leaqiz
+# leaqizz
 
 Live-Quiz für Unterricht und Schulungen. Die Spielleitung zeigt Fragen am Beamer, die Teilnehmenden antworten am Handy. Sie brauchen keinen Account und keine App, nur PIN und Spielnamen.
 
 > **Status: Prototyp.** Statische Webseite auf GitHub Pages, ohne eigenen Server. Die Geräte verbinden sich direkt miteinander (WebRTC). Vor dem Einsatz mit Klassen bitte die Grenzen unten lesen.
 >
-> **Name.** „leaqiz“ ist noch nicht markenrechtlich geprüft. Das Projekt hat keine Verbindung zu Kahoot! ASA und nutzt weder deren Namen noch deren Gestaltung.
+> **Name.** „leaqizz“ (bis 22.11.2026 „leaqiz“) ist noch nicht markenrechtlich geprüft. Repository, Web-Adresse und interne Kennungen (Speicher, Vermittlungs-Präfix) heißen vorerst weiter `leaqiz`, damit Links und gespeicherte Quizze erhalten bleiben. Geplante Adresse: leaqizz.com. Das Projekt hat keine Verbindung zu Kahoot! ASA und nutzt weder deren Namen noch deren Gestaltung.
 
 ## Für Lehrkräfte
 
@@ -54,7 +54,7 @@ Handys der Spieler ──► finden die Spielleitung über die PIN
 
 ## Datenschutz (DSGVO)
 
-*Technische Einordnung, keine Rechtsberatung.* leaqiz selbst speichert nichts auf einem Server. Spielname, Antworten und Punkte liegen nur im Browser der Spielleitung (Tab-Speicher) und verschwinden mit dem Spielende. Aber drei Fremddienste sehen IP-Adressen:
+*Technische Einordnung, keine Rechtsberatung.* leaqizz selbst speichert nichts auf einem Server. Spielname, Antworten und Punkte liegen nur im Browser der Spielleitung (Tab-Speicher) und verschwinden mit dem Spielende. Aber drei Fremddienste sehen IP-Adressen:
 
 | Dienst | Was er sieht | Vertrag zur Auftragsverarbeitung |
 |---|---|---|
