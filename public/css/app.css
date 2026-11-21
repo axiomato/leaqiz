@@ -1942,6 +1942,32 @@ body.player[data-flood='3'] {
   padding-bottom: var(--s-2);
 }
 
+/* Eingebettet in der Spielleitung (Demo): Höhe = Rahmen statt Bildschirm, ohne eigene Kopfzeile
+   (die Leiste „Dein Handy“ darüber übernimmt das) */
+html.embedded,
+html.embedded body {
+  height: 100%;
+}
+
+html.embedded .screen {
+  min-height: 100%;
+  padding-top: var(--s-2);
+}
+
+html.embedded .screen__top {
+  display: none;
+}
+
+/* Niedrige Ansichten (kleine Handys, eingebettet): Zahlen und Buchstaben kleiner, damit alles passt */
+@media (max-height: 640px) {
+  .play-head__meta > .num {
+    font-size: var(--t-4);
+  }
+  .player-grid .opt__letter {
+    font-size: var(--t-3);
+  }
+}
+
 .play-head {
   display: grid;
   gap: var(--s-1);
@@ -1972,7 +1998,7 @@ body.player[data-flood='3'] {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-auto-rows: minmax(8rem, 1fr);
+  grid-auto-rows: minmax(6rem, 1fr);
   gap: var(--s-1);
 }
 

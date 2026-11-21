@@ -11,6 +11,7 @@
   const DEMO = new URLSearchParams(location.search).has('demo');
   // In der Spielleitung eingebettet („Selbst mitspielen“) oder eigenes Fenster/Tab?
   const EMBEDDED = window.self !== window.top;
+  if (EMBEDDED) document.documentElement.classList.add('embedded');
   const DEMO_TAB_HINT = 'Die Spielleitung antwortet nicht. Handys pausieren Tabs im Hintergrund: Öffne die Demo in der Spielleitung über „Selbst mitspielen“.';
   const socket = DEMO ? new window.LQNet.LocalPlayerLink() : new window.LQNet.PlayerLink();
 
