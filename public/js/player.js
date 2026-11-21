@@ -9,6 +9,9 @@
   // Direktverbindung zum Browser der Spielleitung (siehe net.js).
   // Demo (?demo=1): Verbindung zu einer Demo im selben Browser, ganz ohne Netz.
   const DEMO = new URLSearchParams(location.search).has('demo');
+  // In der Spielleitung eingebettet („Selbst mitspielen“) oder eigenes Fenster/Tab?
+  const EMBEDDED = window.self !== window.top;
+  const DEMO_TAB_HINT = 'Die Spielleitung antwortet nicht. Handys pausieren Tabs im Hintergrund: Öffne die Demo in der Spielleitung über „Selbst mitspielen“.';
   const socket = DEMO ? new window.LQNet.LocalPlayerLink() : new window.LQNet.PlayerLink();
 
   let state = null; // letzter Spielzustand von der Spielleitung
@@ -198,6 +201,9 @@
       h('label', { class: 'field', for: 'nickname' }, h('span', { text: 'Spielname' }), input),
       h('p', { class: 'hint', id: 'name-hint', text: 'Kein echter Name nötig. Höchstens 20 Zeichen.' }),
       button,
+      DEMO && !EMBEDDED && window.matchMedia('(pointer: coarse)').matches
+        ? h('p', { class: 'hint', text: 'Tipp: Auf dem Handy die Demo in der Spielleitung über „Selbst mitspielen“ öffnen. Ein zweiter Tab wird im Hintergrund pausiert.' })
+        : null,
     );
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -340,7 +346,7 @@
     renderAnswered(state);
     const res = await emit(socket, 'player:answer', { choice });
     if (!res.ok) {
-      toast(res.error);
+      toast(DEMO && !EMBEDDED && /Keine Antwort/.test(res.error) ? DEMO_TAB_HINT : res.error);
       if (state && state.state === 'question' && !state.answered && !/schon geantwortet|abgelaufen/.test(res.error)) {
         pendingChoice = null;
         renderedKey = '';

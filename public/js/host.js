@@ -133,6 +133,7 @@
   function renderLibrary() {
     mode = 'library';
     setPhase('home', 'dark');
+    window.scrollTo(0, 0);
     renderedKey = '';
     stopTimer();
     keepAwake(false);
@@ -268,14 +269,52 @@
     renderLibrary();
   }
 
+  // Kleine Symbole (SVG, Farbe über currentColor)
+  function icon(name) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const paths = {
+      up: 'M12 5l-7 7h4.5v7h5v-7H19z',
+      down: 'M12 19l7-7h-4.5V5h-5v7H5z',
+      remove: 'M6.4 5L5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z',
+      check: 'M9.5 16.2L5.3 12l-1.4 1.4 5.6 5.6 11-11-1.4-1.4z',
+      plus: 'M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z',
+    };
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('class', 'icon');
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', paths[name]);
+    path.setAttribute('fill', 'currentColor');
+    svg.append(path);
+    return svg;
+  }
+
+  function editorMeta() {
+    const n = draft.questions.length;
+    const doubles = draft.questions.filter((q) => q.double === true).length;
+    return `${n} ${n === 1 ? 'Frage' : 'Fragen'}${doubles ? `, ${doubles} mit doppelten Punkten` : ''}`;
+  }
+
   function renderEditor(focusSelector) {
     mode = 'editor';
     setPhase('work', 'light');
     const errorBox = h('div', { class: 'error editor-errors', id: 'editor-errors', role: 'alert' });
-    const titleInput = h('input', { class: 'input', id: 'quiz-title', maxlength: '120', value: draft.title, placeholder: 'z. B. Sicherheitsunterweisung 2026' });
+    // Titel als mitwachsendes Textfeld (lange Titel umbrechen statt abschneiden), ohne Zeilenumbrüche
+    const titleInput = h('textarea', { class: 'editor__title', id: 'quiz-title', maxlength: '120', rows: '1', placeholder: 'Wie heißt dein Quiz?', autocomplete: 'off' });
+    titleInput.value = draft.title;
+    const fit = () => {
+      titleInput.style.height = 'auto';
+      titleInput.style.height = `${titleInput.scrollHeight}px`;
+    };
+    titleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') e.preventDefault();
+    });
     titleInput.addEventListener('input', () => {
+      titleInput.value = titleInput.value.replace(/[\r\n]+/g, ' ');
       draft.title = titleInput.value;
       dirty = true;
+      fit();
     });
 
     const cards = draft.questions.map((q, index) => questionCard(q, index));
@@ -283,44 +322,59 @@
     root.replaceChildren(
       h(
         'header',
-        { class: 'bar' },
+        { class: 'bar bar--ink' },
         h('span', { class: 'wordmark', text: APP_NAME }),
         h('div', { class: 'bar__actions' }, h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Zur Übersicht', onclick: leaveEditor })),
       ),
       h(
         'main',
-        { class: 'work' },
-        h('div', { class: 'work__head' }, h('h1', { text: draft.title ? 'Quiz bearbeiten' : 'Neues Quiz' }), saveActions()),
-        errorBox,
-        h('label', { class: 'field', for: 'quiz-title' }, h('span', { text: 'Titel' }), titleInput),
-        ...cards,
+        { class: 'editor' },
         h(
           'div',
-          { class: 'work__foot' },
+          { class: 'editor__hero' },
           h(
             'div',
-            { class: 'actions' },
-            h('button', { class: 'btn btn--quiet', type: 'button', text: 'Frage hinzufügen', onclick: () => addQuestion('quiz') }),
-            h('button', { class: 'btn btn--quiet', type: 'button', text: 'Wahr/Falsch-Frage hinzufügen', onclick: () => addQuestion('truefalse') }),
+            { class: 'editor__inner' },
+            h('h1', { class: 'visually-hidden', text: draft.title ? 'Quiz bearbeiten' : 'Neues Quiz' }),
+            h('label', { class: 'editor__kicker', for: 'quiz-title', text: 'Titel des Quiz' }),
+            titleInput,
+            h('p', { class: 'editor__meta', id: 'editor-meta', text: editorMeta() }),
           ),
-          saveActions(),
+        ),
+        h(
+          'div',
+          { class: 'editor__inner editor__body' },
+          errorBox,
+          ...cards,
+          h(
+            'div',
+            { class: 'editor__add' },
+            h('button', { class: 'add-tile', type: 'button', onclick: () => addQuestion('quiz') }, icon('plus'), h('span', { text: 'Multiple-Choice-Frage' })),
+            h('button', { class: 'add-tile', type: 'button', onclick: () => addQuestion('truefalse') }, icon('plus'), h('span', { text: 'Wahr/Falsch-Frage' })),
+          ),
+        ),
+      ),
+      h(
+        'div',
+        { class: 'savebar' },
+        h(
+          'div',
+          { class: 'savebar__inner' },
+          h('button', { class: 'btn btn--quiet', type: 'button', text: 'Speichern', onclick: () => saveDraft(false) }),
+          h('button', { class: 'btn', type: 'button', text: 'Speichern und Demo starten', onclick: () => saveDraft(true) }),
         ),
       ),
     );
+    fit();
     if (focusSelector) {
       const el = root.querySelector(focusSelector);
       if (el) el.focus();
-    }
+    } else window.scrollTo(0, 0);
   }
 
-  // Speichern oben und unten (nicht klebend), damit lange Quizze nicht verdeckt werden
-  function saveActions() {
-    return h(
-      'div',
-      { class: 'actions' },
-      h('button', { class: 'btn btn--quiet', type: 'button', text: 'Speichern', onclick: () => saveDraft(false) }),
-      h('button', { class: 'btn', type: 'button', text: 'Speichern und Demo starten', onclick: () => saveDraft(true) }),
-    );
+  function refreshMeta() {
+    const el = document.getElementById('editor-meta');
+    if (el) el.textContent = editorMeta();
   }
 
   function addQuestion(type) {
@@ -332,10 +386,11 @@
   function questionCard(q, index) {
     const id = `q${index}`;
     const count = draft.questions.length;
+    const num = index + 1;
 
     const typeSelect = h(
       'select',
-      { class: 'input', id: `${id}-type`, 'aria-label': `Fragetyp für Frage ${index + 1}` },
+      { class: 'input input--select', id: `${id}-type` },
       h('option', { value: 'quiz', text: 'Multiple Choice', selected: q.type === 'quiz' }),
       h('option', { value: 'truefalse', text: 'Wahr/Falsch', selected: q.type === 'truefalse' }),
     );
@@ -348,7 +403,7 @@
       renderEditor(`#${id}-type`);
     });
 
-    const text = h('textarea', { class: 'input', id: `${id}-text`, maxlength: '300', rows: '2', placeholder: 'Frage eingeben' });
+    const text = h('textarea', { class: 'qcard__text', id: `${id}-text`, maxlength: '300', rows: '2', placeholder: 'Wie lautet die Frage?' });
     text.value = q.text;
     text.addEventListener('input', () => {
       q.text = text.value;
@@ -357,7 +412,7 @@
 
     const time = h(
       'select',
-      { class: 'input', id: `${id}-time` },
+      { class: 'input input--select', id: `${id}-time` },
       TIME_LIMITS.map((t) => h('option', { value: String(t), text: `${t} Sekunden`, selected: q.timeLimit === t })),
     );
     time.addEventListener('change', () => {
@@ -365,20 +420,21 @@
       dirty = true;
     });
 
-    const doubleBox = h('input', { type: 'checkbox', id: `${id}-double`, checked: q.double === true });
+    const doubleBox = h('input', { type: 'checkbox', class: 'switch', id: `${id}-double`, checked: q.double === true });
     doubleBox.addEventListener('change', () => {
       q.double = doubleBox.checked;
       dirty = true;
+      refreshMeta();
     });
 
-    const opts = h('div', { class: 'qopts', role: 'group', 'aria-label': `Antworten für Frage ${index + 1}` });
+    // Antworten in ihrer Spielfarbe; „richtig“ als Haken in derselben Farbe
+    const opts = h('div', { class: 'qopts', role: 'group', 'aria-label': `Antworten für Frage ${num}` });
     q.options.forEach((value, i) => {
-      const letter = h('span', { class: 'opt__letter', 'aria-hidden': 'true', text: LETTERS[i] });
       let field;
       if (q.type === 'truefalse') {
-        field = h('span', { class: 'lead', text: value });
+        field = h('span', { class: 'qopt__fixed', text: value });
       } else {
-        field = h('input', { class: 'input', id: `${id}-o${i}`, maxlength: '90', value, 'aria-label': `Antwort ${LETTERS[i]}`, placeholder: i < 2 ? 'Antwort' : 'Antwort (optional)' });
+        field = h('input', { class: 'qopt__input', id: `${id}-o${i}`, maxlength: '90', value, 'aria-label': `Antwort ${LETTERS[i]}`, placeholder: i < 2 ? 'Antwort' : 'Antwort (optional)', autocomplete: 'off' });
         field.addEventListener('input', () => {
           q.options[i] = field.value;
           dirty = true;
@@ -386,16 +442,26 @@
       }
       const mark = h('input', {
         type: q.type === 'truefalse' ? 'radio' : 'checkbox',
+        class: 'qopt__mark',
         name: `${id}-correct`,
         checked: q.correct.includes(i),
         'aria-label': `Antwort ${LETTERS[i]} ist richtig`,
+        title: 'Richtige Antwort',
       });
       mark.addEventListener('change', () => {
         if (q.type === 'truefalse') q.correct = [i];
         else q.correct = mark.checked ? [...new Set([...q.correct, i])] : q.correct.filter((c) => c !== i);
         dirty = true;
       });
-      opts.append(h('div', { class: 'qopt', dataset: { i: String(i) } }, letter, field, h('label', { class: 'check' }, mark, h('span', { 'aria-hidden': 'true', text: 'richtig' }))));
+      opts.append(
+        h(
+          'div',
+          { class: 'qopt', dataset: { i: String(i) } },
+          h('span', { class: 'qopt__letter', 'aria-hidden': 'true', text: LETTERS[i] }),
+          field,
+          h('label', { class: 'qopt__check' }, mark, icon('check')),
+        ),
+      );
     });
 
     const move = (delta) => {
@@ -405,37 +471,42 @@
       renderEditor(`#q${target}-${delta < 0 ? 'up' : 'down'}`);
     };
 
+    const tool = (name, label, attrs) => h('button', { class: 'tool', type: 'button', 'aria-label': label, title: label, ...attrs }, icon(name));
+
     return h(
       'section',
       { class: 'qcard', id: `${id}-card`, 'aria-labelledby': `${id}-num` },
       h(
         'div',
         { class: 'qcard__head' },
-        h('h2', { class: 'qcard__num', id: `${id}-num`, text: `Frage ${index + 1}` }),
-        h('button', { class: 'btn btn--small btn--quiet', id: `${id}-up`, type: 'button', text: 'Nach oben', disabled: index === 0, onclick: () => move(-1) }),
-        h('button', { class: 'btn btn--small btn--quiet', id: `${id}-down`, type: 'button', text: 'Nach unten', disabled: index === count - 1, onclick: () => move(1) }),
-        h('button', {
-          class: 'btn btn--small btn--danger',
-          type: 'button',
-          text: 'Entfernen',
-          'aria-label': `Frage ${index + 1} entfernen`,
-          onclick: () => {
-            draft.questions.splice(index, 1);
-            dirty = true;
-            renderEditor();
-          },
-        }),
+        h('h2', { class: 'qcard__num', id: `${id}-num` }, h('span', { class: 'qcard__label', text: 'Frage ' }), h('span', { class: 'num', text: String(num) })),
+        h(
+          'div',
+          { class: 'qcard__tools' },
+          tool('up', `Frage ${num} nach oben`, { id: `${id}-up`, disabled: index === 0, onclick: () => move(-1) }),
+          tool('down', `Frage ${num} nach unten`, { id: `${id}-down`, disabled: index === count - 1, onclick: () => move(1) }),
+          tool('remove', `Frage ${num} entfernen`, {
+            class: 'tool tool--danger',
+            onclick: () => {
+              if ((q.text || q.options.some((o) => o && o !== 'Wahr' && o !== 'Falsch')) && !window.confirm(`Frage ${num} entfernen?`)) return;
+              draft.questions.splice(index, 1);
+              dirty = true;
+              renderEditor();
+            },
+          }),
+        ),
       ),
-      h('label', { class: 'field', for: `${id}-text` }, h('span', { text: 'Frage' }), text),
+      h('label', { class: 'visually-hidden', for: `${id}-text`, text: `Text der Frage ${num}` }),
+      text,
       h(
         'div',
         { class: 'qcard__row' },
-        h('label', { class: 'field', for: `${id}-type` }, h('span', { text: 'Fragetyp' }), typeSelect),
-        h('label', { class: 'field', for: `${id}-time` }, h('span', { text: 'Zeit zum Antworten' }), time),
+        h('label', { class: 'field field--small', for: `${id}-type` }, h('span', { text: 'Fragetyp' }), typeSelect),
+        h('label', { class: 'field field--small', for: `${id}-time` }, h('span', { text: 'Zeit' }), time),
       ),
-      h('label', { class: 'check check--line', for: `${id}-double` }, doubleBox, h('span', { text: 'Doppelte Punkte für diese Frage' })),
-      h('p', { class: 'hint', text: q.type === 'truefalse' ? 'Markiere die richtige Aussage.' : 'Trage 2 bis 4 Antworten ein und markiere mindestens eine als richtig.' }),
+      h('p', { class: 'qcard__hint', text: q.type === 'truefalse' ? 'Tippe auf den Haken der richtigen Aussage.' : 'Bis zu 4 Antworten. Mindestens eine mit Haken als richtig markieren.' }),
       opts,
+      h('label', { class: 'qcard__double', for: `${id}-double` }, doubleBox, h('span', { text: 'Doppelte Punkte' })),
     );
   }
 
@@ -450,7 +521,8 @@
         const card = document.getElementById(`q${p.index}-card`);
         if (card) card.setAttribute('aria-invalid', 'true');
       });
-      if (first) document.getElementById(`q${first.index}-text`).focus();
+      box.scrollIntoView({ block: 'center' });
+      if (first) document.getElementById(`q${first.index}-text`).focus({ preventScroll: true });
       return;
     }
     box.replaceChildren();
@@ -780,8 +852,8 @@
 
   function setDockOpen(open) {
     if (!dock) return;
+    // Geschlossen auf dem Handy: per CSS ausgeblendet (visibility), das iframe läuft weiter
     document.documentElement.dataset.dock = open ? 'open' : 'closed';
-    dock.el.toggleAttribute('inert', !open && narrow());
     if (open && narrow()) dock.back.focus({ preventScroll: true });
   }
 

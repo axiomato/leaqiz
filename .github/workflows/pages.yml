@@ -40,6 +40,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # Versionsnummer an CSS/JS hängen, damit Browser nach jedem Deploy die neuen Dateien laden
+      - name: Cache-Busting
+        run: find public -name '*.html' -exec sed -i "s/?v=dev/?v=${GITHUB_SHA::7}/g" {} +
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

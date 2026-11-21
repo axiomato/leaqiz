@@ -1378,9 +1378,87 @@ textarea.input {
   line-height: 1.5;
 }
 
-.qcard {
+.bar--ink {
+  background: var(--ink);
+  color: #fff;
+  border-bottom-color: rgba(255, 255, 255, 0.24);
+}
+
+/* ---------- Editor ---------- */
+
+.editor {
+  display: grid;
+  padding-bottom: 8rem;
+}
+
+.editor__inner {
+  width: min(100% - 2 * var(--s-3), 50rem);
+  margin-inline: auto;
+}
+
+.editor__hero {
+  padding: var(--s-6) 0;
+  background: var(--ink);
+  color: #fff;
+}
+
+.editor__hero .editor__inner {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.editor__kicker {
+  color: var(--muted-on-dark);
+  font-size: var(--t-0);
+  font-weight: 700;
+}
+
+.editor__title {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  resize: none;
+  padding: var(--s-1) 0;
+  border: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: var(--t-4);
+  font-stretch: var(--wide);
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+.editor__title::placeholder {
+  color: var(--muted-on-dark);
+  opacity: 1;
+}
+
+.editor__title:focus {
+  border-bottom-color: #fff;
+}
+
+.editor__title:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+
+.editor__meta {
+  color: var(--muted-on-dark);
+  font-weight: 700;
+}
+
+.editor__body {
   display: grid;
   gap: var(--s-3);
+  padding-top: var(--s-6);
+}
+
+.qcard {
+  display: grid;
+  gap: var(--s-2);
   padding: var(--s-3);
   border: 2px solid var(--line);
   border-radius: var(--radius-m);
@@ -1394,15 +1472,86 @@ textarea.input {
 .qcard__head {
   display: flex;
   align-items: center;
-  gap: var(--s-1);
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-2);
 }
 
 .qcard__num {
-  margin-right: auto;
-  font-size: var(--t-1);
-  font-stretch: var(--wide);
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-1);
   font-weight: 850;
+}
+
+.qcard__label {
+  color: var(--muted);
+  font-size: var(--t-0);
+  font-weight: 700;
+}
+
+.qcard__num .num {
+  font-size: var(--t-3);
+  font-stretch: var(--wide);
+  line-height: 1;
+}
+
+.qcard__tools {
+  display: flex;
+  gap: var(--s-1);
+}
+
+.tool {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.tool:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.tool:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.tool--danger {
+  color: var(--error);
+}
+
+.tool--danger:hover:not(:disabled) {
+  border-color: var(--error);
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+}
+
+.qcard__text {
+  width: 100%;
+  min-height: 5.5rem;
+  padding: var(--s-2);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-1);
+  font-weight: 700;
+  line-height: 1.35;
+  resize: vertical;
+}
+
+.qcard__text:focus {
+  border-color: var(--ink);
 }
 
 .qcard__row {
@@ -1411,23 +1560,206 @@ textarea.input {
   gap: var(--s-2);
 }
 
+.field--small > span {
+  color: var(--muted);
+  font-size: var(--t-0);
+}
+
+.qcard__hint {
+  color: var(--muted);
+}
+
 .qopts {
   display: grid;
   gap: var(--s-1);
 }
 
+/* Antwortzeile in ihrer Spielfarbe: Buchstabe | Text | Haken */
 .qopt {
+  --c: var(--opt-0);
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--s-2);
+  grid-template-columns: 3rem minmax(0, 1fr) 3.5rem;
+  min-height: 56px;
+  border: 2px solid var(--c);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.qopt[data-i='1'] {
+  --c: var(--opt-1);
+}
+.qopt[data-i='2'] {
+  --c: var(--opt-2);
+}
+.qopt[data-i='3'] {
+  --c: var(--opt-3);
+}
+
+.qopt__letter {
+  display: grid;
+  place-items: center;
+  background: var(--c);
+  color: #fff;
+  font-size: var(--t-1);
+  font-stretch: var(--wide);
+  font-weight: 850;
+}
+
+.qopt__input,
+.qopt__fixed {
+  min-width: 0;
+  padding: 0 var(--s-2);
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+}
+
+.qopt__fixed {
+  display: flex;
   align-items: center;
 }
 
-.qopt .opt__letter {
-  width: 2.5rem;
-  height: 2.5rem;
+.qopt__input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+.qopt__check {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-left: 2px solid var(--line);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.qopt__mark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.qopt__mark:checked {
   background: var(--c);
+}
+
+.qopt__mark:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+.qopt__check .icon {
+  position: relative;
+  pointer-events: none;
+}
+
+.qopt__mark:checked + .icon {
   color: #fff;
+}
+
+.qcard__double {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: var(--s-1);
+  min-height: 44px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Schalter für „Doppelte Punkte“ */
+.switch {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--muted);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background 150ms;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 150ms;
+}
+
+.switch:checked {
+  background: var(--opt-1);
+}
+
+.switch:checked::after {
+  transform: translateX(18px);
+}
+
+.editor__add {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+
+.add-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  min-height: 64px;
+  border: 2px dashed var(--muted);
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.add-tile:hover {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+
+/* Speichern immer erreichbar, unten fest; der Editor lässt darunter Platz */
+.savebar {
+  position: fixed;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: var(--s-1) 0 calc(var(--s-1) + env(safe-area-inset-bottom));
+  border-top: 2px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.savebar__inner {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s-1);
+  width: min(100% - 2 * var(--s-3), 50rem);
+  margin-inline: auto;
+}
+
+body:has(.savebar) .toast {
+  bottom: 6rem;
 }
 
 .check {
@@ -1957,9 +2289,41 @@ body.player[data-flood='3'] {
 
 @media (max-width: 760px) {
   .lobby,
-  .reveal,
-  .qcard__row {
+  .reveal {
     grid-template-columns: 1fr;
+  }
+  .editor__inner,
+  .savebar__inner {
+    width: min(100% - 2 * var(--s-2), 50rem);
+  }
+  .editor__hero {
+    padding: var(--s-4) 0;
+  }
+  .editor__title {
+    font-size: var(--t-3);
+    font-stretch: 100%;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
+  .qcard__row {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: var(--s-1);
+  }
+  .qcard__row .input {
+    padding-inline: var(--s-1);
+  }
+  .editor__body {
+    padding-top: var(--s-4);
+  }
+  .qcard {
+    padding: var(--s-2);
+  }
+  .editor__add {
+    grid-template-columns: 1fr;
+  }
+  .savebar__inner .btn {
+    flex: 1 1 auto;
   }
   .home {
     width: min(100% - 2 * var(--s-2), 80rem);
