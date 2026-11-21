@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://0.peerjs.com wss://0.peerjs.com http://localhost:* ws://localhost:*; object-src 'none'; base-uri 'none'; form-action 'self'" />
+    <meta name="referrer" content="no-referrer" />
+    <title>leaqiz – Verbindungstest</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../css/app.css" />
+  </head>
+  <body class="player">
+    <main class="screen">
+      <div class="screen__top"><span class="wordmark">leaqiz</span><span>Verbindungstest</span></div>
+      <div class="screen__center">
+        <h1 class="lead">Klappt leaqiz auf diesem Gerät und in diesem Netz?</h1>
+        <ul id="checks" class="checks"></ul>
+        <p id="summary" class="result" role="status">Test läuft …</p>
+        <p class="hint">Diese Zeile bei Problemen weitergeben:</p>
+        <p id="code" class="check-code"></p>
+        <button id="rerun" class="btn" type="button">Test wiederholen</button>
+      </div>
+    </main>
+    <script src="../js/config.js"></script>
+    <script src="../js/vendor/peerjs.min.js"></script>
+    <script src="../js/common.js"></script>
+    <script src="../js/check.js"></script>
+  </body>
+</html>

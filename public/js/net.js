@@ -128,7 +128,11 @@ window.LQNet = (function () {
       if (this.peer && !this.peer.destroyed) return Promise.resolve(this.peer);
       return new Promise((resolve, reject) => {
         const peer = new window.Peer(peerOptions());
-        const timer = setTimeout(() => reject(Object.assign(new Error('timeout'), { code: 'network' })), 15000);
+        // Der kostenlose Vermittlungsserver ist manchmal langsam: großzügig warten
+        const timer = setTimeout(() => {
+          peer.destroy();
+          reject(Object.assign(new Error('timeout'), { code: 'signal' }));
+        }, 30000);
         peer.on('open', () => {
           clearTimeout(timer);
           this.peer = peer;
@@ -141,7 +145,7 @@ window.LQNet = (function () {
           }
           if (!this.peer) {
             clearTimeout(timer);
-            reject(Object.assign(new Error(err.message), { code: 'network' }));
+            reject(Object.assign(new Error(err.message), { code: 'signal' }));
           }
         });
         peer.on('disconnected', () => {
@@ -170,7 +174,11 @@ window.LQNet = (function () {
           if (err) reject(err);
           else resolve();
         };
-        const timer = setTimeout(() => done(Object.assign(new Error('timeout'), { code: 'network' })), 20000);
+        // Kein Aufbau in 25 s: meist sperrt das Netz Direktverbindungen und das Relais ist nicht erreichbar
+        const timer = setTimeout(() => {
+          const pc = this.conn && this.conn.peerConnection;
+          done(Object.assign(new Error('timeout'), { code: 'ice', detail: pc ? pc.iceConnectionState : 'kein Angebot' }));
+        }, 25000);
         this.onUnavailable = () => done(Object.assign(new Error('Kein Spiel'), { code: 'no-game' }));
         const conn = peer.connect(PREFIX + pin, { reliable: true, serialization: 'json' });
         this.conn = conn;
@@ -182,7 +190,7 @@ window.LQNet = (function () {
         conn.on('data', (msg) => this.receive(msg));
         const lost = () => {
           if (this.conn !== conn) return;
-          if (!settled) done(Object.assign(new Error('Verbindung fehlgeschlagen'), { code: 'network' }));
+          if (!settled) done(Object.assign(new Error('Verbindung fehlgeschlagen'), { code: 'ice', detail: 'abgebrochen' }));
           this.conn = null;
           this.failPending();
           this.fire('disconnect');

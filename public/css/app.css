@@ -1072,3 +1072,52 @@ body.player {
     animation: none !important;
   }
 }
+
+/* ---------- Verbindungstest ---------- */
+
+.checks {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem 1rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid #3a4558;
+  border-radius: var(--radius-m);
+}
+
+.check-label {
+  font-weight: 700;
+}
+
+.check-status {
+  font-weight: 800;
+}
+
+.check-status[data-ok='true'] {
+  color: #7fe0c4;
+}
+
+.check-status[data-ok='false'] {
+  color: #ffb3b3;
+}
+
+.check-row .hint {
+  grid-column: 1 / -1;
+}
+
+.check-row .hint:empty {
+  display: none;
+}
+
+.check-code {
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}

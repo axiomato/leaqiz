@@ -130,6 +130,7 @@
         h('p', { class: 'hint', text: 'Die PIN steht auf der großen Leinwand.' }),
         form,
         error,
+        h('a', { class: 'btn btn--ghost', href: 'check/', text: 'Verbindung testen' }),
       ),
     );
     input.focus();
@@ -398,9 +399,13 @@
     announce(`${title}. Platz ${s.rank} von ${s.playerCount} mit ${num(s.score)} Punkten.`);
   }
 
+  // Fehlertexte nach Stufe: V = Vermittlung, D = Direktverbindung. Der Code hilft bei Rückfragen.
   function connectError(err) {
-    if (err && err.code === 'no-game') return 'Zu dieser PIN läuft kein Spiel. Bitte prüfen.';
-    return 'Keine Verbindung zum Spiel. Prüfe das Internet am Handy. Manche WLANs sperren Direktverbindungen: dann mobile Daten probieren.';
+    const code = err && err.code;
+    if (code === 'no-game') return 'Zu dieser PIN läuft kein Spiel. Bitte die PIN prüfen.';
+    if (code === 'signal') return 'Der Vermittlungsserver antwortet nicht. Bitte in einer Minute erneut versuchen. (Code V)';
+    const detail = err && err.detail ? `, ${err.detail}` : '';
+    return `Die Verbindung zum Spiel ließ sich nicht aufbauen. Oft sperrt das Netz Direktverbindungen: mit mobilen Daten oder einem anderen WLAN probieren. (Code D${detail})`;
   }
 
   // Erste Ansicht: laufendes Spiel fortsetzen oder PIN abfragen
