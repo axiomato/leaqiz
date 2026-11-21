@@ -17,25 +17,41 @@ Live-Quiz für Unterricht und Schulungen. Die Spielleitung zeigt Fragen am Beame
 | Ausfälle | Spieler und Host können neu laden oder die Verbindung verlieren und kommen automatisch zurück |
 | Auswertung | CSV-Export für Excel (Platz, Punkte, jede Antwort mit Zeit und Punkten) |
 
-## Schnellstart (lokal)
+## Am Laptop starten (ohne Hosting)
 
-Voraussetzung: Node.js 20 oder neuer.
+So läuft leaqiz aktuell. Der Laptop der Spielleitung ist der Server, die Spieler verbinden sich über das WLAN.
 
-```bash
-npm install
-npm start
-```
+**Einmalig vorbereiten**
+1. Node.js in der LTS-Version von nodejs.org installieren.
+2. Den Code holen: auf GitHub im Repo auf **Code → Download ZIP** klicken und die ZIP-Datei entpacken.
 
-- Spielleitung: `http://localhost:3000/host`
-- Spieler im selben WLAN: `http://<IP-des-Rechners>:3000`. Die Adresse steht auch in der Lobby, dazu ein QR-Code.
+**Vor jedem Einsatz**
+1. Laptop und Handys der Spieler ins **selbe WLAN** bringen.
+2. Im entpackten Ordner doppelklicken:
+   - Windows: `start-windows.bat`
+   - macOS: `start-mac.command`. Beim ersten Mal blockiert macOS die Datei, weil sie nicht von Apple beglaubigt ist. Dann **Systemeinstellungen → Datenschutz & Sicherheit** öffnen und bei der blockierten Datei das Öffnen bestätigen („Open Anyway“). Ab macOS 15 geht das nicht mehr per Rechtsklick. Alternative: Terminal öffnen, `bash ` eintippen (mit Leerzeichen), die Datei ins Fenster ziehen, Enter.
+3. Beim ersten Start fragt die Firewall nach Netzwerkzugriff für Node.js. **Zugriff erlauben** (Windows: „Private Netzwerke“).
+4. Der Browser öffnet die Spielleitung. Die Lobby zeigt die Adresse für die Spieler und einen QR-Code.
+5. Zum Beenden das schwarze Fenster schließen. Laufende Spiele enden damit.
 
-Tests: `npm test` (Spiel-Logik und komplette Spiele über echte WebSocket-Verbindungen).
+**Wenn Spieler nicht beitreten können**
+
+| Ursache | Lösung |
+|---|---|
+| Handy im falschen WLAN oder in mobilen Daten | Handy ins selbe WLAN wie der Laptop |
+| Firewall-Abfrage abgelehnt | Windows: Einstellungen → Windows-Sicherheit → Firewall → „App durch Firewall zulassen“ → Node.js für private Netzwerke erlauben |
+| Netz ist bei Windows als „Öffentlich“ eingestuft | Netzwerkprofil auf „Privat“ stellen oder Node.js auch für öffentliche Netzwerke erlauben |
+| Gäste- oder Schul-WLAN trennt Geräte voneinander | anderes WLAN nutzen oder Hotspot (nur für kleine Gruppen) |
+| VPN auf dem Laptop aktiv | VPN ausschalten |
+
+Wer lieber im Terminal arbeitet: `npm install`, dann `npm start`. Tests: `npm test`.
 
 ## Konfiguration (Umgebungsvariablen)
 
 | Variable | Standard | Zweck |
 |---|---|---|
 | `PORT` | `3000` | HTTP-Port |
+| `PUBLIC_URL` | leer | Feste Adresse für Spieler (Lobby und QR-Code), z. B. `https://quiz.example.de`. Leer: Beim Aufruf über `localhost` zeigt die Lobby automatisch die WLAN-Adresse des Rechners |
 | `HOST_PASSWORD` | leer | Ist es gesetzt, dürfen nur Personen mit Passwort Spiele starten. **Für jeden öffentlich erreichbaren Server setzen.** |
 | `TRUST_PROXY` | aus | `1` setzen, wenn ein Reverse Proxy davor läuft (für korrekte IP-Begrenzung und Origin-Prüfung) |
 | `ALLOWED_ORIGINS` | leer | Weitere erlaubte Origins, kommagetrennt (nur nötig bei abweichender Domain) |
@@ -45,7 +61,7 @@ Tests: `npm test` (Spiel-Logik und komplette Spiele über echte WebSocket-Verbin
 
 ## Betrieb
 
-**Live-Betrieb über GitHub und Render:** siehe [PUBLISHING.md](PUBLISHING.md).
+**Hosting im Internet (später, z. B. Render):** siehe [PUBLISHING.md](PUBLISHING.md). Aktuell läuft leaqiz am Laptop, siehe oben.
 
 **Wichtig:** Spiele liegen nur im Arbeitsspeicher. Es darf **genau eine** Instanz laufen. Ein Neustart beendet laufende Spiele, die Quizze im Browser der Spielleitung bleiben erhalten.
 

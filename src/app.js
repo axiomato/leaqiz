@@ -7,6 +7,7 @@ const crypto = require('node:crypto');
 const { Server } = require('socket.io');
 const { Game, GameError } = require('./game');
 const { validateQuiz, validateNickname, isPin, ValidationError } = require('./validate');
+const { joinUrlFor } = require('./network');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -29,6 +30,7 @@ function readConfig(overrides = {}) {
   };
   return {
     hostPassword: process.env.HOST_PASSWORD || '',
+    publicUrl: process.env.PUBLIC_URL || '', // feste Spieler-Adresse, z. B. https://quiz.example.de
     countdownMs: num('COUNTDOWN_MS', 4000),
     maxGames: num('MAX_GAMES', 100),
     maxPlayers: num('MAX_PLAYERS', 200),
@@ -66,7 +68,6 @@ function createApp(overrides = {}) {
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'no-referrer',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-      'Cross-Origin-Opener-Policy': 'same-origin',
     };
   }
 
@@ -142,6 +143,16 @@ function createApp(overrides = {}) {
     const a = crypto.createHash('sha256').update(candidate).digest();
     const b = crypto.createHash('sha256').update(config.hostPassword).digest();
     return crypto.timingSafeEqual(a, b);
+  }
+
+  // Adresse für Spieler (Lobby-Text und QR-Code), siehe src/network.js
+  function joinUrl(socket) {
+    const address = server.address();
+    return joinUrlFor({
+      publicUrl: config.publicUrl,
+      hostHeader: socket.handshake.headers.host,
+      port: address && typeof address === 'object' ? address.port : 3000,
+    });
   }
 
   function newPin() {
@@ -335,7 +346,7 @@ function createApp(overrides = {}) {
       games.set(game.pin, game);
       bindHost(socket, game);
       setImmediate(() => emitHost(game));
-      return { pin: game.pin, hostToken: game.hostToken };
+      return { pin: game.pin, hostToken: game.hostToken, joinUrl: joinUrl(socket) };
     });
 
     on(socket, 'host:resume', ({ pin, hostToken }) => {
@@ -343,7 +354,7 @@ function createApp(overrides = {}) {
       if (!game || !game.checkHostToken(hostToken)) throw new GameError('Dieses Spiel gibt es nicht mehr.');
       bindHost(socket, game);
       setImmediate(() => broadcast(game)); // Spieler sehen: Host ist wieder da
-      return { pin: game.pin };
+      return { pin: game.pin, joinUrl: joinUrl(socket) };
     });
 
     on(socket, 'host:next', () => {

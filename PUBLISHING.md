@@ -1,5 +1,7 @@
 # Veröffentlichung: GitHub → Render
 
+> **Aktuell nicht in Betrieb.** leaqiz läuft vorerst am Laptop der Spielleitung (siehe README, „Am Laptop starten“). Diese Anleitung gilt, sobald ein Hosting im Internet gewünscht ist. Die Datei `render.yaml` bleibt dafür im Repo und bewirkt ohne Render-Konto nichts.
+
 Stand: Version 0.1.0
 
 ## 1. Architektur

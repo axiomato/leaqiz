@@ -198,6 +198,24 @@ test('Host-Passwort, ungültiges Quiz, PIN-Raten wird gebremst', async (t) => {
   assert.match(lastError, /Zu viele Versuche/);
 });
 
+test('Spieler-Adresse: bei localhost LAN-Adresse, mit PUBLIC_URL feste Adresse', async (t) => {
+  const local = await start();
+  const fixed = await start({ publicUrl: 'https://quiz.example.de' });
+  const a = connect(local.url.replace('127.0.0.1', 'localhost'), { transports: ['websocket'], forceNew: true, reconnection: false });
+  const b = client(fixed.url);
+  t.after(() => {
+    a.close();
+    b.close();
+    local.app.close();
+    fixed.app.close();
+  });
+  const resLocal = await call(a, 'host:create', { quiz: QUIZ });
+  const port = local.app.server.address().port;
+  assert.ok(resLocal.joinUrl === '' || new RegExp(`^http://\\d+\\.\\d+\\.\\d+\\.\\d+:${port}$`).test(resLocal.joinUrl), resLocal.joinUrl);
+  const resFixed = await call(b, 'host:create', { quiz: QUIZ });
+  assert.equal(resFixed.joinUrl, 'https://quiz.example.de');
+});
+
 test('HTTP: Seiten, Sicherheits-Header, kein Pfad-Ausbruch', async (t) => {
   const { app, url } = await start();
   t.after(() => app.close());

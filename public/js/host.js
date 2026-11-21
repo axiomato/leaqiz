@@ -20,6 +20,7 @@
   let refs = {};
   let stopTimer = () => {};
   let endingByMe = false;
+  let joinBase = null; // Adresse für Spieler; null = eigene Adresse des Browsers
 
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
@@ -449,6 +450,7 @@
       return startGame(quiz);
     }
     if (!res.ok) return toast(res.error);
+    joinBase = res.joinUrl;
     session.set(GAME_KEY, { pin: res.pin, hostToken: res.hostToken, title: payload.title, questions: payload.questions.length });
     mode = 'game';
     keepAwake(true);
@@ -481,6 +483,7 @@
       toast(res.error);
       if (mode === 'game') renderLibrary();
     } else {
+      joinBase = res.joinUrl;
       mode = 'game';
       keepAwake(true);
     }
@@ -599,15 +602,22 @@
   }
 
   function stageLobby(stage, s) {
-    const joinUrl = `${location.origin}/?pin=${s.pin}`;
+    // Bei Aufruf über localhost liefert der Server die WLAN-Adresse des Laptops.
+    // Leerer String: kein Netzwerk gefunden.
+    const base = joinBase === null || joinBase === undefined ? location.origin : joinBase;
+    const noNetwork = base === '';
+    const joinUrl = `${base}/?pin=${s.pin}`;
+    const shownHost = noNetwork ? '' : new URL(base).host;
     let qrImg = null;
-    try {
-      const qr = window.qrcode(0, 'M');
-      qr.addData(joinUrl);
-      qr.make();
-      qrImg = h('img', { src: qr.createDataURL(8, 0), alt: `QR-Code zum Beitreten mit PIN ${s.pin}`, width: '240', height: '240' });
-    } catch {
-      qrImg = null;
+    if (!noNetwork) {
+      try {
+        const qr = window.qrcode(0, 'M');
+        qr.addData(joinUrl);
+        qr.make();
+        qrImg = h('img', { src: qr.createDataURL(8, 0), alt: `QR-Code zum Beitreten mit PIN ${s.pin}`, width: '240', height: '240' });
+      } catch {
+        qrImg = null;
+      }
     }
 
     refs.count = h('span', { class: 'display lobby__count' });
@@ -622,7 +632,10 @@
         h(
           'section',
           { class: 'lobby__join', 'aria-label': 'So spielst du mit' },
-          h('h1', { class: 'lobby__how' }, 'Öffne ', h('span', { class: 'lobby__url', text: location.host }), ' und gib diese PIN ein:'),
+          noNetwork
+            ? h('p', { class: 'banner', role: 'alert', text: 'Dieser Rechner ist in keinem Netzwerk. Verbinde ihn mit dem WLAN, in dem auch die Spieler sind, und starte leaqiz neu.' })
+            : null,
+          h('h1', { class: 'lobby__how' }, 'Öffne ', h('span', { class: 'lobby__url', text: shownHost || '…' }), ' und gib diese PIN ein:'),
           h('p', { class: 'display lobby__pin', 'aria-label': `PIN ${s.pin.split('').join(' ')}`, text: formatPin(s.pin) }),
           qrImg ? h('div', { class: 'lobby__qr' }, qrImg, h('p', { class: 'lead', text: 'Oder den Code mit der Handykamera scannen.' })) : null,
         ),
