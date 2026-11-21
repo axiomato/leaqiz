@@ -6,8 +6,10 @@
   const SESSION_KEY = 'leaqiz.player';
   const app = document.getElementById('app');
 
-  // Direktverbindung zum Browser der Spielleitung (siehe net.js)
-  const socket = new window.LQNet.PlayerLink();
+  // Direktverbindung zum Browser der Spielleitung (siehe net.js).
+  // Demo (?demo=1): Verbindung zu einer Demo im selben Browser, ganz ohne Netz.
+  const DEMO = new URLSearchParams(location.search).has('demo');
+  const socket = DEMO ? new window.LQNet.LocalPlayerLink() : new window.LQNet.PlayerLink();
 
   let state = null; // letzter Spielzustand von der Spielleitung
   let joinStep = { pin: '', title: '' };
@@ -465,7 +467,7 @@
   // Fehlertexte nach Stufe: V = Vermittlung, D = Direktverbindung. Der Code hilft bei Rückfragen.
   function connectError(err) {
     const code = err && err.code;
-    if (code === 'no-game') return 'Zu dieser PIN läuft kein Spiel. Bitte die PIN prüfen.';
+    if (code === 'no-game') return DEMO ? 'Zu dieser PIN läuft in diesem Browser keine Demo. Starte die Demo in der Spielleitung.' : 'Zu dieser PIN läuft kein Spiel. Bitte die PIN prüfen.';
     if (code === 'signal') return 'Der Vermittlungsserver antwortet nicht. Bitte in einer Minute erneut versuchen. (Code V)';
     const detail = err && err.detail ? `, ${err.detail}` : '';
     return `Die Verbindung zum Spiel ließ sich nicht aufbauen. Oft sperrt das Netz Direktverbindungen: mit mobilen Daten oder einem anderen WLAN probieren. (Code D${detail})`;

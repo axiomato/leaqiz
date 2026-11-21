@@ -183,6 +183,7 @@ textarea {
 /* ---------- Buttons und Felder ---------- */
 
 .btn {
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -381,6 +382,16 @@ textarea.input {
   font-weight: 850;
 }
 
+.tag {
+  display: inline-block;
+  margin-right: var(--s-1);
+  padding: 0 var(--s-1);
+  border-radius: 999px;
+  background: var(--opt-1);
+  color: #fff;
+  font-weight: 850;
+}
+
 [data-phase='lobby'] .bar__pin {
   display: none;
 }
@@ -475,6 +486,19 @@ textarea.input {
   font-size: var(--t-1);
   font-weight: 700;
   max-width: 18ch;
+  line-height: 1.3;
+}
+
+.lobby__self {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+}
+
+.lobby__self p {
+  font-size: var(--t-1);
+  font-weight: 700;
+  max-width: 24ch;
   line-height: 1.3;
 }
 

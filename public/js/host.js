@@ -172,7 +172,8 @@
           h(
             'div',
             { class: 'actions' },
-            h('button', { class: 'btn btn--small', type: 'button', text: 'Spiel starten', onclick: () => startGame(quiz) }),
+            h('button', { class: 'btn btn--small', type: 'button', text: 'Demo starten', onclick: () => startGame(quiz, { demo: true }) }),
+            h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Live-Spiel', title: 'Mit echten Handys (Netz und Relais nötig)', onclick: () => startGame(quiz) }),
             h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Bearbeiten', onclick: () => openEditor(quiz) }),
             h('button', {
               class: 'btn btn--small btn--quiet',
@@ -218,6 +219,7 @@
           ),
         ),
         h('p', { class: 'hint', text: 'Quizze werden nur in diesem Browser gespeichert. Exportiere sie als Datei, um sie zu sichern oder an Kolleginnen und Kollegen weiterzugeben.' }),
+        h('p', { class: 'hint', text: 'Demo: Acht simulierte Mitspielende treten bei und antworten. Du kannst in einem zweiten Fenster selbst mitspielen. Es braucht kein Netz.' }),
         quizzes.length
           ? list
           : h(
@@ -306,7 +308,7 @@
       'div',
       { class: 'actions' },
       h('button', { class: 'btn btn--quiet', type: 'button', text: 'Speichern', onclick: () => saveDraft(false) }),
-      h('button', { class: 'btn', type: 'button', text: 'Speichern und Spiel starten', onclick: () => saveDraft(true) }),
+      h('button', { class: 'btn', type: 'button', text: 'Speichern und Demo starten', onclick: () => saveDraft(true) }),
     );
   }
 
@@ -443,7 +445,7 @@
     box.replaceChildren();
     upsertQuiz(draft);
     dirty = false;
-    if (andStart) startGame(draft);
+    if (andStart) startGame(draft, { demo: true });
     else toast('Gespeichert.');
   }
 
@@ -455,11 +457,13 @@
   let engine = null;
   let link = null;
   let netOnline = true;
+  let demo = null; // { bots } während einer Demo
 
   function engineHooks() {
     return {
       send: (connId, msg) => {
-        if (link) link.send(connId, msg);
+        if (demo && demo.bots.has(connId)) demo.bots.receive(connId, msg);
+        else if (link) link.send(connId, msg);
       },
       onChange: (view) => {
         saveGame();
@@ -469,12 +473,14 @@
   }
 
   // Spielstand im Tab sichern, damit Neuladen das Spiel nicht beendet
+  // Demos werden nicht gesichert: simulierte Mitspielende lassen sich nicht wiederherstellen
   function saveGame() {
-    if (engine && !engine.closed) session.set(GAME_KEY, engine.snapshot());
+    if (engine && !engine.closed && !demo) session.set(GAME_KEY, engine.snapshot());
   }
 
-  function openLink(pin) {
-    link = new window.LQNet.HostLink({
+  function openLink(pin, isDemo = false) {
+    const Link = isDemo ? window.LQNet.LocalHostLink : window.LQNet.HostLink;
+    link = new Link({
       pin,
       onConnection: (id) => engine && engine.attach(id),
       onData: (id, msg) => engine && engine.handle(id, msg),
@@ -499,7 +505,7 @@
     root.replaceChildren(h('main', { class: 'work' }, h('p', { class: 'lead', role: 'status', text })));
   }
 
-  async function startGame(quiz) {
+  async function startGame(quiz, { demo: isDemo = false } = {}) {
     const found = problems(quiz);
     if (found.length) {
       toast('Das Quiz ist noch nicht vollständig.');
@@ -514,11 +520,11 @@
       toast(err.message);
       return;
     }
-    busy('Spiel wird vorbereitet …');
+    busy(isDemo ? 'Demo wird vorbereitet …' : 'Spiel wird vorbereitet …');
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const pin = randomPin();
       try {
-        await openLink(pin);
+        await openLink(pin, isDemo);
       } catch (err) {
         dropLink();
         if (err.code === 'taken') continue; // PIN schon vergeben: neue würfeln
@@ -527,6 +533,7 @@
         return;
       }
       engine = HostEngine.create({ quiz: payload, pin, ...engineHooks() });
+      demo = isDemo ? { bots: window.LQDemo.createBots({ engine, count: 8 }) } : null;
       mode = 'game';
       keepAwake(true);
       saveGame();
@@ -581,6 +588,8 @@
   function endGame(ask) {
     if (ask && !window.confirm('Spiel wirklich beenden? Alle Spieler werden getrennt.')) return;
     if (engine) engine.end();
+    if (demo) demo.bots.stop();
+    demo = null;
     engine = null;
     game = null;
     session.remove(GAME_KEY);
@@ -624,7 +633,7 @@
       'header',
       { class: 'bar' },
       h('span', { class: 'wordmark', text: APP_NAME }),
-      h('span', { class: 'bar__info', text: inQuestion ? `Frage ${s.qIndex + 1} von ${s.qCount}` : s.title }),
+      h('span', { class: 'bar__info' }, demo ? h('span', { class: 'tag', text: 'Demo' }) : null, inQuestion ? `Frage ${s.qIndex + 1} von ${s.qCount}` : s.title),
       h(
         'div',
         { class: 'bar__actions' },
@@ -720,22 +729,47 @@
     refs.chips = h('ul', { class: 'chips', 'aria-label': 'Beigetretene Spieler' });
     refs.start = nextButton('Spiel starten');
 
-    stage.append(
-      h(
-        'div',
-        { class: 'lobby' },
-        h(
+    const joinSection = demo
+      ? h(
+          'section',
+          { class: 'lobby__join', 'aria-label': 'Demo' },
+          h('h1', { class: 'lobby__how', text: 'Demo mit simulierten Mitspielenden' }),
+          h('p', { class: 'lobby__pin num-pin', 'aria-label': `PIN ${s.pin.split('').join(' ')}`, text: formatPin(s.pin) }),
+          h('div', { class: 'lobby__self' }, selfPlayLink(s.pin), h('p', { text: 'Öffnet die Handy-Ansicht in einem zweiten Fenster dieses Browsers.' })),
+        )
+      : h(
           'section',
           { class: 'lobby__join', 'aria-label': 'So spielst du mit' },
           h('h1', { class: 'lobby__how' }, 'Mitspielen auf ', h('span', { class: 'lobby__url', text: shownHost })),
           h('p', { class: 'lobby__pin num-pin', 'aria-label': `PIN ${s.pin.split('').join(' ')}`, text: formatPin(s.pin) }),
           qrImg ? h('div', { class: 'lobby__qr' }, qrImg, h('p', { text: 'Oder den Code mit der Handykamera scannen' })) : null,
-        ),
+        );
+    stage.append(
+      h(
+        'div',
+        { class: 'lobby' },
+        joinSection,
         h('section', { class: 'lobby__players', 'aria-label': 'Spieler' }, h('p', { class: 'lobby__count' }, refs.count, refs.countLabel), refs.chips),
       ),
       actions(refs.start),
     );
     updatePlayers(s);
+  }
+
+  // Demo: Spieleransicht im selben Browser öffnen (kleines Fenster, sonst neuer Tab)
+  function selfPlayLink(pin) {
+    const href = new URL(`../?pin=${pin}&demo=1`, location.href).href;
+    return h('a', {
+      class: 'btn btn--quiet',
+      href,
+      target: 'leaqiz-spieler',
+      rel: 'opener',
+      text: 'Selbst mitspielen',
+      onclick: (e) => {
+        const win = window.open(href, 'leaqiz-spieler', 'popup,width=400,height=820');
+        if (win) e.preventDefault();
+      },
+    });
   }
 
   function updatePlayers(s) {
@@ -744,14 +778,18 @@
     refs.count.textContent = String(n);
     refs.countLabel.textContent = n === 1 ? 'Person ist dabei' : 'Personen sind dabei';
     refs.start.disabled = n === 0;
-    // Bestehende Namen nicht neu aufbauen, damit nur neue Namen „aufploppen“
+    // Bestehende Namen bleiben im DOM (erneutes Einfügen würde ihre Animation neu starten):
+    // Entfernte löschen, neue hinten anhängen. Neue Namen kommen immer zuletzt hinzu.
     const existing = new Map([...refs.chips.querySelectorAll('.chip')].map((el) => [el.dataset.id, el]));
+    const wanted = new Set(s.players.map((p) => p.id));
+    for (const [id, el] of existing) if (!wanted.has(id)) el.remove();
+    refs.chips.querySelectorAll('.lobby__empty').forEach((el) => el.remove());
     let added = 0;
-    const items = s.players.map((p) => {
+    const fresh = s.players.map((p) => {
       const old = existing.get(p.id);
       if (old) {
         old.classList.toggle('is-away', !p.connected);
-        return old;
+        return null;
       }
       added += 1;
       return h(
@@ -774,8 +812,8 @@
         }),
       );
     });
-    if (!n) items.push(h('li', { class: 'lobby__empty', text: 'Noch niemand da. Die Namen erscheinen hier, sobald jemand beitritt.' }));
-    refs.chips.replaceChildren(...items);
+    refs.chips.append(...fresh.filter(Boolean));
+    if (!n) refs.chips.append(h('li', { class: 'lobby__empty', text: 'Noch niemand da. Die Namen erscheinen hier, sobald jemand beitritt.' }));
     if (added && refs.chipsReady) FX.play('join');
     refs.chipsReady = true;
   }

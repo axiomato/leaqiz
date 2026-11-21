@@ -285,5 +285,118 @@ window.LQNet = (function () {
     }
   }
 
-  return { HostLink, PlayerLink, PREFIX };
+  // ---------- Demo: Verbindung innerhalb eines Browsers (ohne Netz) ----------
+  // Spielleitung und Spielerfenster sprechen über einen BroadcastChannel.
+  // Nachrichten: hello/welcome (Aufbau), data (Spieldaten), bye/host-gone (Ende).
+
+  const LOCAL = 'leaqiz-demo-';
+
+  class LocalHostLink {
+    constructor({ pin, onConnection, onData, onClose, onStatus }) {
+      this.pin = pin;
+      this.handlers = { onConnection, onData, onClose, onStatus: onStatus || (() => {}) };
+      this.conns = new Set();
+      this.channel = null;
+    }
+
+    async open() {
+      this.channel = new BroadcastChannel(LOCAL + this.pin);
+      this.channel.onmessage = (e) => {
+        const m = e.data || {};
+        if (m.t === 'hello' && typeof m.c === 'string') {
+          this.conns.add(m.c);
+          this.handlers.onConnection(m.c);
+          this.channel.postMessage({ t: 'welcome', c: m.c });
+        } else if (m.t === 'data' && m.to === 'host' && this.conns.has(m.c)) {
+          this.handlers.onData(m.c, m.d);
+        } else if (m.t === 'bye' && this.conns.has(m.c)) {
+          this.conns.delete(m.c);
+          this.handlers.onClose(m.c);
+        }
+      };
+      this.handlers.onStatus('online');
+    }
+
+    send(connId, msg) {
+      if (this.channel && this.conns.has(connId)) this.channel.postMessage({ t: 'data', c: connId, to: 'player', d: msg });
+    }
+
+    destroy() {
+      if (this.channel) {
+        this.channel.postMessage({ t: 'host-gone' });
+        this.channel.close();
+        this.channel = null;
+      }
+      this.conns.clear();
+    }
+  }
+
+  // Verhält sich wie eine PeerJS-Datenverbindung (open, send, close, on)
+  class LocalConn {
+    constructor(pin, link) {
+      this.connectionId = `local-${Math.random().toString(36).slice(2, 10)}`;
+      this.open = false;
+      this.closed = false;
+      this.handlers = {};
+      this.channel = new BroadcastChannel(LOCAL + pin);
+      this.channel.onmessage = (e) => {
+        const m = e.data || {};
+        if (m.t === 'host-gone') return this.shut();
+        if (m.c !== this.connectionId) return;
+        if (m.t === 'welcome' && !this.open) {
+          this.open = true;
+          clearTimeout(this.timer);
+          this.fire('open');
+        } else if (m.t === 'data' && m.to === 'player') this.fire('data', m.d);
+      };
+      // Keine Spielleitung in diesem Browser: wie „Spiel nicht gefunden“ behandeln
+      this.timer = setTimeout(() => {
+        if (!this.open && link.onUnavailable) link.onUnavailable();
+      }, 1500);
+      this.onHide = () => this.close();
+      window.addEventListener('pagehide', this.onHide);
+      this.channel.postMessage({ t: 'hello', c: this.connectionId });
+    }
+
+    on(ev, fn) {
+      (this.handlers[ev] = this.handlers[ev] || []).push(fn);
+    }
+
+    fire(ev, data) {
+      for (const fn of this.handlers[ev] || []) fn(data);
+    }
+
+    send(d) {
+      if (!this.open) throw new Error('nicht verbunden');
+      this.channel.postMessage({ t: 'data', c: this.connectionId, to: 'host', d });
+    }
+
+    close() {
+      if (this.closed) return;
+      try {
+        this.channel.postMessage({ t: 'bye', c: this.connectionId });
+      } catch {
+        /* Kanal schon zu */
+      }
+      this.shut();
+    }
+
+    shut() {
+      if (this.closed) return;
+      this.closed = true;
+      this.open = false;
+      clearTimeout(this.timer);
+      window.removeEventListener('pagehide', this.onHide);
+      this.channel.close();
+      this.fire('close');
+    }
+  }
+
+  class LocalPlayerLink extends PlayerLink {
+    async ensurePeer() {
+      return { destroyed: false, connect: (id) => new LocalConn(id.slice(PREFIX.length), this) };
+    }
+  }
+
+  return { HostLink, PlayerLink, LocalHostLink, LocalPlayerLink, PREFIX };
 })();
