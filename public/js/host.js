@@ -132,7 +132,7 @@
 
   function renderLibrary() {
     mode = 'library';
-    setPhase('work', 'light');
+    setPhase('home', 'dark');
     renderedKey = '';
     stopTimer();
     keepAwake(false);
@@ -156,78 +156,89 @@
       }
     });
 
-    const list = h('ul', { class: 'lib' });
-    for (const quiz of quizzes) {
+    // Startseite: dunkle Bühne, jedes Quiz als farbige Kachel (Antwortfarben im Wechsel)
+    const tiles = quizzes.map((quiz, i) => {
       const date = new Date(quiz.updatedAt || Date.now()).toLocaleDateString('de-DE');
-      list.append(
-        h(
-          'li',
-          { class: 'lib__item' },
-          h(
-            'div',
-            null,
-            h('p', { class: 'lib__title', text: quiz.title || 'Ohne Titel' }),
-            h('p', { class: 'hint', text: `${quiz.questions.length} ${quiz.questions.length === 1 ? 'Frage' : 'Fragen'}, geändert am ${date}` }),
-          ),
-          h(
-            'div',
-            { class: 'actions' },
-            h('button', { class: 'btn btn--small', type: 'button', text: 'Demo starten', onclick: () => startGame(quiz, { demo: true }) }),
-            h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Live-Spiel', title: 'Mit echten Handys (Netz und Relais nötig)', onclick: () => startGame(quiz) }),
-            h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Bearbeiten', onclick: () => openEditor(quiz) }),
-            h('button', {
-              class: 'btn btn--small btn--quiet',
-              type: 'button',
-              text: 'Exportieren',
-              onclick: () => {
-                const { id, ...data } = quiz;
-                download(`${slug(quiz.title)}.leaqiz.json`, JSON.stringify(data, null, 2), 'application/json');
-              },
-            }),
-            h('button', {
-              class: 'btn btn--small btn--danger',
-              type: 'button',
-              text: 'Löschen',
-              'aria-label': `„${quiz.title}“ löschen`,
-              onclick: () => {
-                if (!window.confirm(`„${quiz.title}“ endgültig löschen?`)) return;
-                saveQuizzes(loadQuizzes().filter((q) => q.id !== quiz.id));
-                toast('Quiz gelöscht.');
-                renderLibrary();
-              },
-            }),
-          ),
-        ),
-      );
-    }
-
-    root.replaceChildren(
-      h('header', { class: 'bar' }, h('span', { class: 'wordmark', text: APP_NAME }), h('span', { class: 'bar__info hint', text: 'Spielleitung' })),
-      h(
-        'main',
-        { class: 'work' },
+      const n = quiz.questions.length;
+      const doubles = quiz.questions.filter((q) => q.double === true).length;
+      const titleId = `quiz-${i}-title`;
+      return h(
+        'li',
+        { class: 'quiz-tile', dataset: { i: String(i % 4) }, 'aria-labelledby': titleId },
+        h('p', { class: 'quiz-tile__count num', 'aria-hidden': 'true', text: String(n) }),
         h(
           'div',
-          { class: 'work__head' },
-          h('h1', { text: 'Deine Quizze' }),
-          h(
-            'div',
-            { class: 'actions' },
-            h('button', { class: 'btn btn--quiet', type: 'button', text: 'Datei importieren', onclick: () => fileInput.click() }),
-            fileInput,
-            h('button', { class: 'btn', type: 'button', text: 'Neues Quiz', onclick: () => openEditor(null) }),
-          ),
+          { class: 'quiz-tile__head' },
+          h('h2', { class: 'quiz-tile__title', id: titleId, text: quiz.title || 'Ohne Titel' }),
+          h('p', { class: 'quiz-tile__meta', text: `${n} ${n === 1 ? 'Frage' : 'Fragen'}${doubles ? `, ${doubles} mit doppelten Punkten` : ''}. Geändert am ${date}` }),
         ),
-        h('p', { class: 'hint', text: 'Quizze werden nur in diesem Browser gespeichert. Exportiere sie als Datei, um sie zu sichern oder an Kolleginnen und Kollegen weiterzugeben.' }),
-        h('p', { class: 'hint', text: 'Demo: Acht simulierte Mitspielende treten bei und antworten. Du kannst in einem zweiten Fenster selbst mitspielen. Es braucht kein Netz.' }),
-        quizzes.length
-          ? list
-          : h(
-              'div',
-              { class: 'empty' },
-              h('p', { class: 'lead', text: 'Noch kein Quiz vorhanden.' }),
-              h('button', { class: 'btn', type: 'button', text: 'Erstes Quiz anlegen', onclick: () => openEditor(null) }),
-            ),
+        h(
+          'div',
+          { class: 'quiz-tile__main' },
+          h('button', { class: 'btn btn--primary', type: 'button', text: 'Demo starten', 'aria-describedby': titleId, onclick: () => startGame(quiz, { demo: true }) }),
+          h('button', { class: 'btn btn--quiet', type: 'button', text: 'Live-Spiel', title: 'Mit echten Handys (Netz und Relais nötig)', 'aria-describedby': titleId, onclick: () => startGame(quiz) }),
+        ),
+        h(
+          'div',
+          { class: 'quiz-tile__more' },
+          h('button', { class: 'btn btn--link', type: 'button', text: 'Bearbeiten', 'aria-describedby': titleId, onclick: () => openEditor(quiz) }),
+          h('button', {
+            class: 'btn btn--link',
+            type: 'button',
+            text: 'Exportieren',
+            'aria-describedby': titleId,
+            onclick: () => {
+              const { id, ...data } = quiz;
+              download(`${slug(quiz.title)}.leaqiz.json`, JSON.stringify(data, null, 2), 'application/json');
+            },
+          }),
+          h('button', {
+            class: 'btn btn--link',
+            type: 'button',
+            text: 'Löschen',
+            'aria-label': `„${quiz.title}“ löschen`,
+            onclick: () => {
+              if (!window.confirm(`„${quiz.title}“ endgültig löschen?`)) return;
+              saveQuizzes(loadQuizzes().filter((q) => q.id !== quiz.id));
+              toast('Quiz gelöscht.');
+              renderLibrary();
+            },
+          }),
+        ),
+      );
+    });
+    tiles.push(
+      h(
+        'li',
+        { class: 'quiz-new' },
+        h(
+          'button',
+          { class: 'quiz-new__btn', type: 'button', onclick: () => openEditor(null) },
+          h('span', { class: 'quiz-new__plus', 'aria-hidden': 'true', text: '+' }),
+          h('span', { text: quizzes.length ? 'Neues Quiz' : 'Erstes Quiz anlegen' }),
+        ),
+      ),
+    );
+
+    root.replaceChildren(
+      h(
+        'header',
+        { class: 'bar' },
+        h('span', { class: 'wordmark', text: APP_NAME }),
+        h('span', { class: 'bar__info', text: 'Spielleitung' }),
+        h('div', { class: 'bar__actions' }, h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Importieren', title: 'Quiz-Datei (JSON) importieren', onclick: () => fileInput.click() }), fileInput),
+      ),
+      h(
+        'main',
+        { class: 'home' },
+        h(
+          'div',
+          { class: 'home__head' },
+          h('h1', { class: 'home__title', text: 'Was spielen wir heute?' }),
+          h('p', { class: 'home__lead', text: 'Wähle ein Quiz. Die Demo startet sofort mit acht simulierten Mitspielenden, ganz ohne Handys und Netz.' }),
+        ),
+        h('ul', { class: 'quiz-grid', 'aria-label': 'Deine Quizze' }, tiles),
+        h('p', { class: 'home__note', text: 'Quizze werden nur in diesem Browser gespeichert. Exportiere sie als Datei, um sie zu sichern oder weiterzugeben.' }),
       ),
     );
   }
@@ -612,6 +623,7 @@
   const PHASE_TONE = { lobby: 'dark', countdown: 'dark', question: 'light', reveal: 'flood', leaderboard: 'light', podium: 'dark' };
 
   function setPhase(phase, tone, floodIndex) {
+    document.documentElement.dataset.view = phase === 'work' || phase === 'home' ? 'work' : 'stage';
     root.dataset.phase = phase;
     root.dataset.tone = tone;
     if (floodIndex === null || floodIndex === undefined) delete root.dataset.flood;
