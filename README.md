@@ -8,7 +8,7 @@ Live-Quiz für Unterricht und Schulungen. Die Spielleitung zeigt Fragen am Beame
 
 ## Für Lehrkräfte
 
-Infoseite mit Demo und „Unterstützen“: `https://axiomato.github.io/leaqiz/lehrkraefte/` (Prototyp, nicht indexiert; Zahlungslinks in `public/js/config.js` unter `donate`).
+Infoseite mit Demo und „Unterstützen“: `https://axiomato.github.io/leaqiz/lehrkraefte/` (Prototyp; Suchmaschinen sind auf allen Seiten dauerhaft gesperrt, ein Test prüft das; Zahlungslinks in `public/js/config.js` unter `donate`).
 
 1. Spielleitung öffnen: `https://axiomato.github.io/leaqiz/host/` (als Lesezeichen speichern)
 2. Quiz wählen → **Spiel starten**
