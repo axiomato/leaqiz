@@ -21,7 +21,9 @@
   const EMBEDDED = window.self !== window.top;
   if (EMBEDDED) document.documentElement.classList.add('embedded');
   const DEMO_TAB_HINT = 'Die Spielleitung antwortet nicht. Handys pausieren Tabs im Hintergrund: Öffne die Demo in der Spielleitung über „Selbst mitspielen“.';
-  const socket = DEMO ? new window.LQNet.LocalPlayerLink() : new window.LQNet.PlayerLink();
+  // Mit eigenem Server: WebSocket zum Spielserver statt Direktverbindung
+  const Link = DEMO ? window.LQNet.LocalPlayerLink : window.LQNet.serverMode() ? window.LQNet.WsPlayerLink : window.LQNet.PlayerLink;
+  const socket = new Link();
 
   let state = null; // letzter Spielzustand von der Spielleitung
   let joinStep = { pin: '', title: '' };
@@ -630,6 +632,8 @@
     const code = err && err.code;
     if (code === 'no-game') return DEMO ? 'Zu dieser PIN läuft in diesem Browser keine Demo. Starte die Demo in der Spielleitung.' : 'Zu dieser PIN läuft kein Spiel. Bitte die PIN prüfen.';
     if (code === 'signal') return 'Der Vermittlungsserver antwortet nicht. Bitte in einer Minute erneut versuchen. (Code V)';
+    if (code === 'server') return 'Der Spielserver ist gerade nicht erreichbar. Bitte Internet prüfen und in einer Minute erneut versuchen. (Code S)';
+    if (code === 'busy') return 'Zu viele falsche PINs von diesem Netz. Bitte eine Minute warten und die PIN prüfen.';
     const detail = err && err.detail ? `, ${err.detail}` : '';
     return `Die Verbindung zum Spiel ließ sich nicht aufbauen. Oft sperrt das Netz Direktverbindungen: mit mobilen Daten oder einem anderen WLAN probieren. (Code D${detail})`;
   }

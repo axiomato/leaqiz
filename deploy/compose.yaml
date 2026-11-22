@@ -1,0 +1,63 @@
+# leaqizz auf einem eigenen Server: Caddy (HTTPS), Spielserver, PostgreSQL.
+# Anleitung: deploy/README.md. Werte kommen aus deploy/.env (Vorlage: .env.example).
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN fehlt in deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    logging: &logs
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  app:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://leaqiz:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt in deploy/.env}@db:5432/leaqiz
+      LEAQIZ_ORIGIN: https://${DOMAIN}
+      LEAQIZ_HINTER_PROXY: "ja"
+      LEAQIZ_INDEXIERBAR: ${LEAQIZ_INDEXIERBAR:-nein}
+      LOG_LEVEL: info
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logs
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: leaqiz
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: leaqiz
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leaqiz -d leaqiz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: *logs
+
+volumes:
+  caddy_data:
+  caddy_config:
+  db_data:

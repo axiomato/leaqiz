@@ -41,8 +41,21 @@ Handys der Spieler ──► finden die Spielleitung über die PIN
                    ──► danach Daten direkt per WebRTC, sonst über TURN-Relais
 ```
 
-- Spiel-Logik: `public/js/engine/` (läuft im Browser der Spielleitung und in den Tests)
+- Spiel-Logik: `public/js/engine/` (läuft im Browser der Spielleitung, auf dem Spielserver und in den Tests)
 - Spieler bekommen die richtige Antwort erst nach dem Schließen der Frage. Punkte berechnet nur die Spielleitung.
+
+### Mit eigenem Server (im Aufbau, Phase 1)
+
+```
+Caddy (HTTPS) ──► leaqizz-Server (server/) ──► PostgreSQL
+                    │ liefert public/ aus, ergänzt js/config.js um den Spielserver
+                    │ führt Live-Spiele: je Spiel eine HostEngine, Zustand in der Datenbank
+Leinwand und Handys ──► WebSocket /ws über Port 443 (kein Relais, kein PeerJS)
+```
+
+- Der Browser erkennt den Server an `window.LEAQIZ_CONFIG.server` und nutzt dann WebSocket statt Direktverbindung. Ohne diesen Eintrag (GitHub Pages) bleibt alles wie oben. Die Demo läuft immer im Browser.
+- Spiele überstehen Neuladen der Leinwand und Neustart des Servers.
+- Betrieb: `deploy/README.md`. Zielarchitektur und Entscheidungen: Projekt „Kahoot! Nachbau“, `claude/leaqiz-architektur.md`.
 
 ## Grenzen des Prototyps
 
@@ -88,12 +101,27 @@ npm run dev     # http://localhost:8080/leaqiz/host/  mit lokalem Vermittlungsse
 npm test        # Spiel-Logik und Host-Engine (Node)
 ```
 
+Spielserver (braucht PostgreSQL):
+
+```bash
+cd server && npm install
+cat > .env <<'ENV'
+DATABASE_URL=postgres://leaqiz:…@localhost:5432/leaqiz
+LEAQIZ_ORIGIN=http://localhost:3000
+LEAQIZ_SPIELE_OHNE_ANMELDUNG=ja
+ENV
+npm run dev     # http://localhost:3000/host/  Live-Spiel läuft über den Server
+npm test        # mit TEST_DATABASE_URL zusätzlich gegen PostgreSQL
+npm run lasttest -- --spiele 20 --spieler 30
+npm run db:generate   # nach Änderungen an src/db/schema.js
+```
+
 ```
 public/                 die veröffentlichte Seite
   index.html            Spieler (Handy)
   host/index.html       Spielleitung (Bibliothek, Editor, Beamer)
   js/engine/            Spiel-Logik, Eingabeprüfung, Host-Engine
-  js/net.js             Direktverbindung (PeerJS)
+  js/net.js             Direktverbindung (PeerJS) und Verbindung zum Spielserver (WebSocket)
   js/avatar.js          Avatare: schräge Wesen aus sechs Zahlen, gezeichnet als SVG
   js/config.js          Vermittlungsserver (leer = öffentlicher PeerJS-Server)
   img/og-leaqizz.png    Vorschaubild für geteilte Links (1200 × 630)
@@ -101,13 +129,18 @@ dev/serve.js            lokaler Entwicklungsserver
 dev/og/                 Quelle des Vorschaubilds; neu erzeugen mit python3 dev/og/render.py
 dev/avatar/             Teile-Bogen der Avatare; neu erzeugen mit python3 dev/avatar/render.py
 test/                   Tests (node:test)
+server/                 Spielserver: Fastify, WebSocket (ws), PostgreSQL (Drizzle)
+  src/games/            Spiele verwalten, sichern, wiederherstellen; WebSocket-Zugang
+  drizzle/              Datenbank-Migrationen (erzeugt, eingecheckt)
+  scripts/lasttest.js   viele Spiele mit simulierten Handys gleichzeitig
+deploy/                 Docker Compose mit Caddy und PostgreSQL, Betriebsanleitung
 ```
 
 Das Vorschaubild ist in Spielerseite, Spielleitung und Landingpage mit absoluter Adresse
 unter `https://axiomato.github.io/leaqiz/` eingetragen. Beim Umzug auf eine eigene Domain
 die `og:url`- und `og:image`-Adressen mitziehen; `test/og.test.js` prüft sie.
 
-Die frühere Variante mit eigenem Node.js-Server liegt im Git-Verlauf (Commit `875fb9e`).
+Die frühere Variante mit eigenem Node.js-Server (Socket.IO) liegt im Git-Verlauf (Commit `875fb9e`); der neue Server unter `server/` ersetzt sie.
 
 ## Quiz-Dateiformat
 
@@ -126,5 +159,6 @@ Die frühere Variante mit eigenem Node.js-Server liegt im Git-Verlauf (Commit `8
 - PeerJS, MIT-Lizenz (`public/js/vendor/peerjs.min.js`, `LICENSE-peerjs.txt`)
 - qrcode-generator von Kazuhiko Arase, MIT-Lizenz (`public/js/vendor/qrcode.js`)
 - Schrift Archivo, SIL Open Font License 1.1 (`public/fonts/OFL-Archivo.txt`)
+- Spielserver: Fastify, @fastify/static, ws, pg (MIT), Drizzle ORM (Apache-2.0), Drizzle Kit (MIT, nur Entwicklung)
 
 Die Lizenz des eigenen Codes ist noch nicht festgelegt. Ein öffentliches Repo ohne Lizenz heißt: einsehbar, aber nicht zur Weiterverwendung freigegeben.

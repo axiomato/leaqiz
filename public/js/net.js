@@ -398,5 +398,294 @@ window.LQNet = (function () {
     }
   }
 
-  return { HostLink, PlayerLink, LocalHostLink, LocalPlayerLink, PREFIX };
+  // ---------- Spielserver (WebSocket) ----------
+  // Läuft leaqizz auf dem eigenen Server, ergänzt dieser window.LEAQIZ_CONFIG.server.
+  // Dann führt der Server die Spiele; Leinwand und Handys verbinden sich per WebSocket dorthin.
+  // Ohne diesen Eintrag (GitHub Pages) bleibt alles bei der Direktverbindung.
+
+  const serverConfig = () => (window.LEAQIZ_CONFIG && window.LEAQIZ_CONFIG.server) || null;
+  const serverMode = () => Boolean(serverConfig());
+
+  function wsUrl() {
+    const url = new URL(serverConfig().ws, location.href);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    return url.href;
+  }
+
+  const apiUrl = (path) => new URL(serverConfig().api + path, location.href).href;
+
+  // Verhält sich wie eine PeerJS-Datenverbindung (open, send, close, on), damit PlayerLink unverändert bleibt
+  class WsConn {
+    constructor(pin, link) {
+      this.open = false;
+      this.closed = false;
+      this.handlers = {};
+      this.peerConnection = null;
+      this.ws = new WebSocket(wsUrl());
+      this.ws.onopen = () => this.ws.send(JSON.stringify({ k: 'player', pin }));
+      this.ws.onmessage = (e) => {
+        let m;
+        try {
+          m = JSON.parse(e.data);
+        } catch {
+          return;
+        }
+        if (!m || typeof m !== 'object') return;
+        if (m.k === 'welcome' && !this.open) {
+          this.open = true;
+          this.fire('open');
+        } else if (m.k === 'no-game') {
+          this.refused = true;
+          if (link.onUnavailable) link.onUnavailable();
+        } else if (m.k === 'busy') {
+          this.refused = true;
+          if (link.onBusy) link.onBusy();
+        } else if (this.open) this.fire('data', m);
+      };
+      this.ws.onclose = () => this.shut();
+      this.ws.onerror = () => {};
+    }
+
+    on(ev, fn) {
+      (this.handlers[ev] = this.handlers[ev] || []).push(fn);
+    }
+
+    fire(ev, data) {
+      for (const fn of this.handlers[ev] || []) fn(data);
+    }
+
+    send(d) {
+      if (!this.open) throw new Error('nicht verbunden');
+      this.ws.send(JSON.stringify(d));
+    }
+
+    close() {
+      try {
+        this.ws.close();
+      } catch {
+        /* schon zu */
+      }
+      this.shut();
+    }
+
+    // Abgewiesen (keine PIN, zu viele Versuche): kein „Verbindung verloren“ und kein Neuverbinden
+    shut() {
+      if (this.closed) return;
+      this.closed = true;
+      this.open = false;
+      if (!this.refused) this.fire('close');
+    }
+  }
+
+  class WsPlayerLink extends PlayerLink {
+    async ensurePeer() {
+      return { destroyed: false, connect: (id) => new WsConn(id.slice(PREFIX.length), this) };
+    }
+
+    // Fehler wie bei der Direktverbindung, nur mit eigenem Code für den Server
+    async connect(pin) {
+      this.onBusy = null;
+      const busy = new Promise((_, reject) => {
+        this.onBusy = () => reject(Object.assign(new Error('busy'), { code: 'busy' }));
+      });
+      try {
+        await Promise.race([super.connect(pin), busy]);
+      } catch (err) {
+        if (err.code === 'busy') this.closeConn();
+        if (err.code === 'ice') err.code = 'server';
+        throw err;
+      } finally {
+        this.onBusy = null;
+      }
+    }
+  }
+
+  // Leinwand eines Spiels auf dem Server. Gleiche Oberfläche wie die HostEngine im Browser
+  // (next, kick, end, hostView, snapshot, pin, closed), damit host.js beide gleich behandelt.
+  class RemoteGame {
+    static async create(quiz, hooks) {
+      let res;
+      let data = {};
+      try {
+        res = await fetch(apiUrl('games'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ quiz }),
+        });
+        data = await res.json().catch(() => ({}));
+      } catch {
+        throw new Error('Der Spielserver ist nicht erreichbar. Bitte Internet prüfen und erneut versuchen.');
+      }
+      if (!res.ok) throw new Error(data.error || 'Das Spiel ließ sich nicht anlegen. Bitte erneut versuchen.');
+      const game = new RemoteGame({ id: data.id, token: data.hostToken, pin: data.pin }, hooks);
+      await game.connect();
+      return game;
+    }
+
+    static async resume(saved, hooks) {
+      const game = new RemoteGame(saved, hooks);
+      await game.connect();
+      return game;
+    }
+
+    constructor({ id, token, pin }, { onChange, onClosed, onStatus }) {
+      this.id = id;
+      this.token = token;
+      this.pin = pin;
+      this.hooks = { onChange: onChange || (() => {}), onClosed: onClosed || (() => {}), onStatus: onStatus || (() => {}) };
+      this.view = null;
+      this.ws = null;
+      this.seq = 0;
+      this.pending = new Map();
+      this.closed = false;
+      this.retryTimer = 0;
+      this.retries = 0;
+    }
+
+    // Erste Verbindung: erst fertig, wenn die erste Ansicht da ist
+    connect() {
+      return new Promise((resolve, reject) => {
+        let first = true;
+        const ws = new WebSocket(wsUrl());
+        this.ws = ws;
+        const timer = setTimeout(() => {
+          if (!first) return;
+          first = false;
+          ws.close();
+          reject(new Error('Der Spielserver antwortet nicht. Bitte erneut versuchen.'));
+        }, 10000);
+        ws.onopen = () => ws.send(JSON.stringify({ k: 'host', game: this.id, token: this.token }));
+        ws.onmessage = (e) => {
+          let m;
+          try {
+            m = JSON.parse(e.data);
+          } catch {
+            return;
+          }
+          if (!m || typeof m !== 'object') return;
+          if (m.k === 'view') {
+            this.view = m.d;
+            this.retries = 0;
+            if (first) {
+              first = false;
+              clearTimeout(timer);
+              this.hooks.onStatus('online');
+              resolve();
+            } else this.hooks.onChange(m.d);
+          } else if (m.k === 'ack') {
+            const p = this.pending.get(m.id);
+            if (p) {
+              clearTimeout(p.timer);
+              this.pending.delete(m.id);
+              if (m.r && m.r.ok) p.resolve();
+              else p.reject(new Error((m.r && m.r.error) || 'Unbekannter Fehler.'));
+            }
+          } else if (m.k === 'denied') {
+            this.finish('Dieses Spiel gibt es nicht mehr.');
+            if (first) {
+              first = false;
+              clearTimeout(timer);
+              reject(new Error('Dieses Spiel gibt es nicht mehr.'));
+            }
+          } else if (m.k === 'closed') {
+            this.finish(m.reason || 'Das Spiel ist beendet.');
+          }
+        };
+        ws.onclose = () => {
+          if (this.ws !== ws) return;
+          this.ws = null;
+          this.failPending('Verbindung zum Spielserver unterbrochen.');
+          if (first) {
+            first = false;
+            clearTimeout(timer);
+            reject(new Error('Der Spielserver ist nicht erreichbar. Bitte Internet prüfen und erneut versuchen.'));
+            return;
+          }
+          if (this.closed) return;
+          this.hooks.onStatus('offline');
+          this.scheduleReconnect();
+        };
+        ws.onerror = () => {};
+      });
+    }
+
+    // Neu verbinden mit wachsender Pause (1 s bis 10 s); das Spiel läuft auf dem Server weiter
+    scheduleReconnect() {
+      clearTimeout(this.retryTimer);
+      const delay = Math.min(10000, 1000 * 2 ** Math.min(this.retries, 4));
+      this.retries += 1;
+      this.retryTimer = setTimeout(() => {
+        if (this.closed) return;
+        this.connect().then(
+          () => this.hooks.onChange(this.view),
+          () => !this.closed && this.scheduleReconnect(),
+        );
+      }, delay);
+    }
+
+    command(ev, p) {
+      return new Promise((resolve, reject) => {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+          reject(new Error('Keine Verbindung zum Spielserver. Ich verbinde neu …'));
+          return;
+        }
+        this.seq += 1;
+        const id = this.seq;
+        const timer = setTimeout(() => {
+          this.pending.delete(id);
+          reject(new Error('Der Spielserver antwortet nicht.'));
+        }, 8000);
+        this.pending.set(id, { resolve, reject, timer });
+        this.ws.send(JSON.stringify({ k: 'cmd', id, ev, p: p || {} }));
+      });
+    }
+
+    failPending(text) {
+      for (const [id, p] of this.pending) {
+        clearTimeout(p.timer);
+        p.reject(new Error(text));
+        this.pending.delete(id);
+      }
+    }
+
+    finish(reason) {
+      if (this.closed) return;
+      this.closed = true;
+      clearTimeout(this.retryTimer);
+      this.failPending('Das Spiel ist beendet.');
+      if (this.ws) this.ws.close();
+      this.ws = null;
+      this.hooks.onClosed(reason);
+    }
+
+    hostView() {
+      return this.view;
+    }
+
+    // Für den Tab-Speicher: nur die Zugangsdaten, der Spielstand liegt auf dem Server
+    snapshot() {
+      return { v: 1, remote: { id: this.id, token: this.token, pin: this.pin } };
+    }
+
+    next() {
+      return this.command('next');
+    }
+
+    kick(playerId) {
+      return this.command('kick', { playerId });
+    }
+
+    end() {
+      if (this.closed) return Promise.resolve();
+      const done = this.command('end').catch(() => {});
+      this.closed = true;
+      clearTimeout(this.retryTimer);
+      return done.then(() => {
+        if (this.ws) this.ws.close();
+      });
+    }
+  }
+
+  return { HostLink, PlayerLink, LocalHostLink, LocalPlayerLink, WsPlayerLink, RemoteGame, serverMode, PREFIX };
 })();

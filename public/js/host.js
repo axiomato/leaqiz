@@ -177,7 +177,7 @@
           'div',
           { class: 'quiz-tile__main' },
           h('button', { class: 'btn btn--primary', type: 'button', text: 'Demo starten', 'aria-describedby': titleId, onclick: () => startGame(quiz, { demo: true }) }),
-          h('button', { class: 'btn btn--quiet', type: 'button', text: 'Live-Spiel', title: 'Mit echten Handys (Netz und Relais nötig)', 'aria-describedby': titleId, onclick: () => startGame(quiz) }),
+          h('button', { class: 'btn btn--quiet', type: 'button', text: 'Live-Spiel', title: window.LQNet.serverMode() ? 'Mit echten Handys' : 'Mit echten Handys (Netz und Relais nötig)', 'aria-describedby': titleId, onclick: () => startGame(quiz) }),
         ),
         h(
           'div',
@@ -555,7 +555,8 @@
   }
 
   // ---------- Spiel starten und fortsetzen ----------
-  // Dieser Browser ist der Spiel-Server: Host-Engine + Direktverbindung zu den Spielern.
+  // Ohne eigenen Server (GitHub Pages) ist dieser Browser der Spiel-Server: Host-Engine + Direktverbindung.
+  // Mit eigenem Server führt dieser das Live-Spiel (RemoteGame, net.js); die Demo bleibt immer hier im Browser.
 
   const { HostEngine, randomPin } = window.LeaqizEngine;
   const { validateQuiz } = window.LeaqizValidate;
@@ -573,6 +574,31 @@
       onChange: (view) => {
         saveGame();
         if (mode === 'game') renderGame(view);
+      },
+    };
+  }
+
+  // Spiel auf dem Server (eigener Betrieb): gleiche Ansicht, der Server führt das Spiel
+  function remoteHooks() {
+    return {
+      onChange: (view) => {
+        saveGame();
+        if (mode === 'game') renderGame(view);
+      },
+      onStatus: (status) => {
+        netOnline = status === 'online';
+        updateNetStatus();
+      },
+      // Vom Server beendet (z. B. nach langer Pause): zurück zur Bibliothek
+      onClosed: (reason) => {
+        if (!engine) return;
+        toast(reason);
+        closeDock();
+        engine = null;
+        game = null;
+        session.remove(GAME_KEY);
+        keepAwake(false);
+        renderLibrary();
       },
     };
   }
@@ -626,6 +652,22 @@
       return;
     }
     busy(isDemo ? 'Demo wird vorbereitet …' : 'Spiel wird vorbereitet …');
+    if (!isDemo && window.LQNet.serverMode()) {
+      try {
+        engine = await window.LQNet.RemoteGame.create(payload, remoteHooks());
+      } catch (err) {
+        toast(err.message);
+        renderLibrary();
+        return;
+      }
+      demo = null;
+      netOnline = true;
+      mode = 'game';
+      keepAwake(true);
+      saveGame();
+      renderGame(engine.hostView());
+      return;
+    }
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const pin = randomPin();
       try {
@@ -650,6 +692,23 @@
   }
 
   async function resumeGame(snapshot) {
+    if (snapshot.remote) {
+      busy('Verbinde mit deinem Spiel …');
+      try {
+        engine = await window.LQNet.RemoteGame.resume(snapshot.remote, remoteHooks());
+      } catch (err) {
+        engine = null;
+        session.remove(GAME_KEY);
+        toast(err.message);
+        renderLibrary();
+        return;
+      }
+      mode = 'game';
+      netOnline = true;
+      keepAwake(true);
+      renderGame(engine.hostView());
+      return;
+    }
     try {
       engine = HostEngine.restore(snapshot, engineHooks());
     } catch {
@@ -678,13 +737,17 @@
   function updateNetStatus() {
     const el = document.getElementById('net-status');
     if (!el) return;
-    el.textContent = netOnline ? '' : 'Vermittlung getrennt: Neue Spieler können gerade nicht beitreten. Ich verbinde neu …';
+    const offline = window.LQNet.serverMode() && !demo
+      ? 'Verbindung zum Spielserver unterbrochen. Das Spiel läuft weiter, ich verbinde neu …'
+      : 'Vermittlung getrennt: Neue Spieler können gerade nicht beitreten. Ich verbinde neu …';
+    el.textContent = netOnline ? '' : offline;
   }
 
   function next() {
     if (!engine) return;
     try {
-      engine.next();
+      const done = engine.next();
+      if (done && typeof done.catch === 'function') done.catch((err) => toast(err.message));
     } catch (err) {
       toast(err.message);
     }
@@ -952,7 +1015,8 @@
           text: '×',
           onclick: () => {
             try {
-              if (engine) engine.kick(p.id);
+              const done = engine && engine.kick(p.id);
+              if (done && typeof done.catch === 'function') done.catch((err) => toast(err.message));
             } catch (err) {
               toast(err.message);
             }
