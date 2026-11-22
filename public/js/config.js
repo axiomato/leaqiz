@@ -22,5 +22,5 @@ window.LEAQIZ_CONFIG = {
   //   amounts:  Betrag in Euro -> Link mit festem Betrag
   //   custom:   Link, auf dem der Betrag frei gewählt wird (wird genutzt, wenn für einen Betrag kein Link da ist)
   //   Alles leer = Knopf inaktiv mit Hinweis „wird eingerichtet“. Nur https-Links werden verwendet.
-  donate: { provider: 'PayPal', amounts: { 5: '', 10: '', 25: '' }, custom: '' },
+  donate: { provider: 'PayPal', amounts: { 5: '', 10: '', 25: '' }, custom: 'https://www.paypal.com/donate/?hosted_button_id=HQKG9487XENE8' },
 };
