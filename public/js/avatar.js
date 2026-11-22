@@ -126,6 +126,22 @@ function random(next = Math.random) {
   return pick(next);
 }
 
+// Gleiche Avatare in einer Runde vermeiden: erst die Körperfarbe, dann den Grund weiterdrehen.
+// Bei mehr Mitspielenden als Farbkombinationen bleibt ein Doppelter möglich (unschädlich).
+function distinct(code, taken) {
+  const key = (c) => c.join('.');
+  const used = new Set(taken.map(key));
+  if (!used.has(key(code))) return code;
+  const [K, G] = [SIZES[4], SIZES[5]];
+  for (let i = 1; i < K * G; i++) {
+    const k = (code[4] + i) % K;
+    const g = (code[5] + Math.floor((code[4] + i) / K)) % G;
+    const next = [code[0], code[1], code[2], code[3], k, g];
+    if (!used.has(key(next))) return next;
+  }
+  return code;
+}
+
 function render(code, { title = '' } = {}) {
   const c = isAvatar(code) ? code : fromName('');
   const [f, e, m, x, k, g] = c;
@@ -156,5 +172,5 @@ function render(code, { title = '' } = {}) {
   );
 }
 
-return { PARTS, SIZES, isAvatar, fromName, random, render, hash };
+return { PARTS, SIZES, isAvatar, fromName, random, distinct, render, hash };
 });

@@ -1,9 +1,17 @@
 'use strict';
 
 (function () {
-  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, keepAwake } = window.LQ;
+  const { APP_NAME, LETTERS, h, avatar, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, keepAwake } = window.LQ;
   const session = store('session');
+  const local = store('local');
   const SESSION_KEY = 'leaqiz.player';
+  // Gewürfelter Avatar bleibt auf diesem Gerät für das nächste Spiel (nur sechs Zahlen, D-38)
+  const AVATAR_KEY = 'leaqiz.avatar';
+  const Av = window.LeaqizAvatar;
+  const savedAvatar = () => {
+    const a = local.get(AVATAR_KEY);
+    return Av && Av.isAvatar(a) ? a : null;
+  };
   const app = document.getElementById('app');
 
   // Direktverbindung zum Browser der Spielleitung (siehe net.js).
@@ -199,11 +207,32 @@
       'aria-describedby': 'name-hint name-error',
     });
     const button = h('button', { class: 'btn btn--big', type: 'submit', text: 'Beitreten' });
+    // Avatar: ohne Würfeln aus dem Namen, sonst der gewürfelte (auf dem Gerät gemerkt)
+    let rolled = savedAvatar();
+    const current = () => rolled || (Av ? Av.fromName(input.value) : null);
+    const preview = h('div', { class: 'avatar-pick__pic' });
+    const showPreview = (fresh) => preview.replaceChildren(avatar(current(), input.value, fresh ? 'is-new' : ''));
+    const roll = h('button', {
+      class: 'btn btn--quiet',
+      type: 'button',
+      text: 'Würfeln',
+      'aria-label': 'Avatar würfeln',
+      onclick: () => {
+        rolled = Av.random();
+        local.set(AVATAR_KEY, rolled);
+        showPreview(true);
+      },
+    });
+    input.addEventListener('input', () => {
+      if (!rolled) showPreview(false);
+    });
+    showPreview(false);
     const form = h(
       'form',
       { class: 'join-form', novalidate: true },
       h('label', { class: 'field', for: 'nickname' }, h('span', { text: 'Spielname' }), input),
       h('p', { class: 'hint', id: 'name-hint', text: 'Kein echter Name nötig. Höchstens 20 Zeichen.' }),
+      Av ? h('div', { class: 'avatar-pick' }, preview, h('div', { class: 'avatar-pick__side' }, h('p', { class: 'hint', text: 'Dein Avatar' }), roll)) : null,
       button,
       DEMO && !EMBEDDED && window.matchMedia('(pointer: coarse)').matches
         ? h('p', { class: 'hint', text: 'Tipp: Auf dem Handy die Demo in der Spielleitung über „Selbst mitspielen“ öffnen. Ein zweiter Tab wird im Hintergrund pausiert.' })
@@ -212,7 +241,7 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       button.disabled = true;
-      const res = await emit(socket, 'player:join', { pin: joinStep.pin, nickname: input.value });
+      const res = await emit(socket, 'player:join', { pin: joinStep.pin, nickname: input.value, avatar: current() });
       button.disabled = false;
       if (!res.ok) {
         error.textContent = res.error;
@@ -308,10 +337,29 @@
   }
 
   function renderLobby(s) {
+    const pic = h('div', { class: 'lobby-me__pic' }, avatar(s.avatar, s.nickname));
+    const roll = Av
+      ? h('button', {
+          class: 'btn btn--quiet',
+          type: 'button',
+          text: 'Neu würfeln',
+          'aria-label': 'Avatar neu würfeln',
+          onclick: async () => {
+            const next = Av.random();
+            roll.disabled = true;
+            const res = await emit(socket, 'player:avatar', { avatar: next });
+            roll.disabled = false;
+            if (!res.ok) return toast(res.error);
+            local.set(AVATAR_KEY, next);
+            pic.replaceChildren(avatar(res.avatar, s.nickname, 'is-new'));
+          },
+        })
+      : null;
     frame(
       h(
         'div',
         { class: 'screen__center' },
+        h('div', { class: 'lobby-me' }, pic, roll),
         h('h1', { class: 'title', text: 'Du bist dabei' }),
         h('p', { class: 'lead', text: `Gleich geht es los, ${s.nickname}.` }),
         h('p', { class: 'waiting', text: 'Warte auf den Start' }),
@@ -539,7 +587,7 @@
       h(
         'div',
         { class: 'screen__center' },
-        h('p', { class: 'final-rank num', 'aria-hidden': 'true', text: `${s.rank}.` }),
+        h('div', { class: 'final-me' }, avatar(s.avatar, s.nickname), h('p', { class: 'final-rank num', 'aria-hidden': 'true', text: `${s.rank}.` })),
         h('h1', { class: 'title', text: title }),
         h(
           'dl',

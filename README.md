@@ -94,10 +94,12 @@ public/                 die veröffentlichte Seite
   host/index.html       Spielleitung (Bibliothek, Editor, Beamer)
   js/engine/            Spiel-Logik, Eingabeprüfung, Host-Engine
   js/net.js             Direktverbindung (PeerJS)
+  js/avatar.js          Avatare: schräge Wesen aus sechs Zahlen, gezeichnet als SVG
   js/config.js          Vermittlungsserver (leer = öffentlicher PeerJS-Server)
   img/og-leaqizz.png    Vorschaubild für geteilte Links (1200 × 630)
 dev/serve.js            lokaler Entwicklungsserver
 dev/og/                 Quelle des Vorschaubilds; neu erzeugen mit python3 dev/og/render.py
+dev/avatar/             Teile-Bogen der Avatare; neu erzeugen mit python3 dev/avatar/render.py
 test/                   Tests (node:test)
 ```
 

@@ -85,7 +85,7 @@ function rankPlayers(players) {
       rank = i + 1;
       prevScore = p.score;
     }
-    return { id: p.id, nickname: p.nickname, score: p.score, rank };
+    return { id: p.id, nickname: p.nickname, avatar: p.avatar || null, score: p.score, rank };
   });
 }
 
@@ -124,7 +124,7 @@ class Game {
 
   // ---------- Spieler ----------
 
-  addPlayer(nickname, now) {
+  addPlayer(nickname, now, avatar = null) {
     if (this.state === 'podium') throw new GameError('Dieses Spiel ist bereits beendet.');
     if (this.players.size >= this.maxPlayers) throw new GameError('Das Spiel ist voll.');
     const key = nickname.toLocaleLowerCase('de');
@@ -135,6 +135,7 @@ class Game {
       id: randomToken(8),
       token: randomToken(),
       nickname,
+      avatar, // sechs Zahlen, von der Host-Engine geprüft (avatar.js)
       score: 0,
       streak: 0,
       bestStreak: 0,
@@ -150,6 +151,16 @@ class Game {
     this.players.set(player.id, player);
     this.touch(now);
     return player;
+  }
+
+  // Avatar ändern: nur in der Lobby, damit sich am Beamer während der Runde nichts verschiebt
+  setAvatar(playerId, avatar, now) {
+    const p = this.players.get(playerId);
+    if (!p) throw new GameError('Du bist in keinem Spiel.');
+    if (this.state !== 'lobby') throw new GameError('Den Avatar kannst du nur vor dem Start ändern.');
+    p.avatar = avatar;
+    this.touch(now);
+    return p;
   }
 
   findPlayerByToken(token) {
@@ -315,7 +326,7 @@ class Game {
       remainingMs: this.remainingMs(now),
       players: [...this.players.values()]
         .sort((a, b) => a.joinedAt - b.joinedAt)
-        .map((p) => ({ id: p.id, nickname: p.nickname, connected: p.connected })),
+        .map((p) => ({ id: p.id, nickname: p.nickname, avatar: p.avatar || null, connected: p.connected })),
       question: null,
       answeredCount: this.round ? this.round.answers.size : 0,
       activeCount: this.connectedPlayers().length,
@@ -366,6 +377,7 @@ class Game {
       qCount: this.questionCount,
       remainingMs: this.remainingMs(now),
       nickname: p.nickname,
+      avatar: p.avatar || null,
       hostOnline: this.hostConnected,
       score: p.score,
       rank: me.rank,

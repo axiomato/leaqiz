@@ -5,11 +5,13 @@
 (function (root, factory) {
   'use strict';
   const isNode = typeof module === 'object' && module.exports;
-  const deps = isNode ? [require('./game.js'), require('./validate.js')] : [root.LeaqizGame, root.LeaqizValidate];
+  const deps = isNode
+    ? [require('./game.js'), require('./validate.js'), require('../avatar.js')]
+    : [root.LeaqizGame, root.LeaqizValidate, root.LeaqizAvatar];
   const api = factory(...deps);
   if (isNode) module.exports = api;
   else root.LeaqizEngine = api;
-})(typeof self !== 'undefined' ? self : globalThis, function (GameLib, Validate) {
+})(typeof self !== 'undefined' ? self : globalThis, function (GameLib, Validate, Avatar) {
   'use strict';
 
   const { Game, GameError } = GameLib;
@@ -147,7 +149,8 @@
 
         case 'player:join': {
           if (conn.playerId) throw new GameError('Du bist schon im Spiel.');
-          const player = game.addPlayer(validateNickname(p.nickname), this.now());
+          const nickname = validateNickname(p.nickname);
+          const player = game.addPlayer(nickname, this.now(), this.avatarFor(p.avatar, nickname, null));
           this.bind(connId, conn, player);
           this.after = () => {
             this.emitPlayer(player);
@@ -181,6 +184,16 @@
           return {};
         }
 
+        case 'player:avatar': {
+          const player = this.playerOf(conn);
+          game.setAvatar(player.id, this.avatarFor(p.avatar, player.nickname, player.id), this.now());
+          this.after = () => {
+            this.emitPlayer(player);
+            this.changed(false);
+          };
+          return { avatar: player.avatar };
+        }
+
         case 'player:leave': {
           const player = this.playerOf(conn);
           game.removePlayer(player.id);
@@ -195,6 +208,15 @@
         default:
           throw new GameError('Unbekannte Anfrage.');
       }
+    }
+
+    // Avatar vom Handy nie ungeprüft übernehmen: nur sechs gültige Zahlen, sonst aus dem Namen.
+    // Gleiche Avatare in einer Runde werden umgefärbt.
+    avatarFor(raw, nickname, selfId) {
+      if (!Avatar) return null;
+      const code = Avatar.isAvatar(raw) ? raw.slice() : Avatar.fromName(nickname);
+      const taken = [...this.game.players.values()].filter((q) => q.id !== selfId && q.avatar).map((q) => q.avatar);
+      return Avatar.distinct(code, taken);
     }
 
     playerOf(conn) {

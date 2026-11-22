@@ -323,3 +323,38 @@ test('Wartefortschritt: wer geantwortet hat, sieht gebündelt, wie viele schon f
   engine.end();
   clock.advance(1000);
 });
+
+test('Avatare: geprüft, aus dem Namen, eindeutig, nur in der Lobby änderbar', () => {
+  const { engine, clock, player, lastHost } = setup();
+  const [a, b, c, d] = ['p1', 'p2', 'p3', 'p4'].map(player);
+  const A = require('../public/js/avatar.js');
+
+  assert.equal(a.req('player:join', { nickname: 'Anna', avatar: [1, 2, 3, 4, 5, 2] }).ok, true);
+  assert.deepEqual(a.lastState().avatar, [1, 2, 3, 4, 5, 2], 'gültiger Avatar wird übernommen');
+
+  assert.equal(b.req('player:join', { nickname: 'Ben', avatar: '<svg onload=x>' }).ok, true);
+  assert.deepEqual(b.lastState().avatar, A.fromName('Ben'), 'ungültiger Avatar → aus dem Namen');
+
+  assert.equal(c.req('player:join', { nickname: 'Cem' }).ok, true);
+  assert.deepEqual(c.lastState().avatar, A.fromName('Cem'), 'ohne Avatar → aus dem Namen');
+
+  assert.equal(d.req('player:join', { nickname: 'Dana', avatar: [1, 2, 3, 4, 5, 2] }).ok, true);
+  const dAv = d.lastState().avatar;
+  assert.ok(A.isAvatar(dAv));
+  assert.notDeepEqual(dAv, [1, 2, 3, 4, 5, 2], 'gleicher Avatar wird umgefärbt');
+  assert.deepEqual(dAv.slice(0, 4), [1, 2, 3, 4], 'Form, Augen, Mund, Extra bleiben');
+
+  const r = b.req('player:avatar', { avatar: [0, 0, 0, 0, 0, 0] });
+  assert.equal(r.ok, true);
+  assert.deepEqual(b.lastState().avatar, [0, 0, 0, 0, 0, 0]);
+  const chips = lastHost().players;
+  assert.deepEqual(chips.find((p) => p.nickname === 'Ben').avatar, [0, 0, 0, 0, 0, 0], 'Leinwand sieht den neuen Avatar');
+
+  engine.next(); // Countdown
+  assert.equal(b.req('player:avatar', { avatar: [1, 1, 1, 1, 1, 1] }).ok, false, 'nach dem Start nicht mehr änderbar');
+  clock.advance(1000);
+  for (const p of [a, b, c, d]) p.req('player:answer', { choice: 1 });
+  engine.next(); // Zwischenstand
+  const board = lastHost().leaderboard;
+  assert.ok(board.every((row) => A.isAvatar(row.avatar)), 'Zwischenstand trägt Avatare');
+});

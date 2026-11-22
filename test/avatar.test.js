@@ -47,3 +47,11 @@ test('ungültiger Avatar fällt auf einen gültigen zurück, Titel wird entschä
 test('Würfeln liefert gültige Avatare', () => {
   for (let i = 0; i < 200; i++) assert.ok(A.isAvatar(A.random()));
 });
+
+test('Spielleitung lädt avatar.js vor der Engine, Spielerseite vor common.js', () => {
+  const { readFileSync } = require('node:fs');
+  const host = readFileSync(require.resolve('../public/host/index.html'), 'utf8');
+  const player = readFileSync(require.resolve('../public/index.html'), 'utf8');
+  assert.ok(host.indexOf('js/avatar.js') > 0 && host.indexOf('js/avatar.js') < host.indexOf('engine/host-engine.js'), 'sonst bleibt die Engine ohne Avatare');
+  assert.ok(player.indexOf('js/avatar.js') > 0 && player.indexOf('js/avatar.js') < player.indexOf('js/player.js'));
+});

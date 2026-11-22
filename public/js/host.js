@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  const { APP_NAME, LETTERS, h, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, toCsv, download, keepAwake } = window.LQ;
+  const { APP_NAME, LETTERS, h, avatar, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, toCsv, download, keepAwake } = window.LQ;
   const FX = window.LQFX;
   const local = store('local');
   const session = store('session');
@@ -932,12 +932,17 @@
       const old = existing.get(p.id);
       if (old) {
         old.classList.toggle('is-away', !p.connected);
+        // Avatar in der Lobby geändert: nur das Bild tauschen (springt kurz)
+        const pic = old.querySelector('.avatar-pic');
+        const next = avatar(p.avatar, p.nickname, 'is-new');
+        if (pic && pic.dataset.av !== next.dataset.av) pic.replaceWith(next);
         return null;
       }
       added += 1;
       return h(
         'li',
         { class: `chip${p.connected ? '' : ' is-away'}`, dataset: { id: p.id } },
+        avatar(p.avatar, p.nickname),
         h('span', { text: p.nickname }),
         h('button', {
           class: 'chip__kick',
@@ -1071,7 +1076,7 @@
         'li',
         { class: 'board__row' },
         h('span', { class: 'board__rank', text: `${r.rank}.` }),
-        h('span', { class: 'board__name' }, h('span', { text: r.nickname }), streak),
+        h('span', { class: 'board__name' }, avatar(r.avatar, r.nickname), h('span', { text: r.nickname }), streak),
         h('span', { class: 'board__movecell' }, move),
         h('span', { class: 'board__delta', text: r.delta > 0 ? `+${num(r.delta)}` : '' }),
         h('span', { class: 'board__score' }),
@@ -1111,6 +1116,7 @@
       return h(
         'li',
         { class: 'podium__col', dataset: { place: String(place) } },
+        entries.length ? h('div', { class: 'podium__avatars' }, entries.slice(0, 3).map((e) => avatar(e.avatar, e.nickname))) : null,
         h('p', { class: 'podium__name', text: entries.map((e) => e.nickname).join(', ') || '–' }),
         h('p', { class: 'podium__score', text: entries.length ? `${num(entries[0].score)} Punkte` : 'frei' }),
         h('div', { class: 'podium__block num', 'aria-hidden': 'true', text: String(place) }),

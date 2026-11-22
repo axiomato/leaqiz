@@ -28,6 +28,20 @@ window.LQ = (function () {
     return el;
   }
 
+  // Avatar als SVG (avatar.js zeichnet nur aus eigenen Bausteinen). Fehlt ein gültiger Avatar
+  // (älteres gesichertes Spiel), entsteht er aus dem Namen.
+  function avatar(code, name = '', cls = '') {
+    const A = window.LeaqizAvatar;
+    const el = document.createElement('span');
+    el.className = cls ? `avatar-pic ${cls}` : 'avatar-pic';
+    el.setAttribute('aria-hidden', 'true');
+    if (!A) return el;
+    const c = A.isAvatar(code) ? code : A.fromName(name);
+    el.dataset.av = c.join('.');
+    el.innerHTML = A.render(c);
+    return el;
+  }
+
   function num(n) {
     return numberFormat.format(n);
   }
@@ -256,5 +270,5 @@ window.LQ = (function () {
     }
   }
 
-  return { APP_NAME, LETTERS, h, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, toCsv, download, keepAwake };
+  return { APP_NAME, LETTERS, h, avatar, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, toCsv, download, keepAwake };
 })();
