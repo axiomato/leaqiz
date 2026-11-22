@@ -35,6 +35,12 @@ services:
       LEAQIZ_ORIGIN: https://${DOMAIN}
       LEAQIZ_HINTER_PROXY: "ja"
       LEAQIZ_INDEXIERBAR: ${LEAQIZ_INDEXIERBAR:-nein}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET fehlt in deploy/.env}
+      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST fehlt in deploy/.env}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:?SMTP_USER fehlt in deploy/.env}
+      SMTP_PASS: ${SMTP_PASS:?SMTP_PASS fehlt in deploy/.env}
+      MAIL_FROM: ${MAIL_FROM:?MAIL_FROM fehlt in deploy/.env}
       LOG_LEVEL: info
     depends_on:
       db:

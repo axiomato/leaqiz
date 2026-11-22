@@ -2,6 +2,9 @@
 // und die neue Datei unter drizzle/ mit einchecken. Der Server wendet Migrationen beim Start an.
 import { sql } from 'drizzle-orm';
 import { index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { user } from './auth-schema.js';
+
+export * from './auth-schema.js';
 
 // Ein Live-Spiel. `snapshot` ist der Zustand der HostEngine (Quiz-Kopie, Spielnamen, Antworten),
 // damit Spiele einen Neustart des Servers überstehen. Das Token der Leinwand steht nur als Hash hier.
@@ -9,6 +12,9 @@ export const game = pgTable(
   'game',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    // Lehrkraft, die das Spiel angelegt hat. Konto gelöscht → ihre Spiele auch.
+    // Leer nur bei lokalen Spielen ohne Anmeldung (Entwicklung).
+    ownerId: text('owner_id').references(() => user.id, { onDelete: 'cascade' }),
     pin: text('pin').notNull(),
     hostTokenHash: text('host_token_hash').notNull(),
     title: text('title').notNull(),
@@ -22,5 +28,6 @@ export const game = pgTable(
     // Eine PIN gehört immer nur einem laufenden Spiel
     uniqueIndex('game_pin_active').on(t.pin).where(sql`${t.endedAt} is null`),
     index('game_ended_at').on(t.endedAt),
+    index('game_owner_id').on(t.ownerId),
   ],
 );

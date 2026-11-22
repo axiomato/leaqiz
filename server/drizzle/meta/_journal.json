@@ -8,6 +8,13 @@
       "when": 1795342823189,
       "tag": "0000_spiele",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795351947507,
+      "tag": "0001_anmeldung",
+      "breakpoints": true
     }
   ]
 }

@@ -315,7 +315,13 @@
       let due = null;
       if (g.state === 'countdown') due = g.countdownEndsAt;
       else if (g.state === 'question') due = g.round.closesAt + this.opts.closeGraceMs;
-      if (due !== null) this.timer = this.setTimer(() => this.tick(), Math.max(0, due - now));
+      // Timer feuern mitunter 1–2 ms zu früh. Dann ist die Phase noch nicht fällig: neu stellen,
+      // sonst stünde sie bis zum nächsten Aufräumen (30 s) oder bis zur nächsten Nachricht.
+      if (due !== null) {
+        this.timer = this.setTimer(() => {
+          if (!this.tick()) this.schedule();
+        }, Math.max(0, due - now));
+      }
     }
 
     canCloseEarly() {

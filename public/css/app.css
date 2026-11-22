@@ -1286,6 +1286,34 @@ textarea.input {
   background: rgba(255, 255, 255, 0.14);
 }
 
+/* ---------- Konto der Lehrkraft (nur mit eigenem Server) ---------- */
+
+.account {
+  max-width: 40rem;
+}
+
+.account-form {
+  display: grid;
+  gap: var(--s-2);
+  max-width: 28rem;
+}
+
+.account-alt,
+.account-section {
+  display: grid;
+  gap: var(--s-2);
+  justify-items: start;
+  padding-top: var(--s-3);
+  border-top: 2px solid var(--line);
+}
+
+.account-list {
+  display: grid;
+  gap: var(--s-1);
+  padding-left: 1.2em;
+  list-style: disc;
+}
+
 /* ---------- Startseite der Spielleitung ---------- */
 
 .home {

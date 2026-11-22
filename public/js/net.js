@@ -517,7 +517,7 @@ window.LQNet = (function () {
       } catch {
         throw new Error('Der Spielserver ist nicht erreichbar. Bitte Internet prüfen und erneut versuchen.');
       }
-      if (!res.ok) throw new Error(data.error || 'Das Spiel ließ sich nicht anlegen. Bitte erneut versuchen.');
+      if (!res.ok) throw Object.assign(new Error(data.error || 'Das Spiel ließ sich nicht anlegen. Bitte erneut versuchen.'), { status: res.status });
       const game = new RemoteGame({ id: data.id, token: data.hostToken, pin: data.pin }, hooks);
       await game.connect();
       return game;

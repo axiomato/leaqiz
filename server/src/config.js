@@ -53,6 +53,22 @@ export function loadConfig(env = process.env) {
     problems.push('LEAQIZ_SPIELE_OHNE_ANMELDUNG=ja ist nur lokal erlaubt (LEAQIZ_ORIGIN auf localhost). Öffentlich erst mit Anmeldung.');
   }
 
+  // Anmeldung der Lehrkräfte (Better Auth): Schlüssel für Sitzungen und Signaturen
+  const authSecret = env.BETTER_AUTH_SECRET || '';
+  if (authSecret.length < 32) problems.push('BETTER_AUTH_SECRET fehlt oder ist kürzer als 32 Zeichen (z. B. openssl rand -base64 32).');
+
+  // Mailversand für Anmeldelinks per SMTP (Hetzner: Port 587). Ohne SMTP_HOST nur lokal:
+  // dann stehen die Links im Server-Log.
+  const smtpHost = env.SMTP_HOST || '';
+  const smtpPort = int(env, 'SMTP_PORT', 587, { min: 1, max: 65535 }, problems);
+  const mailFrom = env.MAIL_FROM || '';
+  if (smtpHost) {
+    if (!env.SMTP_USER || !env.SMTP_PASS) problems.push('SMTP_USER und SMTP_PASS fehlen (Zugangsdaten des Postfachs).');
+    if (!mailFrom) problems.push('MAIL_FROM fehlt (z. B. leaqizz <noreply@leaqizz.com>).');
+  } else if (origin && !local) {
+    problems.push('SMTP_HOST fehlt: Ohne Mailversand kann sich niemand anmelden.');
+  }
+
   // Suchmaschinen: Standard gesperrt. Erst wenn leaqizz echt online ist, freigeben (D-46).
   const indexable = yes(env.LEAQIZ_INDEXIERBAR);
 
@@ -68,6 +84,10 @@ export function loadConfig(env = process.env) {
     anonGames,
     indexable,
     trustProxy,
+    authSecret,
+    mail: smtpHost
+      ? { host: smtpHost, port: smtpPort, user: env.SMTP_USER, pass: env.SMTP_PASS, from: mailFrom }
+      : null,
     publicDir: env.LEAQIZ_PUBLIC_DIR ? path.resolve(env.LEAQIZ_PUBLIC_DIR) : DEFAULT_PUBLIC,
     // Spiele ohne Leinwand und ohne Aktivität werden nach dieser Zeit beendet
     gameIdleMs: int(env, 'LEAQIZ_SPIEL_LEERLAUF_MIN', 120, { min: 5, max: 24 * 60 }, problems) * 60_000,

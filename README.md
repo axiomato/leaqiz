@@ -55,6 +55,7 @@ Leinwand und Handys ──► WebSocket /ws über Port 443 (kein Relais, kein Pe
 
 - Der Browser erkennt den Server an `window.LEAQIZ_CONFIG.server` und nutzt dann WebSocket statt Direktverbindung. Ohne diesen Eintrag (GitHub Pages) bleibt alles wie oben. Die Demo läuft immer im Browser.
 - Spiele überstehen Neuladen der Leinwand und Neustart des Servers.
+- Live-Spiele starten nur angemeldete Lehrkräfte: Anmeldelink per Mail oder Passkey (Better Auth, `public/js/account.js`). Schüler:innen brauchen kein Konto.
 - Betrieb: `deploy/README.md`. Zielarchitektur und Entscheidungen: Projekt „Kahoot! Nachbau“, `claude/leaqiz-architektur.md`.
 
 ## Grenzen des Prototyps
@@ -108,10 +109,10 @@ cd server && npm install
 cat > .env <<'ENV'
 DATABASE_URL=postgres://leaqiz:…@localhost:5432/leaqiz
 LEAQIZ_ORIGIN=http://localhost:3000
-LEAQIZ_SPIELE_OHNE_ANMELDUNG=ja
+BETTER_AUTH_SECRET=…        # openssl rand -base64 32
 ENV
-npm run dev     # http://localhost:3000/host/  Live-Spiel läuft über den Server
-npm test        # mit TEST_DATABASE_URL zusätzlich gegen PostgreSQL
+npm run dev     # http://localhost:3000/host/  Anmeldelinks stehen lokal im Server-Log
+npm test        # mit TEST_DATABASE_URL zusätzlich Anmeldung und Datenbank (leert diese Datenbank)
 npm run lasttest -- --spiele 20 --spieler 30
 npm run db:generate   # nach Änderungen an src/db/schema.js
 ```
@@ -159,6 +160,9 @@ Die frühere Variante mit eigenem Node.js-Server (Socket.IO) liegt im Git-Verlau
 - PeerJS, MIT-Lizenz (`public/js/vendor/peerjs.min.js`, `LICENSE-peerjs.txt`)
 - qrcode-generator von Kazuhiko Arase, MIT-Lizenz (`public/js/vendor/qrcode.js`)
 - Schrift Archivo, SIL Open Font License 1.1 (`public/fonts/OFL-Archivo.txt`)
-- Spielserver: Fastify, @fastify/static, ws, pg (MIT), Drizzle ORM (Apache-2.0), Drizzle Kit (MIT, nur Entwicklung)
+- SimpleWebAuthn (Browser), MIT-Lizenz (`public/js/vendor/simplewebauthn.min.js`, `LICENSE-simplewebauthn.txt`)
+- Spielserver: Fastify, @fastify/static, ws, pg, Better Auth, nodemailer (MIT bzw. MIT-0), Drizzle ORM (Apache-2.0), Drizzle Kit (MIT, nur Entwicklung)
 
-Die Lizenz des eigenen Codes ist noch nicht festgelegt. Ein öffentliches Repo ohne Lizenz heißt: einsehbar, aber nicht zur Weiterverwendung freigegeben.
+## Lizenz
+
+Alle Rechte vorbehalten (`LICENSE`). Der Code ist hier öffentlich einsehbar, aber nicht frei nutzbar.

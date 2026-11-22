@@ -103,8 +103,13 @@ export function client(url, { origin = ORIGIN } = {}) {
       const fn = typeof match === 'function' ? match : (m) => m.k === match;
       const i = inbox.findIndex(fn);
       if (i >= 0) return Promise.resolve(inbox.splice(i, 1)[0]);
+      // Aufrufstelle merken, damit ein Zeitablauf sagt, worauf gewartet wurde
+      const where = (new Error().stack.split('\n')[2] || '').trim();
       return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error(`Keine Nachricht (${typeof match === 'string' ? match : 'Bedingung'}) in ${ms} ms`)), ms);
+        const timer = setTimeout(() => {
+          const seen = inbox.map((m) => `${m.k}${m.d && m.d.state ? `:${m.d.state}/${m.d.qIndex}` : ''}`).join(', ');
+          reject(new Error(`Keine Nachricht (${typeof match === 'string' ? match : 'Bedingung'}) in ${ms} ms ${where}; im Puffer: ${seen || 'nichts'}`));
+        }, ms);
         waiters.push({ match: fn, resolve, timer });
       });
     },

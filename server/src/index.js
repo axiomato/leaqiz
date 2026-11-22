@@ -1,5 +1,7 @@
 // Start: Konfiguration prüfen, Datenbank migrieren, Spiele wiederherstellen, Server öffnen.
 import { buildApp } from './app.js';
+import { createAuth } from './auth.js';
+import { createMailer } from './mail.js';
 import { ConfigError, loadConfig } from './config.js';
 import { openDb } from './db/index.js';
 import { attachGateway } from './games/gateway.js';
@@ -27,7 +29,9 @@ const registry = new GameRegistry({
 });
 const restored = await registry.restoreAll();
 
-const app = await buildApp({ config, registry, db, log: { level: process.env.LOG_LEVEL || 'info' }, limits: config.limits });
+const mailer = createMailer(config.mail, console);
+const auth = createAuth({ config, db: db.db, mailer });
+const app = await buildApp({ config, registry, db, auth, log: { level: process.env.LOG_LEVEL || 'info' }, limits: config.limits });
 const gateway = attachGateway({ server: app.server, registry, config, log: app.log, limits: config.limits });
 await app.listen({ port: config.port, host: config.host });
 registry.startSweep();

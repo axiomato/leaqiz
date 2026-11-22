@@ -53,7 +53,7 @@ export class GameRegistry {
 
   // ---------- Anlegen und Wiederherstellen ----------
 
-  async create(rawQuiz) {
+  async create(rawQuiz, { ownerId = null } = {}) {
     let quiz;
     try {
       quiz = validateQuiz(rawQuiz);
@@ -72,7 +72,7 @@ export class GameRegistry {
       entry.engine = HostEngine.create({ quiz, pin, ...this.#hooks(entry) });
       this.#mount(entry);
       try {
-        await this.store.insert({ id, pin, hostTokenHash: entry.hostTokenHash, title: quiz.title, ...this.#snapshot(entry) });
+        await this.store.insert({ id, ownerId, pin, hostTokenHash: entry.hostTokenHash, title: quiz.title, ...this.#snapshot(entry) });
       } catch (err) {
         this.#unmount(entry);
         entry.engine.end('');

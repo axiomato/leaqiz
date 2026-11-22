@@ -131,6 +131,7 @@
   // ---------- Ansicht: Bibliothek ----------
 
   function renderLibrary() {
+    stopMailWatch();
     mode = 'library';
     setPhase('home', 'dark');
     window.scrollTo(0, 0);
@@ -227,7 +228,7 @@
         { class: 'bar' },
         h('span', { class: 'wordmark', text: APP_NAME }),
         h('span', { class: 'bar__info', text: 'Spielleitung' }),
-        h('div', { class: 'bar__actions' }, h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Importieren', title: 'Quiz-Datei (JSON) importieren', onclick: () => fileInput.click() }), fileInput),
+        h('div', { class: 'bar__actions' }, accountButton(), h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Importieren', title: 'Quiz-Datei (JSON) importieren', onclick: () => fileInput.click() }), fileInput),
       ),
       h(
         'main',
@@ -554,6 +555,192 @@
     else toast('Gespeichert.');
   }
 
+  // ---------- Konto der Lehrkraft (nur mit eigenem Server) ----------
+  // Anmeldung per Link in der Mail oder per Passkey. Ohne Server (GitHub Pages) unsichtbar.
+
+  const Account = window.LQAccount;
+  let me = null; // angemeldete Lehrkraft { id, email }
+  let mailWatch = 0;
+
+  function stopMailWatch() {
+    clearInterval(mailWatch);
+    mailWatch = 0;
+  }
+
+  function accountButton() {
+    if (!Account.enabled()) return null;
+    return me
+      ? h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Konto', title: me.email, onclick: () => renderAccount() })
+      : h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Anmelden', onclick: () => renderLogin() });
+  }
+
+  function accountView(...children) {
+    mode = 'account';
+    renderedKey = '';
+    stopTimer();
+    stopMailWatch();
+    setPhase('work', 'light');
+    window.scrollTo(0, 0);
+    root.replaceChildren(
+      h(
+        'header',
+        { class: 'bar bar--ink' },
+        h('span', { class: 'wordmark', text: APP_NAME }),
+        h('div', { class: 'bar__actions' }, h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Zur Übersicht', onclick: () => renderLibrary() })),
+      ),
+      h('main', { class: 'work account' }, ...children),
+    );
+  }
+
+  const looksLikeEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+  function renderLogin({ reason = '', error = '', email = '' } = {}) {
+    const errorEl = h('p', { class: 'error', id: 'login-error', role: 'alert', text: error });
+    const input = h('input', { class: 'input', id: 'login-email', type: 'email', name: 'email', autocomplete: 'email', inputmode: 'email', required: true, value: email, 'aria-describedby': 'login-error' });
+    const submit = h('button', { class: 'btn btn--primary', type: 'submit', text: 'Anmeldelink senden' });
+    const form = h('form', { class: 'account-form', novalidate: true }, h('label', { class: 'field', for: 'login-email' }, h('span', { text: 'E-Mail-Adresse' }), input), errorEl, h('div', { class: 'actions' }, submit));
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const value = input.value.trim();
+      if (!looksLikeEmail(value)) {
+        errorEl.textContent = 'Bitte eine gültige E-Mail-Adresse eingeben.';
+        input.focus();
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = 'Sende …';
+      try {
+        await Account.sendLink(value);
+        renderCheckMail(value);
+      } catch (err) {
+        submit.disabled = false;
+        submit.textContent = 'Anmeldelink senden';
+        errorEl.textContent = err.message;
+      }
+    });
+
+    let passkeyBlock = null;
+    if (Account.passkeySupported()) {
+      const passkeyBtn = h('button', { class: 'btn btn--quiet', type: 'button', text: 'Mit Passkey anmelden' });
+      passkeyBtn.addEventListener('click', async () => {
+        errorEl.textContent = '';
+        passkeyBtn.disabled = true;
+        try {
+          await Account.passkeySignIn();
+          me = await Account.current();
+          renderLibrary();
+          toast('Du bist angemeldet.');
+        } catch (err) {
+          passkeyBtn.disabled = false;
+          if (!err.cancelled) errorEl.textContent = err.message;
+        }
+      });
+      passkeyBlock = h('section', { class: 'account-alt', 'aria-label': 'Passkey' }, h('p', { class: 'hint', text: 'Schon einen Passkey für leaqizz auf diesem Gerät?' }), passkeyBtn);
+    }
+
+    accountView(
+      h('h1', { text: 'Anmelden' }),
+      h('p', { class: 'hint', text: reason === 'live' ? 'Für Live-Spiele brauchst du ein Konto. Ein Link per Mail genügt, ein Passwort gibt es nicht.' : 'Ein Link per Mail genügt, ein Passwort gibt es nicht.' }),
+      form,
+      passkeyBlock,
+    );
+    input.focus();
+  }
+
+  function renderCheckMail(email) {
+    accountView(
+      h('h1', { text: 'Schau in dein Postfach' }),
+      h('p', { class: 'lead', text: `Der Anmeldelink ist unterwegs an ${email}.` }),
+      h('p', { class: 'hint', text: 'Er gilt 15 Minuten und nur einmal. Öffnest du ihn auf diesem Gerät, geht es hier von selbst weiter. Keine Mail da? Schau auch im Spam-Ordner nach.' }),
+      h('div', { class: 'actions' }, h('button', { class: 'btn btn--quiet', type: 'button', text: 'Andere Adresse eingeben', onclick: () => renderLogin({ email }) })),
+    );
+    // Link in einem anderen Tab geöffnet: Sitzung gilt auch hier, also weiter
+    const until = Date.now() + 15 * 60_000;
+    mailWatch = setInterval(async () => {
+      if (Date.now() > until) return stopMailWatch();
+      const user = await Account.current();
+      if (user && mode === 'account') {
+        stopMailWatch();
+        me = user;
+        afterLogin();
+      }
+    }, 3000);
+  }
+
+  async function afterLogin() {
+    if (Account.passkeySupported() && (await Account.passkeys()).length === 0) {
+      renderPasskeyOffer();
+      return;
+    }
+    renderLibrary();
+    toast('Du bist angemeldet.');
+  }
+
+  function passkeySetupButton(label, onDone) {
+    const errorEl = h('p', { class: 'error', role: 'alert' });
+    const btn = h('button', { class: 'btn btn--primary', type: 'button', text: label });
+    btn.addEventListener('click', async () => {
+      errorEl.textContent = '';
+      btn.disabled = true;
+      try {
+        await Account.passkeyAdd();
+        toast('Passkey eingerichtet.');
+        onDone();
+      } catch (err) {
+        btn.disabled = false;
+        if (!err.cancelled) errorEl.textContent = err.message;
+      }
+    });
+    return { btn, errorEl };
+  }
+
+  function renderPasskeyOffer() {
+    const setup = passkeySetupButton('Passkey einrichten', () => renderLibrary());
+    accountView(
+      h('h1', { text: 'Du bist angemeldet' }),
+      h('p', { class: 'lead', text: 'Nächstes Mal ohne Mail?' }),
+      h('p', { class: 'hint', text: 'Mit einem Passkey meldest du dich per Fingerabdruck, Gesicht oder Geräte-PIN an. Der Schlüssel bleibt auf deinem Gerät, leaqizz speichert nur den öffentlichen Teil.' }),
+      setup.errorEl,
+      h('div', { class: 'actions' }, setup.btn, h('button', { class: 'btn btn--quiet', type: 'button', text: 'Später', onclick: () => renderLibrary() })),
+    );
+  }
+
+  async function renderAccount() {
+    if (!me) return renderLogin();
+    const list = await Account.passkeys();
+    const errorEl = h('p', { class: 'error', role: 'alert' });
+    const signOut = h('button', { class: 'btn btn--quiet', type: 'button', text: 'Abmelden' });
+    signOut.addEventListener('click', async () => {
+      signOut.disabled = true;
+      try {
+        await Account.signOut();
+        me = null;
+        renderLibrary();
+        toast('Du bist abgemeldet.');
+      } catch (err) {
+        signOut.disabled = false;
+        errorEl.textContent = err.message;
+      }
+    });
+    const setup = Account.passkeySupported() ? passkeySetupButton(list.length ? 'Weiteren Passkey einrichten' : 'Passkey einrichten', () => renderAccount()) : null;
+    accountView(
+      h('h1', { text: 'Konto' }),
+      h('p', { class: 'lead', text: me.email }),
+      h(
+        'section',
+        { class: 'account-section', 'aria-labelledby': 'passkeys-title' },
+        h('h2', { id: 'passkeys-title', text: 'Passkeys' }),
+        list.length
+          ? h('ul', { class: 'account-list' }, list.map((p) => h('li', { text: p.name || 'Passkey' })))
+          : h('p', { class: 'hint', text: 'Noch kein Passkey. Mit einem Passkey meldest du dich ohne Mail an.' }),
+        setup ? setup.errorEl : null,
+        setup ? h('div', { class: 'actions' }, setup.btn) : null,
+      ),
+      errorEl,
+      h('div', { class: 'actions' }, signOut),
+    );
+  }
+
   // ---------- Spiel starten und fortsetzen ----------
   // Ohne eigenen Server (GitHub Pages) ist dieser Browser der Spiel-Server: Host-Engine + Direktverbindung.
   // Mit eigenem Server führt dieser das Live-Spiel (RemoteGame, net.js); die Demo bleibt immer hier im Browser.
@@ -653,9 +840,18 @@
     }
     busy(isDemo ? 'Demo wird vorbereitet …' : 'Spiel wird vorbereitet …');
     if (!isDemo && window.LQNet.serverMode()) {
+      if (!me) {
+        renderLogin({ reason: 'live' });
+        return;
+      }
       try {
         engine = await window.LQNet.RemoteGame.create(payload, remoteHooks());
       } catch (err) {
+        if (err.status === 401) {
+          me = null;
+          renderLogin({ reason: 'live' });
+          return;
+        }
         toast(err.message);
         renderLibrary();
         return;
@@ -1311,17 +1507,32 @@
     }
   });
 
-  // Start: laufendes Spiel fortsetzen oder Bibliothek zeigen
-  const savedGame = session.get(GAME_KEY);
-  if (savedGame && savedGame.v === 1) {
-    resumeGame(savedGame);
-  } else if (new URLSearchParams(location.search).get('start') === 'demo') {
-    // Direkt aus der Landingpage: erstes Quiz als Demo starten; Parameter entfernen, damit Neuladen nicht neu startet
-    history.replaceState(null, '', location.pathname);
-    const list = loadQuizzes();
-    renderLibrary();
-    if (list.length) startGame(list[0], { demo: true });
-  } else {
+  // Start: Anmeldung prüfen (nur mit Server), laufendes Spiel fortsetzen oder Bibliothek zeigen
+  async function init() {
+    const params = new URLSearchParams(location.search);
+    if (Account.enabled()) me = await Account.current();
+    const savedGame = session.get(GAME_KEY);
+    if (savedGame && savedGame.v === 1) {
+      resumeGame(savedGame);
+      return;
+    }
+    // Rückkehr vom Anmeldelink: Parameter entfernen, damit Neuladen nichts wiederholt
+    if (params.has('angemeldet') || params.has('anmeldung')) {
+      history.replaceState(null, '', location.pathname);
+      if (params.has('anmeldung')) renderLogin({ error: 'Der Link ist abgelaufen oder wurde schon benutzt. Fordere einen neuen an.' });
+      else if (me) afterLogin();
+      else renderLogin({ error: 'Die Anmeldung hat nicht geklappt. Fordere einen neuen Link an.' });
+      return;
+    }
+    if (params.get('start') === 'demo') {
+      // Direkt aus der Landingpage: erstes Quiz als Demo starten; Parameter entfernen, damit Neuladen nicht neu startet
+      history.replaceState(null, '', location.pathname);
+      const list = loadQuizzes();
+      renderLibrary();
+      if (list.length) startGame(list[0], { demo: true });
+      return;
+    }
     renderLibrary();
   }
+  init();
 })();

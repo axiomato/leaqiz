@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
+import { AUTH_BASE, sessionHeaders, toWebRequest } from './auth.js';
 import { RegistryError } from './games/registry.js';
 import { RateLimiter } from './limits.js';
 
@@ -13,7 +14,7 @@ export const INDEXABLE = new Set(['/', '/lehrkraefte/', '/datenschutz/', '/impre
 
 const ROBOTS_META = /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/i;
 
-export async function buildApp({ config, registry, db = null, log = false, limits = {} }) {
+export async function buildApp({ config, registry, db = null, auth = null, log = false, limits = {} }) {
   const app = Fastify({
     logger: log,
     trustProxy: config.trustProxy ? 1 : false,
@@ -66,15 +67,42 @@ export async function buildApp({ config, registry, db = null, log = false, limit
     return { ok, database, ...registry.stats() };
   });
 
-  // Neues Live-Spiel. Bis die Anmeldung steht, nur lokal ohne Konto (LEAQIZ_SPIELE_OHNE_ANMELDUNG).
+  // Anmeldung (Better Auth): alle Wege unter /api/auth/ weiterreichen
+  if (auth) {
+    app.route({
+      method: ['GET', 'POST'],
+      url: `${AUTH_BASE}/*`,
+      async handler(request, reply) {
+        const response = await auth.handler(toWebRequest(request, config));
+        reply.code(response.status);
+        reply.header('Cache-Control', 'no-store');
+        for (const [key, value] of response.headers) {
+          if (key !== 'set-cookie' && key !== 'content-length') reply.header(key, value);
+        }
+        const cookies = response.headers.getSetCookie();
+        if (cookies.length) reply.header('set-cookie', cookies);
+        return reply.send(response.body ? Buffer.from(await response.arrayBuffer()) : null);
+      },
+    });
+  }
+
+  async function currentUser(request) {
+    if (!auth) return null;
+    const result = await auth.api.getSession({ headers: sessionHeaders(request) });
+    return result ? result.user : null;
+  }
+
+  // Neues Live-Spiel: nur für angemeldete Lehrkräfte. Ohne Konto nur lokal (LEAQIZ_SPIELE_OHNE_ANMELDUNG).
   app.post('/api/games', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
-    if (!config.anonGames) return reply.code(401).send({ error: 'Bitte melde dich an, um ein Live-Spiel zu starten.' });
-    if (request.headers.origin && request.headers.origin !== config.origin) return reply.code(403).send({ error: 'Nicht erlaubt.' });
-    if (!creates.take(request.ip)) return reply.code(429).send({ error: 'Zu viele neue Spiele in kurzer Zeit. Bitte später erneut versuchen.' });
+    // Schutz gegen fremde Seiten, die mit der Sitzung der Lehrkraft Spiele anlegen wollen
+    if (request.headers.origin !== config.origin) return reply.code(403).send({ error: 'Nicht erlaubt.' });
+    const user = await currentUser(request);
+    if (!user && !config.anonGames) return reply.code(401).send({ error: 'Bitte melde dich an, um ein Live-Spiel zu starten.' });
+    if (!creates.take(user ? `u:${user.id}` : request.ip)) return reply.code(429).send({ error: 'Zu viele neue Spiele in kurzer Zeit. Bitte später erneut versuchen.' });
     const body = request.body && typeof request.body === 'object' ? request.body : {};
     try {
-      const created = await registry.create(body.quiz);
+      const created = await registry.create(body.quiz, { ownerId: user ? user.id : null });
       return reply.code(201).send(created);
     } catch (err) {
       if (err instanceof RegistryError) return reply.code(err.status).send({ error: err.message });
