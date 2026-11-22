@@ -262,8 +262,24 @@
     const note = $('#donate-note');
     const base = 'Freiwillig und einmalig. leaqizz ist nicht gemeinnützig, es gibt keine Spendenquittung.';
 
+    const amountsBox = $('.amounts');
+    const hasFixed = Object.values(cfg.amounts || {}).some((u) => safe(u));
+    const onlyCustom = !hasFixed && Boolean(safe(cfg.custom));
+    // Nur ein Link mit frei wählbarem Betrag: kein Podest, sonst verspräche es einen Betrag, den die Bezahlseite nicht übernimmt
+    if (onlyCustom && amountsBox) amountsBox.hidden = true;
+
     const updateDonate = () => {
       const value = ($('input[name="amount"]:checked') || {}).value || '10';
+      if (onlyCustom) {
+        donate.href = safe(cfg.custom);
+        donate.rel = 'noopener';
+        donate.removeAttribute('aria-disabled');
+        donate.removeAttribute('role');
+        donate.removeAttribute('tabindex');
+        donate.textContent = `Mit ${cfg.provider || 'einem Betrag deiner Wahl'} unterstützen`;
+        note.textContent = `${base} Den Betrag wählst du bei ${cfg.provider || 'der Bezahlseite'}.`;
+        return;
+      }
       const fixed = value === 'custom' ? '' : safe(cfg.amounts && cfg.amounts[value]);
       const url = fixed || safe(cfg.custom);
       donate.textContent = value !== 'custom' && (fixed || !url) ? `Mit ${value} € unterstützen` : 'Betrag wählen und unterstützen';

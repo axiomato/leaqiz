@@ -14,9 +14,13 @@ window.LEAQIZ_CONFIG = {
   turnCredentialsUrl: '',
   iceServers: [],
   // Unterstützen (Landingpage /lehrkraefte/): Links zu einer gehosteten Bezahlseite, z. B. Stripe Payment Links.
-  //   provider: Name, der unter dem Knopf steht („Weiter zu …“)
+  //   provider: Name des Anbieters, erscheint auf dem Knopf und im Hinweis
+//   PayPal: im Geschäftskonto unter paypal.com/de/donate/buttons einen Spenden-Button anlegen,
+//           den Link (https://www.paypal.com/donate/?hosted_button_id=…) hier eintragen.
+//           Nur custom gesetzt = ein Knopf, Betrag wählen die Unterstützer bei PayPal.
+//           Zusätzlich Festbetrags-Buttons unter amounts = die Beträge erscheinen als Podest.
   //   amounts:  Betrag in Euro -> Link mit festem Betrag
   //   custom:   Link, auf dem der Betrag frei gewählt wird (wird genutzt, wenn für einen Betrag kein Link da ist)
   //   Alles leer = Knopf inaktiv mit Hinweis „wird eingerichtet“. Nur https-Links werden verwendet.
-  donate: { provider: '', amounts: { 5: '', 10: '', 25: '' }, custom: '' },
+  donate: { provider: 'PayPal', amounts: { 5: '', 10: '', 25: '' }, custom: '' },
 };
