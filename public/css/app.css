@@ -1470,6 +1470,58 @@ textarea.input {
   line-height: 1.5;
 }
 
+/* Laden der Quizze aus dem Konto, oder Fehler mit „Erneut versuchen“ */
+.home__status {
+  display: grid;
+  gap: var(--s-2);
+  justify-items: start;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* Angebot: Quizze, die noch im Browser liegen, ins Konto übernehmen */
+.import-offer {
+  display: grid;
+  gap: var(--s-2);
+  max-width: 48rem;
+  padding: var(--s-4);
+  border: 2px solid rgba(255, 255, 255, 0.24);
+  border-radius: var(--radius-m);
+}
+
+.import-offer__title {
+  font-size: var(--t-2);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.import-offer__text,
+.import-offer__list {
+  max-width: 60ch;
+  line-height: 1.5;
+}
+
+.import-offer__list {
+  color: var(--muted);
+}
+
+.import-offer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.import-offer .btn:not(.btn--link) {
+  background: #fff;
+  border-color: #fff;
+  color: var(--ink);
+}
+
+.import-offer .btn:not(.btn--link):hover {
+  background: #e6ebf2;
+}
+
 .bar--ink {
   background: var(--ink);
   color: #fff;

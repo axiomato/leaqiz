@@ -7,6 +7,7 @@ import fastifyStatic from '@fastify/static';
 import { AUTH_BASE, sessionHeaders, toWebRequest } from './auth.js';
 import { RegistryError } from './games/registry.js';
 import { RateLimiter } from './limits.js';
+import { registerQuizRoutes } from './quizzes.js';
 
 // Seiten, die Suchmaschinen finden dürfen, sobald LEAQIZ_INDEXIERBAR=ja (D-46).
 // Spielleitung und Verbindungstest bleiben immer gesperrt: dort gibt es nichts zu finden.
@@ -92,17 +93,33 @@ export async function buildApp({ config, registry, db = null, auth = null, log =
     return result ? result.user : null;
   }
 
+  async function requireUser(request, reply) {
+    const user = await currentUser(request);
+    if (!user) reply.code(401).send({ error: 'Bitte melde dich an.' });
+    return user;
+  }
+
+  // Schreibende Anfragen nur von der eigenen Seite (Schutz gegen fremde Seiten mit der Sitzung der Lehrkraft)
+  function requireSameOrigin(request, reply) {
+    if (request.headers.origin === config.origin) return true;
+    reply.code(403).send({ error: 'Nicht erlaubt.' });
+    return false;
+  }
+
+  // Quizze der Lehrkraft (nur mit Anmeldung und Datenbank)
+  const quizzes = auth && db ? registerQuizRoutes(app, { db: db.db, requireUser, requireSameOrigin }) : null;
+
   // Neues Live-Spiel: nur für angemeldete Lehrkräfte. Ohne Konto nur lokal (LEAQIZ_SPIELE_OHNE_ANMELDUNG).
   app.post('/api/games', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
-    // Schutz gegen fremde Seiten, die mit der Sitzung der Lehrkraft Spiele anlegen wollen
-    if (request.headers.origin !== config.origin) return reply.code(403).send({ error: 'Nicht erlaubt.' });
+    if (!requireSameOrigin(request, reply)) return reply;
     const user = await currentUser(request);
     if (!user && !config.anonGames) return reply.code(401).send({ error: 'Bitte melde dich an, um ein Live-Spiel zu starten.' });
     if (!creates.take(user ? `u:${user.id}` : request.ip)) return reply.code(429).send({ error: 'Zu viele neue Spiele in kurzer Zeit. Bitte später erneut versuchen.' });
     const body = request.body && typeof request.body === 'object' ? request.body : {};
     try {
-      const created = await registry.create(body.quiz, { ownerId: user ? user.id : null });
+      const quizId = quizzes && user ? await quizzes.ownQuizId(user.id, body.quizId) : null;
+      const created = await registry.create(body.quiz, { ownerId: user ? user.id : null, quizId });
       return reply.code(201).send(created);
     } catch (err) {
       if (err instanceof RegistryError) return reply.code(err.status).send({ error: err.message });

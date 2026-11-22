@@ -56,11 +56,12 @@ jobs:
         working-directory: .
         run: docker build -f server/Dockerfile -t leaqizz:test .
 
-  # Veröffentlicht den Ordner public/ – nur nach grünen Tests und nur von main.
+  # Veröffentlicht den Ordner public/ über GitHub Pages dieses Repos – nur nach grünen Tests und nur von main.
+  # Gilt, solange dieses Repo öffentlich ist (Variable SITE_REPO nicht gesetzt).
   # Voraussetzung (einmalig): Repo öffentlich, Settings → Pages → Source: "GitHub Actions".
   deploy:
     needs: [test, server]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.SITE_REPO == ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -83,3 +84,40 @@ jobs:
           path: public
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Nach der Aufteilung (deploy/README.md, „Privates Code-Repo, öffentliches Seiten-Repo“):
+  # Dieses Repo ist privat, die Website liegt im öffentlichen Repo aus der Variable SITE_REPO
+  # und wird dort von GitHub Pages aus dem Branch main ausgeliefert. Hinüber geht nur public/,
+  # dazu README und LICENSE – kein Servercode, keine Tests, keine Unterlagen.
+  # Braucht das Secret SITE_TOKEN: fein granulierter Token nur für SITE_REPO, Recht „Contents: Read and write“.
+  publish:
+    needs: [test, server]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.SITE_REPO != ''
+    runs-on: ubuntu-latest
+    concurrency:
+      group: publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache-Busting
+        run: find public -name '*.html' -exec sed -i "s/?v=dev/?v=${GITHUB_SHA::7}/g" {} +
+      - name: Website ins öffentliche Repo schieben
+        env:
+          SITE_REPO: ${{ vars.SITE_REPO }}
+          SITE_TOKEN: ${{ secrets.SITE_TOKEN }}
+        run: |
+          if [ -z "$SITE_TOKEN" ]; then echo "::error::Secret SITE_TOKEN fehlt (deploy/README.md)"; exit 1; fi
+          git clone --depth 1 "https://x-access-token:${SITE_TOKEN}@github.com/${SITE_REPO}.git" site
+          # Alles außer .git ersetzen: gelöschte Dateien verschwinden auch drüben
+          find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a public/. site/
+          cp deploy/site/README.md LICENSE site/
+          # Ohne Jekyll ausliefern (Dateien genau so, wie sie sind)
+          touch site/.nojekyll
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Keine Änderung an der Website."; exit 0; fi
+          git commit -q -m "Website aus ${GITHUB_SHA::7}"
+          git push origin HEAD:main

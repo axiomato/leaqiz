@@ -40,7 +40,7 @@ Laufende Spiele überstehen das: Der Server sichert beim Herunterfahren alle Spi
 
 ## Noch offen (Phase 1)
 
-- Konto löschen in der Oberfläche (die Datenbank löscht Spiele mit dem Konto schon mit)
+- Konto löschen in der Oberfläche (die Datenbank löscht Spiele und Quizze mit dem Konto schon mit)
 - Sicherung der Datenbank außer Haus (restic), Überwachung, Logrotation auf 7 Tage
 - Datenschutzerklärung für den Serverbetrieb
 
@@ -59,3 +59,34 @@ Laufende Spiele überstehen das: Der Server sichert beim Herunterfahren alle Spi
 | `LEAQIZ_GRENZE_VERBINDUNGEN_MINUTE` | neue Verbindungen je IP und Minute (eine Schule teilt sich oft eine IP) | 300 |
 | `LEAQIZ_GRENZE_FALSCHE_PIN_MINUTE` | falsche PINs je IP und Minute | 30 |
 | `LEAQIZ_GRENZE_SPIELE_STUNDE` | neue Spiele je IP und Stunde | 60 |
+
+## Privates Code-Repo, öffentliches Seiten-Repo
+
+Der Quellcode liegt privat in `axiomato/leaqiz-quellcode`. Öffentlich ist nur die fertige Website in
+`axiomato/leaqiz`; die Adresse `https://axiomato.github.io/leaqiz/` bleibt gleich. Der Workflow schiebt nach
+jedem grünen Lauf auf `main` den Ordner `public/` samt README (`deploy/site/README.md`) und LICENSE hinüber
+(Job `publish`). Solange die Variable `SITE_REPO` fehlt, veröffentlicht er wie bisher über Pages dieses Repos.
+
+Einmalig, in dieser Reihenfolge (die Website ist zwischen Schritt 2 und 7 ein paar Minuten nicht erreichbar):
+
+1. `axiomato/leaqiz` → Settings → General → Repository name: `leaqiz-quellcode` → Rename.
+2. Ganz unten, Danger Zone → Change repository visibility → Private. GitHub Free nimmt die Pages-Seite dabei
+   automatisch vom Netz. Bestehende Forks bleiben öffentlich und werden abgetrennt.
+3. Neues Repository `leaqiz` anlegen: Public, ohne README, ohne .gitignore, ohne Lizenz.
+4. Token anlegen: Profilbild → Settings → Developer settings → Personal access tokens → Fine-grained tokens →
+   Generate new token. Name `leaqiz-veroeffentlichen`, Ablauf nach Wahl (bei Ablauf wird der Job rot, die
+   Website bleibt stehen), Repository access: Only select repositories → `axiomato/leaqiz`,
+   Permissions → Repository → Contents: Read and write. Token kopieren.
+5. In `leaqiz-quellcode` → Settings → Secrets and variables → Actions:
+   Tab Secrets → New repository secret `SITE_TOKEN` (der Token);
+   Tab Variables → New repository variable `SITE_REPO` = `axiomato/leaqiz`.
+6. `leaqiz-quellcode` → Actions → „Tests und GitHub Pages“ → Run workflow (Branch `main`).
+   Der Job `publish` füllt das neue Repo.
+7. In `leaqiz` → Settings → Pages → Source: Deploy from a branch → `main` / `(root)` → Save.
+
+Kosten: In privaten Repos zählen die Minuten von GitHub Actions; ein Lauf braucht etwa 3 Minuten
+(GitHub Free: 2.000 Minuten im Monat). Die Auslieferung im öffentlichen Repo kostet nichts.
+
+Achtung für lokale Klone: Nach Schritt 3 zeigt die alte Adresse `github.com/axiomato/leaqiz` auf das
+öffentliche Seiten-Repo. Vor dem nächsten Push die Adresse umstellen:
+`git remote set-url origin https://github.com/axiomato/leaqiz-quellcode.git`

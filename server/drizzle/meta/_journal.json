@@ -15,6 +15,13 @@
       "when": 1795351947507,
       "tag": "0001_anmeldung",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795353261195,
+      "tag": "0002_quizze",
+      "breakpoints": true
     }
   ]
 }

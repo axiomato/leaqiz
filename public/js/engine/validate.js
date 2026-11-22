@@ -86,6 +86,35 @@ function validateQuiz(raw) {
   return { title, questions: raw.questions.map(validateQuestion) };
 }
 
+// Entwurf im Format des Editors (bei „quiz“ immer 4 Antwortfelder, leere erlaubt).
+// Darf unvollständig sein: vollständig geprüft wird erst beim Spielstart (validateQuiz).
+// Für Import und Speichern in der Bibliothek, im Browser und auf dem Server gleich.
+function normalizeDraft(raw) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.questions)) fail('Das ist kein Quiz: Die Fragen fehlen.');
+  if (raw.questions.length > LIMITS.questionsMax) fail(`Höchstens ${LIMITS.questionsMax} Fragen pro Quiz.`);
+  const title = cleanText(raw.title).slice(0, LIMITS.titleMax);
+  const questions = raw.questions.map((q) => {
+    const item = q && typeof q === 'object' ? q : {};
+    const type = TYPES.includes(item.type) ? item.type : 'quiz';
+    const options =
+      type === 'truefalse'
+        ? [...TRUE_FALSE_OPTIONS]
+        : Array.from({ length: LIMITS.optionsMax }, (_, i) => cleanText(Array.isArray(item.options) ? item.options[i] : '').slice(0, LIMITS.optionTextMax));
+    const correctRaw = Array.isArray(item.correct) ? item.correct : [];
+    const correct = [...new Set(correctRaw.filter((i) => Number.isInteger(i) && i >= 0 && i < options.length))].sort((a, b) => a - b);
+    return {
+      type,
+      text: cleanText(item.text).slice(0, LIMITS.questionTextMax),
+      options,
+      // Wahr/Falsch: genau eine Antwort, die zuerst genannte zählt
+      correct: type === 'truefalse' ? correct.filter((i) => i === correctRaw.find((c) => c === 0 || c === 1)) : correct,
+      timeLimit: TIME_LIMITS.includes(item.timeLimit) ? item.timeLimit : 20,
+      double: item.double === true,
+    };
+  });
+  return { title, questions };
+}
+
 function validateNickname(raw) {
   const nickname = cleanText(raw);
   if (!nickname) fail('Bitte einen Spielnamen eingeben.');
@@ -104,6 +133,7 @@ return {
   ValidationError,
   cleanText,
   validateQuiz,
+  normalizeDraft,
   validateNickname,
   isPin,
 };

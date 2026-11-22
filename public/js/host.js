@@ -116,17 +116,186 @@
     return list;
   }
 
+  // Quiz aus einer Datei: dieselbe Normalisierung wie auf dem Server (validate.js), höchstens 100 Fragen
   function normalizeImported(raw) {
     if (!raw || typeof raw !== 'object' || !Array.isArray(raw.questions)) return null;
-    const questions = raw.questions.slice(0, 100).map((q) => {
-      const type = q && q.type === 'truefalse' ? 'truefalse' : 'quiz';
-      const options = type === 'truefalse' ? ['Wahr', 'Falsch'] : Array.from({ length: 4 }, (_, i) => String((q && q.options && q.options[i]) || '').slice(0, 90));
-      const correct = (Array.isArray(q && q.correct) ? q.correct : []).filter((i) => Number.isInteger(i) && i >= 0 && i < options.length);
-      const timeLimit = TIME_LIMITS.includes(q && q.timeLimit) ? q.timeLimit : 20;
-      return { type, text: String((q && q.text) || '').slice(0, 300), options, correct, timeLimit, double: Boolean(q && q.double === true) };
-    });
-    return { id: uid(), title: String(raw.title || 'Importiertes Quiz').slice(0, 120), updatedAt: Date.now(), questions };
+    try {
+      const d = window.LeaqizValidate.normalizeDraft({ ...raw, questions: raw.questions.slice(0, 100) });
+      return { id: uid(), title: d.title || 'Importiertes Quiz', updatedAt: Date.now(), questions: d.questions };
+    } catch {
+      return null;
+    }
   }
+
+  // ---------- Bibliothek im Konto (nur mit eigenem Server und Anmeldung) ----------
+  // Angemeldet liegen die Quizze auf dem Server (quiz-api.js), sonst wie bisher im Browser.
+
+  const QuizApi = window.LQQuizApi;
+  const IMPORT_HIDDEN_KEY = 'leaqiz.importHidden';
+  let serverQuizzes = null; // Quizze im Konto, null = noch nicht geladen
+  let serverOwner = null; // zu welchem Konto der Zwischenspeicher gehört
+  let libraryError = '';
+  let syncing = null;
+
+  function onServer() {
+    return Boolean(Account.enabled() && me);
+  }
+
+  function libraryList() {
+    return onServer() ? serverQuizzes || [] : loadQuizzes();
+  }
+
+  // Liste aus dem Konto laden. 401: abgemeldet, dann zeigt die Bibliothek wieder den Browser.
+  function syncLibrary() {
+    if (!onServer()) {
+      serverQuizzes = null;
+      libraryError = '';
+      return Promise.resolve();
+    }
+    if (!syncing) {
+      const owner = me.id;
+      syncing = QuizApi.list()
+        .then((list) => {
+          serverQuizzes = list;
+          serverOwner = owner;
+          libraryError = '';
+        })
+        .catch((err) => {
+          if (err.status === 401) {
+            me = null;
+            serverQuizzes = null;
+          } else libraryError = err.message;
+        })
+        .finally(() => {
+          syncing = null;
+        });
+    }
+    return syncing;
+  }
+
+  function rememberServerQuiz(saved) {
+    serverQuizzes = [saved, ...(serverQuizzes || []).filter((q) => q.id !== saved.id)];
+  }
+
+  // Speichern: im Konto (neu oder ändern) oder im Browser. Setzt id und updatedAt am übergebenen Quiz.
+  async function storeQuiz(quiz) {
+    if (!onServer()) {
+      upsertQuiz(quiz);
+      return;
+    }
+    let saved;
+    if (quiz.id) {
+      try {
+        saved = await QuizApi.update(quiz.id, quiz);
+      } catch (err) {
+        if (err.status !== 404) throw err;
+        // Auf einem anderen Gerät gelöscht: die Arbeit im Editor nicht verlieren
+        saved = await QuizApi.create(quiz);
+        toast('Das Quiz war inzwischen gelöscht worden. Es ist jetzt neu angelegt.');
+      }
+    } else saved = await QuizApi.create(quiz);
+    quiz.id = saved.id;
+    quiz.updatedAt = saved.updatedAt;
+    rememberServerQuiz(saved);
+  }
+
+  async function removeQuiz(quiz) {
+    if (!onServer()) {
+      saveQuizzes(loadQuizzes().filter((q) => q.id !== quiz.id));
+      return;
+    }
+    try {
+      await QuizApi.remove(quiz.id);
+    } catch (err) {
+      if (err.status !== 404) throw err; // schon weg: auch gut
+    }
+    serverQuizzes = (serverQuizzes || []).filter((q) => q.id !== quiz.id);
+  }
+
+  // Quizze aus einer Datei hinzufügen. Gibt die Zahl der neuen Quizze zurück.
+  async function addQuizzes(items) {
+    if (!onServer()) {
+      saveQuizzes([...items, ...loadQuizzes()]);
+      return items.length;
+    }
+    let added = 0;
+    for (let i = 0; i < items.length; i += 100) {
+      const result = await QuizApi.importMany(items.slice(i, i + 100).map(({ title, questions }) => ({ title, questions })));
+      result.imported.forEach(rememberServerQuiz);
+      added += result.imported.length;
+    }
+    return added;
+  }
+
+  // Unverändertes Beispiel-Quiz: liegt in jedem Browser, wird nicht zur Übernahme angeboten
+  function isUntouchedSample(q) {
+    const s = sampleQuiz();
+    return q.title === s.title && JSON.stringify(q.questions) === JSON.stringify(s.questions);
+  }
+
+  // Quizze, die noch im Browser liegen und nicht im Konto sind (ohne „Nicht übernehmen“)
+  function browserOnlyQuizzes() {
+    if (!onServer() || !serverQuizzes) return [];
+    const list = local.get(LIB_KEY, null);
+    if (!Array.isArray(list)) return [];
+    const known = new Set(serverQuizzes.map((q) => q.localId).filter(Boolean));
+    const hidden = new Set(local.get(IMPORT_HIDDEN_KEY, []));
+    return list.filter((q) => q && q.id && Array.isArray(q.questions) && !known.has(q.id) && !hidden.has(q.id) && !isUntouchedSample(q));
+  }
+
+  // Ins Konto übernehmen und danach aus dem Browser entfernen (sonst gäbe es zwei Fassungen)
+  async function moveToAccount(items) {
+    for (let i = 0; i < items.length; i += 100) {
+      await QuizApi.importMany(items.slice(i, i + 100).map(({ id, title, questions }) => ({ localId: id, title, questions })));
+    }
+    serverQuizzes = await QuizApi.list();
+    const known = new Set(serverQuizzes.map((q) => q.localId).filter(Boolean));
+    saveQuizzes(loadQuizzes().filter((q) => !known.has(q.id)));
+    return items.filter((q) => known.has(q.id)).length;
+  }
+
+  function importOffer(items) {
+    const n = items.length;
+    const moveBtn = h('button', { class: 'btn', type: 'button', text: 'Ins Konto übernehmen' });
+    const hideBtn = h('button', { class: 'btn btn--link', type: 'button', text: 'Nicht übernehmen' });
+    const errorEl = h('p', { class: 'error', role: 'alert' });
+    moveBtn.addEventListener('click', async () => {
+      moveBtn.disabled = true;
+      hideBtn.disabled = true;
+      errorEl.textContent = '';
+      try {
+        const moved = await moveToAccount(items);
+        toast(moved === 1 ? 'Ein Quiz ist jetzt in deinem Konto.' : `${moved} Quizze sind jetzt in deinem Konto.`);
+        renderLibrary();
+      } catch (err) {
+        moveBtn.disabled = false;
+        hideBtn.disabled = false;
+        errorEl.textContent = err.message;
+      }
+    });
+    hideBtn.addEventListener('click', () => {
+      local.set(IMPORT_HIDDEN_KEY, [...new Set([...local.get(IMPORT_HIDDEN_KEY, []), ...items.map((q) => q.id)])]);
+      renderLibrary();
+    });
+    return h(
+      'section',
+      { class: 'import-offer', 'aria-labelledby': 'import-offer-title' },
+      h('h2', { class: 'import-offer__title', id: 'import-offer-title', text: n === 1 ? 'Ein Quiz liegt nur in diesem Browser' : `${n} Quizze liegen nur in diesem Browser` }),
+      h('p', { class: 'import-offer__text', text: `Übernimm ${n === 1 ? 'es' : 'sie'} in dein Konto, dann ${n === 1 ? 'ist es' : 'sind sie'} auf jedem Gerät da, auf dem du angemeldet bist. Aus dem Browser ${n === 1 ? 'wird es' : 'werden sie'} danach entfernt.` }),
+      h('p', { class: 'import-offer__list', text: items.slice(0, 3).map((q) => q.title || 'Ohne Titel').join(', ') + (n > 3 ? ` und ${n - 3} weitere` : '') }),
+      errorEl,
+      h('div', { class: 'import-offer__actions' }, moveBtn, hideBtn),
+    );
+  }
+
+  // Zurück im Tab: Änderungen von anderen Geräten holen, ohne die Ansicht unnötig neu aufzubauen
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden || mode !== 'library' || !onServer() || !serverQuizzes) return;
+    const before = JSON.stringify(serverQuizzes.map((q) => [q.id, q.updatedAt]));
+    await syncLibrary();
+    if (mode !== 'library') return;
+    if (!onServer() || JSON.stringify((serverQuizzes || []).map((q) => [q.id, q.updatedAt])) !== before) renderLibrary();
+  });
 
   // ---------- Ansicht: Bibliothek ----------
 
@@ -138,7 +307,14 @@
     renderedKey = '';
     stopTimer();
     keepAwake(false);
-    const quizzes = loadQuizzes();
+    if (onServer() && serverOwner !== me.id) serverQuizzes = null;
+    const loading = onServer() && serverQuizzes === null;
+    if (loading && !libraryError) {
+      syncLibrary().then(() => {
+        if (mode === 'library') renderLibrary();
+      });
+    }
+    const quizzes = libraryList();
 
     const fileInput = h('input', { type: 'file', accept: '.json,application/json', class: 'visually-hidden', id: 'import-file', tabindex: '-1', 'aria-hidden': 'true' });
     fileInput.addEventListener('change', async () => {
@@ -150,9 +326,14 @@
         const data = JSON.parse(await file.text());
         const items = (Array.isArray(data) ? data : [data]).map(normalizeImported).filter(Boolean);
         if (!items.length) return toast('In der Datei wurde kein Quiz gefunden.');
-        saveQuizzes([...items, ...loadQuizzes()]);
-        toast(items.length === 1 ? `„${items[0].title}“ importiert.` : `${items.length} Quizze importiert.`);
-        renderLibrary();
+        let added;
+        try {
+          added = await addQuizzes(items);
+        } catch (err) {
+          return toast(err.message);
+        }
+        toast(added === 1 ? `„${items[0].title}“ importiert.` : `${added} Quizze importiert.`);
+        if (mode === 'library') renderLibrary();
       } catch {
         toast('Die Datei ist kein gültiges Quiz (JSON).');
       }
@@ -190,7 +371,7 @@
             text: 'Exportieren',
             'aria-describedby': titleId,
             onclick: () => {
-              const { id, ...data } = quiz;
+              const { id, localId, updatedAt, ...data } = quiz;
               download(`${slug(quiz.title)}.leaqizz.json`, JSON.stringify(data, null, 2), 'application/json');
             },
           }),
@@ -199,11 +380,16 @@
             type: 'button',
             text: 'Löschen',
             'aria-label': `„${quiz.title}“ löschen`,
-            onclick: () => {
+            onclick: async () => {
               if (!window.confirm(`„${quiz.title}“ endgültig löschen?`)) return;
-              saveQuizzes(loadQuizzes().filter((q) => q.id !== quiz.id));
+              try {
+                await removeQuiz(quiz);
+              } catch (err) {
+                toast(err.message);
+                return;
+              }
               toast('Quiz gelöscht.');
-              renderLibrary();
+              if (mode === 'library') renderLibrary();
             },
           }),
         ),
@@ -221,6 +407,33 @@
         ),
       ),
     );
+    // Leeres Konto: Beispiel-Quiz zum Ausprobieren anbieten
+    if (onServer() && !quizzes.length) {
+      tiles.push(
+        h(
+          'li',
+          { class: 'quiz-new' },
+          h(
+            'button',
+            {
+              class: 'quiz-new__btn',
+              type: 'button',
+              onclick: async (e) => {
+                e.currentTarget.disabled = true;
+                try {
+                  await storeQuiz({ ...sampleQuiz(), id: null });
+                } catch (err) {
+                  toast(err.message);
+                }
+                if (mode === 'library') renderLibrary();
+              },
+            },
+            h('span', { class: 'quiz-new__plus', 'aria-hidden': 'true', text: '+' }),
+            h('span', { text: 'Beispiel-Quiz hinzufügen' }),
+          ),
+        ),
+      );
+    }
 
     root.replaceChildren(
       h(
@@ -239,9 +452,39 @@
           h('h1', { class: 'home__title', text: 'Was spielen wir heute?' }),
           h('p', { class: 'home__lead', text: 'Wähle ein Quiz. Die Demo startet sofort mit acht simulierten Mitspielenden, ganz ohne Handys und Netz.' }),
         ),
-        h('ul', { class: 'quiz-grid', 'aria-label': 'Deine Quizze' }, tiles),
-        h('p', { class: 'home__note', text: 'Quizze werden nur in diesem Browser gespeichert. Exportiere sie als Datei, um sie zu sichern oder weiterzugeben.' }),
+        loading ? libraryStatus() : null,
+        !loading && onServer() ? (() => {
+          const pending = browserOnlyQuizzes();
+          return pending.length ? importOffer(pending) : null;
+        })() : null,
+        loading ? null : h('ul', { class: 'quiz-grid', 'aria-label': 'Deine Quizze' }, tiles),
+        h('p', { class: 'home__note', text: libraryNote() }),
       ),
+    );
+  }
+
+  function libraryNote() {
+    if (onServer()) return 'Deine Quizze sind in deinem Konto gespeichert und auf jedem Gerät da, auf dem du angemeldet bist. Exportiere sie als Datei, um sie weiterzugeben.';
+    if (Account.enabled()) return 'Ohne Anmeldung werden Quizze nur in diesem Browser gespeichert. Melde dich an, um sie in deinem Konto zu speichern.';
+    return 'Quizze werden nur in diesem Browser gespeichert. Exportiere sie als Datei, um sie zu sichern oder weiterzugeben.';
+  }
+
+  // Laden aus dem Konto läuft oder ist gescheitert
+  function libraryStatus() {
+    if (!libraryError) return h('p', { class: 'home__status', role: 'status', text: 'Deine Quizze werden geladen …' });
+    return h(
+      'div',
+      { class: 'home__status', role: 'alert' },
+      h('p', { text: `Deine Quizze ließen sich nicht laden. ${libraryError}` }),
+      h('button', {
+        class: 'btn btn--quiet btn--small',
+        type: 'button',
+        text: 'Erneut versuchen',
+        onclick: () => {
+          libraryError = '';
+          renderLibrary();
+        },
+      }),
     );
   }
 
@@ -256,7 +499,7 @@
   function openEditor(quiz) {
     draft = quiz
       ? JSON.parse(JSON.stringify(quiz))
-      : { id: uid(), title: '', updatedAt: Date.now(), questions: [blankQuestion('quiz')] };
+      : { id: onServer() ? null : uid(), title: '', updatedAt: Date.now(), questions: [blankQuestion('quiz')] };
     // Editor arbeitet immer mit 4 Antwortfeldern
     for (const q of draft.questions) {
       if (q.type === 'quiz') while (q.options.length < 4) q.options.push('');
@@ -533,7 +776,10 @@
     );
   }
 
-  function saveDraft(andStart) {
+  let saving = false;
+
+  async function saveDraft(andStart) {
+    if (saving) return;
     const found = problems(draft);
     const box = document.getElementById('editor-errors');
     root.querySelectorAll('.qcard').forEach((c) => c.removeAttribute('aria-invalid'));
@@ -549,8 +795,20 @@
       return;
     }
     box.replaceChildren();
-    upsertQuiz(draft);
+    saving = true;
+    try {
+      await storeQuiz(draft);
+    } catch (err) {
+      // Anmeldung abgelaufen: in einem neuen Tab anmelden, hier bleibt der Entwurf stehen
+      const relogin = err.status === 401 ? h('p', null, h('a', { href: location.pathname, target: '_blank', rel: 'noopener', text: 'In neuem Tab anmelden' }), ' und danach hier erneut speichern.') : null;
+      box.replaceChildren(h('p', { text: `Nicht gespeichert. ${err.message}` }), relogin);
+      box.scrollIntoView({ block: 'center' });
+      return;
+    } finally {
+      saving = false;
+    }
     dirty = false;
+    if (mode !== 'editor') return;
     if (andStart) startGame(draft, { demo: true });
     else toast('Gespeichert.');
   }
@@ -715,6 +973,7 @@
       try {
         await Account.signOut();
         me = null;
+        serverQuizzes = null;
         renderLibrary();
         toast('Du bist abgemeldet.');
       } catch (err) {
@@ -845,7 +1104,7 @@
         return;
       }
       try {
-        engine = await window.LQNet.RemoteGame.create(payload, remoteHooks());
+        engine = await window.LQNet.RemoteGame.create(payload, remoteHooks(), { quizId: onServer() ? quiz.id : null });
       } catch (err) {
         if (err.status === 401) {
           me = null;
@@ -1511,6 +1770,7 @@
   async function init() {
     const params = new URLSearchParams(location.search);
     if (Account.enabled()) me = await Account.current();
+    await syncLibrary();
     const savedGame = session.get(GAME_KEY);
     if (savedGame && savedGame.v === 1) {
       resumeGame(savedGame);
@@ -1527,9 +1787,10 @@
     if (params.get('start') === 'demo') {
       // Direkt aus der Landingpage: erstes Quiz als Demo starten; Parameter entfernen, damit Neuladen nicht neu startet
       history.replaceState(null, '', location.pathname);
-      const list = loadQuizzes();
+      // Leeres Konto: Beispiel-Quiz nur für die Demo, ohne es zu speichern
+      const list = libraryList();
       renderLibrary();
-      if (list.length) startGame(list[0], { demo: true });
+      startGame(list[0] || sampleQuiz(), { demo: true });
       return;
     }
     renderLibrary();

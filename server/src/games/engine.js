@@ -7,4 +7,4 @@ const Engine = require('../../../public/js/engine/host-engine.js');
 const Validate = require('../../../public/js/engine/validate.js');
 
 export const { HostEngine, randomPin, GameError } = Engine;
-export const { validateQuiz, isPin, ValidationError } = Validate;
+export const { validateQuiz, normalizeDraft, isPin, ValidationError } = Validate;

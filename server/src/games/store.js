@@ -8,8 +8,8 @@ export class PgGameStore {
     this.db = db;
   }
 
-  async insert({ id, ownerId = null, pin, hostTokenHash, title, state, snapshot }) {
-    await this.db.insert(game).values({ id, ownerId, pin, hostTokenHash, title, state, snapshot });
+  async insert({ id, ownerId = null, quizId = null, pin, hostTokenHash, title, state, snapshot }) {
+    await this.db.insert(game).values({ id, ownerId, quizId, pin, hostTokenHash, title, state, snapshot });
   }
 
   async save(id, { state, snapshot }) {

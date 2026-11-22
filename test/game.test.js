@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { Game, GameError, scoreAnswer, rankPlayers } = require('../public/js/engine/game.js');
-const { validateQuiz, validateNickname, ValidationError } = require('../public/js/engine/validate.js');
+const { validateQuiz, validateNickname, normalizeDraft, ValidationError } = require('../public/js/engine/validate.js');
 
 const quiz = validateQuiz({
   title: 'Test',
@@ -109,4 +109,23 @@ test('Host-Token und Spieler-Token werden sicher verglichen', () => {
   assert.equal(g.findPlayerByToken(undefined), null);
   assert.equal(g.checkHostToken(g.hostToken), true);
   assert.equal(g.checkHostToken('falsch'), false);
+});
+
+test('Entwurf: Format des Editors, unvollständig erlaubt, Werte bereinigt und begrenzt', () => {
+  const d = normalizeDraft({
+    title: ` ${'T'.repeat(200)} `,
+    questions: [
+      { type: 'quiz', text: 'Frage\u0000', options: ['a', '', ' b '], correct: [2, 2, 7, 0] },
+      { type: 'truefalse', text: '', correct: [1, 0], timeLimit: 7, double: 'ja' },
+      { type: 'unbekannt' },
+    ],
+  });
+  assert.equal(d.title.length, 120);
+  assert.deepEqual(d.questions[0].options, ['a', '', 'b', ''], 'immer 4 Antwortfelder');
+  assert.deepEqual(d.questions[0].correct, [0, 2]);
+  assert.equal(d.questions[0].text, 'Frage');
+  assert.deepEqual(d.questions[1], { type: 'truefalse', text: '', options: ['Wahr', 'Falsch'], correct: [1], timeLimit: 20, double: false });
+  assert.equal(d.questions[2].type, 'quiz');
+  assert.throws(() => normalizeDraft({ title: 'x' }), ValidationError);
+  assert.throws(() => normalizeDraft({ questions: Array.from({ length: 101 }, () => ({})) }), ValidationError);
 });

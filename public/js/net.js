@@ -503,7 +503,8 @@ window.LQNet = (function () {
   // Leinwand eines Spiels auf dem Server. Gleiche Oberfläche wie die HostEngine im Browser
   // (next, kick, end, hostView, snapshot, pin, closed), damit host.js beide gleich behandelt.
   class RemoteGame {
-    static async create(quiz, hooks) {
+    // quizId: Quiz im Konto, aus dem das Spiel stammt (optional, nur zur Verknüpfung)
+    static async create(quiz, hooks, { quizId = null } = {}) {
       let res;
       let data = {};
       try {
@@ -511,7 +512,7 @@ window.LQNet = (function () {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ quiz }),
+          body: JSON.stringify(quizId ? { quiz, quizId } : { quiz }),
         });
         data = await res.json().catch(() => ({}));
       } catch {
