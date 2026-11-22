@@ -142,7 +142,7 @@ function distinct(code, taken) {
   return code;
 }
 
-function render(code, { title = '' } = {}) {
+function render(code, { title = '', round = false } = {}) {
   const c = isAvatar(code) ? code : fromName('');
   const [f, e, m, x, k, g] = c;
   const form = FORMS[f];
@@ -156,13 +156,14 @@ function render(code, { title = '' } = {}) {
   // Einpassen: Wesen samt Extra füllt das Feld, nichts ragt hinaus
   const top = ty - extra.h - 2;
   const bottom = 93;
-  const fit = Math.min(1.14, 88 / (bottom - top));
+  // Rund (Namens-Chips): Wesen etwas kleiner, damit nichts am Kreisrand anstößt
+  const fit = Math.min(1.14, 88 / (bottom - top)) * (round ? 0.84 : 1);
   const mid = (top + bottom) / 2;
   const face = `<g transform="translate(${fx} ${fy}) scale(${FEAT})"><g transform="translate(0 -6)">${EYES[e].svg()}</g><g transform="translate(0 10)">${MOUTHS[m].svg()}</g></g>`;
   const label = title ? `<title>${String(title).replace(/[<&>"]/g, '')}</title>` : '';
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"${title ? ' role="img"' : ' aria-hidden="true"'} class="avatar">${label}` +
-    `<rect width="100" height="100" rx="24" fill="${GROUNDS[g].hex}"/>` +
+    (round ? `<circle cx="50" cy="50" r="50" fill="${GROUNDS[g].hex}"/>` : `<rect width="100" height="100" rx="24" fill="${GROUNDS[g].hex}"/>`) +
     `<g transform="translate(50 50) rotate(${lean}) scale(${fit.toFixed(3)}) translate(-50 ${-mid})">` +
     (extra.back ? hat : '') +
     `<path d="${form.d}" fill="${COLORS[k].hex}" stroke="${INK}" stroke-width="${SW}" stroke-linejoin="round"/>` +

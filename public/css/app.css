@@ -2544,9 +2544,17 @@ html.embedded .screen__top {
   }
 }
 
+/* Avatar im Namens-Chip: rund und konzentrisch zur Pillenform (gleicher Abstand oben, unten,
+   links); das Entfernen-Kreuz rechts als gleich großer Kreis, damit beide Enden gleich wirken */
 .chip:has(> .avatar-pic) {
-  padding-block: 0.25rem;
-  padding-left: 0.25rem;
+  gap: var(--s-2);
+  padding: 0.25rem;
+}
+
+.chip:has(> .avatar-pic) .chip__kick {
+  width: 2.2em;
+  height: 2.2em;
+  margin-left: calc(var(--s-1) * -1);
 }
 
 .board__name .avatar-pic {

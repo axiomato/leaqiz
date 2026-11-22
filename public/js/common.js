@@ -30,7 +30,7 @@ window.LQ = (function () {
 
   // Avatar als SVG (avatar.js zeichnet nur aus eigenen Bausteinen). Fehlt ein gültiger Avatar
   // (älteres gesichertes Spiel), entsteht er aus dem Namen.
-  function avatar(code, name = '', cls = '') {
+  function avatar(code, name = '', cls = '', opts = {}) {
     const A = window.LeaqizAvatar;
     const el = document.createElement('span');
     el.className = cls ? `avatar-pic ${cls}` : 'avatar-pic';
@@ -38,7 +38,7 @@ window.LQ = (function () {
     if (!A) return el;
     const c = A.isAvatar(code) ? code : A.fromName(name);
     el.dataset.av = c.join('.');
-    el.innerHTML = A.render(c);
+    el.innerHTML = A.render(c, opts);
     return el;
   }
 

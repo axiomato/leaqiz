@@ -934,7 +934,7 @@
         old.classList.toggle('is-away', !p.connected);
         // Avatar in der Lobby geändert: nur das Bild tauschen (springt kurz)
         const pic = old.querySelector('.avatar-pic');
-        const next = avatar(p.avatar, p.nickname, 'is-new');
+        const next = avatar(p.avatar, p.nickname, 'is-new', { round: true });
         if (pic && pic.dataset.av !== next.dataset.av) pic.replaceWith(next);
         return null;
       }
@@ -942,7 +942,7 @@
       return h(
         'li',
         { class: `chip${p.connected ? '' : ' is-away'}`, dataset: { id: p.id } },
-        avatar(p.avatar, p.nickname),
+        avatar(p.avatar, p.nickname, '', { round: true }),
         h('span', { text: p.nickname }),
         h('button', {
           class: 'chip__kick',
