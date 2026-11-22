@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Quelle des Vorschaubilds für geteilte Links (og:image, 1200 × 630).
+         Neu erzeugen: python3 dev/og/render.py  →  public/img/og-leaqizz.png -->
+    <title>leaqizz – Vorschaubild</title>
+    <style>
+      @font-face {
+        font-family: 'Archivo';
+        font-weight: 100 900;
+        font-stretch: 62% 125%;
+        src: url('../../public/fonts/archivo-wdth.woff2') format('woff2');
+      }
+      * { box-sizing: border-box; margin: 0; }
+      html, body { width: 1200px; height: 630px; }
+      body {
+        background: #121826;
+        color: #ffffff;
+        font-family: 'Archivo', sans-serif;
+        display: grid;
+        grid-template-columns: 1fr 432px;
+        gap: 64px;
+        padding: 64px 72px;
+        align-items: center;
+      }
+      .copy { display: grid; gap: 28px; align-content: center; }
+      .wordmark { font-size: 32px; font-weight: 800; font-stretch: 125%; letter-spacing: -0.01em; }
+      h1 { font-size: 72px; line-height: 1.02; font-weight: 800; font-stretch: 112%; letter-spacing: -0.02em; }
+      .sub { font-size: 26px; line-height: 1.35; color: #c3cbd6; max-width: 36ch; font-stretch: 100%; text-wrap: balance; }
+      .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .tile {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 16px;
+        padding: 18px 22px;
+        font-size: 88px;
+        line-height: 1;
+        font-weight: 800;
+        font-stretch: 125%;
+      }
+      .a { background: #0f6e74; }
+      .b { background: #c2410c; }
+      .c { background: #6741d9; }
+      .d { background: #b0234f; }
+      .dim { opacity: 0.32; }
+      .check { position: absolute; right: 18px; bottom: 18px; width: 64px; height: 64px; }
+    </style>
+  </head>
+  <body>
+    <div class="copy">
+      <p class="wordmark">leaqizz</p>
+      <h1>Mitmachen dauert Sekunden.</h1>
+      <p class="sub">Live-Quiz für die Klasse: Fragen am Beamer, Antworten am Handy, ohne Konto.</p>
+    </div>
+    <div class="tiles" aria-hidden="true">
+      <div class="tile a dim">A</div>
+      <div class="tile b">B
+        <svg class="check" viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="32" cy="32" r="28" />
+          <path d="M20 33l8 8 16-18" />
+        </svg>
+      </div>
+      <div class="tile c dim">C</div>
+      <div class="tile d dim">D</div>
+    </div>
+  </body>
+</html>

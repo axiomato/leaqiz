@@ -95,9 +95,15 @@ public/                 die veröffentlichte Seite
   js/engine/            Spiel-Logik, Eingabeprüfung, Host-Engine
   js/net.js             Direktverbindung (PeerJS)
   js/config.js          Vermittlungsserver (leer = öffentlicher PeerJS-Server)
+  img/og-leaqizz.png    Vorschaubild für geteilte Links (1200 × 630)
 dev/serve.js            lokaler Entwicklungsserver
+dev/og/                 Quelle des Vorschaubilds; neu erzeugen mit python3 dev/og/render.py
 test/                   Tests (node:test)
 ```
+
+Das Vorschaubild ist in Spielerseite, Spielleitung und Landingpage mit absoluter Adresse
+unter `https://axiomato.github.io/leaqiz/` eingetragen. Beim Umzug auf eine eigene Domain
+die `og:url`- und `og:image`-Adressen mitziehen; `test/og.test.js` prüft sie.
 
 Die frühere Variante mit eigenem Node.js-Server liegt im Git-Verlauf (Commit `875fb9e`).
 
