@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<!-- Teile-Bogen der Avatare (D-38), Entwurf zur Freigabe. Erzeugen: python3 dev/avatar/render.py -->
+<title>leaqizz – Avatar-Baukasten</title>
+<style>
+@font-face { font-family: 'Archivo'; font-weight: 100 900; font-stretch: 62% 125%; src: url('../../public/fonts/archivo-wdth.woff2') format('woff2'); }
+* { box-sizing: border-box; margin: 0; }
+body { width: 1600px; background: #f4f5f7; color: #121826; font-family: 'Archivo', sans-serif; padding: 56px 64px 64px; }
+h1 { font-size: 48px; font-weight: 800; font-stretch: 112%; letter-spacing: -0.02em; }
+.sub { font-size: 20px; color: #4a5263; margin-top: 8px; }
+h2 { font-size: 22px; font-weight: 800; margin: 40px 0 16px; }
+.row { display: flex; flex-wrap: wrap; gap: 20px; }
+figure { width: 112px; text-align: center; }
+figure svg { width: 112px; height: 112px; display: block; }
+figcaption { font-size: 15px; margin-top: 6px; font-weight: 600; }
+.panel { border-radius: 24px; padding: 28px; display: flex; flex-wrap: wrap; gap: 14px; }
+.dark { background: #121826; }
+.chip { display: flex; align-items: center; gap: 10px; background: #1f2737; color: #fff; border-radius: 999px; padding: 6px 18px 6px 6px; font-size: 20px; font-weight: 700; }
+.chip svg { width: 48px; height: 48px; }
+.light { background: #fff; flex-direction: column; gap: 0; padding: 12px 28px; }
+.line { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-bottom: 1px solid #e3e6ec; font-size: 22px; font-weight: 700; }
+.line:last-child { border: 0; }
+.line svg { width: 56px; height: 56px; }
+.line span.pts { margin-left: auto; font-variant-numeric: tabular-nums; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.flood { background: #c2410c; }
+.big { display: flex; gap: 28px; align-items: flex-end; justify-content: center; padding: 36px; }
+.big svg { width: 180px; height: 180px; }
+</style>
+</head>
+<body>
+<h1>Avatar-Baukasten – Entwurf</h1>
+<p class="sub" id="sum"></p>
+<h2>Formen</h2><div class="row" id="forms"></div>
+<h2>Augen</h2><div class="row" id="eyes"></div>
+<h2>Münder</h2><div class="row" id="mouths"></div>
+<h2>Extras</h2><div class="row" id="extras"></div>
+<h2>Körperfarben und Grund</h2><div class="row" id="colors"></div>
+<h2>Beispiele aus dem Namen (ohne Auswahl) – Lobby am Beamer</h2>
+<div class="panel dark" id="lobby"></div>
+<div class="cols" style="margin-top:24px">
+  <div><h2 style="margin-top:0">Zwischenstand</h2><div class="panel light" id="board"></div></div>
+  <div><h2 style="margin-top:0">Auf der Flutfarbe und auf dem Podium</h2><div class="panel flood big" id="podium"></div></div>
+</div>
+<script src="../../public/js/avatar.js"></script>
+<script>
+const A = window.LeaqizAvatar, P = A.PARTS;
+const fig = (code, cap) => `<figure>${A.render(code)}<figcaption>${cap}</figcaption></figure>`;
+document.getElementById('sum').textContent = `${P.forms.length} Formen × ${P.eyes.length} Augen × ${P.mouths.length} Münder × ${P.extras.length} Extras × ${P.colors.length} Körperfarben × ${P.grounds.length} Gründe = ${A.SIZES.reduce((a, b) => a * b, 1).toLocaleString('de-DE')} Kombinationen. Ohne Auswahl entsteht der Avatar aus dem Namen; „Würfeln“ zieht einen neuen.`;
+document.getElementById('forms').innerHTML = P.forms.map((f, i) => fig([i, 0, 0, 0, i % 8, i % 4], f.name)).join('');
+document.getElementById('eyes').innerHTML = P.eyes.map((f, i) => fig([0, i, 0, 0, 0, 2], f.name)).join('');
+document.getElementById('mouths').innerHTML = P.mouths.map((f, i) => fig([0, 0, i, 0, 1, 0], f.name)).join('');
+document.getElementById('extras').innerHTML = P.extras.map((f, i) => fig([5, 0, 0, i, 3, 3], f.name)).join('');
+document.getElementById('colors').innerHTML = P.colors.map((c, i) => fig([0, 0, 0, 0, i, i % 4], c.name + ' / ' + P.grounds[i % 4].name)).join('');
+const names = ['Emil', 'Mila', 'Jonas', 'Aylin', 'Ben', 'Sofia', 'Luca', 'Hannah', 'Elias', 'Noah', 'Lea', 'Finn', 'Emma', 'Paul', 'Lina', 'Ida', 'Mats', 'Zoe', 'Karim', 'Mira', 'Tom', 'Ella', 'Jan', 'Nele'];
+document.getElementById('lobby').innerHTML = names.map((n) => `<span class="chip">${A.render(A.fromName(n))}${n}</span>`).join('');
+document.getElementById('board').innerHTML = names.slice(0, 5).map((n, i) => `<div class="line">${i + 1}. ${A.render(A.fromName(n))}${n}<span class="pts">${[2042, 1980, 971, 912, 888][i]}</span></div>`).join('');
+document.getElementById('podium').innerHTML = ['Aylin', 'Emil', 'Mila'].map((n, i) => `<div style="text-align:center;color:#fff;font-size:24px;font-weight:800">${A.render(A.fromName(n))}<div style="margin-top:8px">${n}</div></div>`).join('');
+</script>
+</body>
+</html>
