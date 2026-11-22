@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta name="referrer" content="no-referrer" />
+    <!-- Prototyp: nicht indexieren, bis Impressum, Datenschutz und Domain stehen -->
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#121826" />
+    <title>Quiz erstellen kostenlos – Live-Quiz für Klassen | leaqizz</title>
+    <meta name="description" content="Kostenloses Live-Quiz für den Unterricht: Fragen am Beamer, Antworten am Handy, ohne Konto für die Klasse. Demo direkt im Browser starten." />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="de_DE" />
+    <meta property="og:title" content="leaqizz – Live-Quiz für die Klasse, ohne Konto" />
+    <meta property="og:description" content="Fragen am Beamer, Antworten am Handy, Auflösung für alle. Deine Klasse braucht nur PIN und Spielnamen." />
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="../fonts/archivo-wdth.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="../css/landing.css?v=dev" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Brauchen Schüler:innen ein Konto oder eine App?", "acceptedAnswer": { "@type": "Answer", "text": "Nein. Sie öffnen die Seite im Browser, scannen den QR-Code oder tippen die PIN ein und wählen einen Spielnamen." } },
+          { "@type": "Question", "name": "Was kostet leaqizz?", "acceptedAnswer": { "@type": "Answer", "text": "Nichts. Wer das Projekt unterstützen möchte, kann freiwillig einen Betrag geben. Das ist keine Spende im steuerlichen Sinn, eine Spendenquittung gibt es nicht." } },
+          { "@type": "Question", "name": "Welche Daten speichert leaqizz?", "acceptedAnswer": { "@type": "Answer", "text": "Quizze speichert nur dein Browser. Spielnamen und Antworten liegen während des Spiels im Browser der Spielleitung. Die Ergebnisse lädst du bei Bedarf als CSV-Datei herunter. Es gibt keine Cookies und kein Tracking." } },
+          { "@type": "Question", "name": "Funktioniert das im Schul-WLAN?", "acceptedAnswer": { "@type": "Answer", "text": "Die Demo immer, denn nach dem Laden braucht sie kein Netz. Das Live-Spiel verbindet die Geräte direkt miteinander, und manche Schulnetze blockieren das. Der Verbindungstest zeigt vorab, ob es bei dir klappt." } },
+          { "@type": "Question", "name": "Kann ich eigene Fragen erstellen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja. Im Editor legst du Multiple-Choice- und Wahr/Falsch-Fragen mit Zeitlimit an. Quizze kannst du als Datei exportieren und wieder importieren." } },
+          { "@type": "Question", "name": "Wofür wird meine Unterstützung verwendet?", "acceptedAnswer": { "@type": "Answer", "text": "Für den Betrieb, zum Beispiel einen Verbindungsserver für das Live-Spiel, und für die Weiterentwicklung." } }
+        ]
+      }
+    </script>
+  </head>
+  <body class="lp">
+    <a class="skip" href="#main">Zum Inhalt springen</a>
+
+    <header class="top tone-ink">
+      <div class="wrap top__inner">
+        <a class="wordmark" href="./" aria-label="leaqizz Startseite">leaqizz</a>
+        <nav class="top__nav" aria-label="Seitenbereiche">
+          <a href="#runde">So läuft eine Runde</a>
+          <a href="#unterstuetzen">Unterstützen</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- M02 Hero -->
+      <section class="hero tone-ink" aria-labelledby="hero-title">
+        <div class="wrap hero__grid">
+          <div class="hero__copy">
+            <h1 class="h1" id="hero-title">Mitmachen dauert Sekunden.</h1>
+            <p class="lead">Deine Klasse braucht kein Konto und keine App. Nur eine PIN und einen Spielnamen.</p>
+            <p class="hero__what">leaqizz zeigt Fragen am Beamer, die Klasse antwortet am Handy, die Auflösung sehen alle.</p>
+            <ul class="checks">
+              <li>Ohne Konto für Schüler:innen</li>
+              <li>Läuft im Browser, nichts zu installieren</li>
+              <li>Kostenlos</li>
+            </ul>
+            <div class="hero__cta">
+              <a class="btn btn--primary" id="hero-cta" href="../host/?start=demo">Demo starten – ohne Anmeldung</a>
+              <a class="textlink" href="#unterstuetzen">Projekt unterstützen</a>
+            </div>
+            <p class="hero__note small">Prototyp. Die Demo läuft komplett in deinem Browser, mit acht simulierten Mitspielenden.</p>
+          </div>
+
+          <div class="demo" id="demo" data-step="reveal">
+            <p class="visually-hidden">Animation: Am Handy wird Antwort B angetippt. Die Leinwand färbt sich orange und zeigt „Richtig ist Merkur“, danach den Zwischenstand, in dem Emil auf Platz 1 steigt.</p>
+            <div class="demo__scene" aria-hidden="true">
+              <div class="stage">
+                <div class="stage__bar"><span class="wordmark">leaqizz</span><span>Frage 1 von 6</span></div>
+                <div class="stage__view view-q">
+                  <div class="stage__head">
+                    <p class="stage__text">Welcher Planet ist der Sonne am nächsten?</p>
+                    <p class="stage__count"><b data-count>9</b>von 9 haben geantwortet</p>
+                  </div>
+                  <ul class="opts">
+                    <li class="o0"><i>A</i>Venus</li>
+                    <li class="o1"><i>B</i>Merkur</li>
+                    <li class="o2"><i>C</i>Mars</li>
+                    <li class="o3"><i>D</i>Erde</li>
+                  </ul>
+                </div>
+                <div class="stage__flood"></div>
+                <div class="stage__view view-r">
+                  <p class="reveal__big">B</p>
+                  <p class="reveal__lbl">Richtig ist</p>
+                  <p class="reveal__ans">Merkur</p>
+                  <ul class="bars">
+                    <li><i>A</i><span class="bar"><span></span></span><b>1</b></li>
+                    <li class="is-right"><i>B</i><span class="bar"><span></span></span><b>5</b></li>
+                    <li><i>C</i><span class="bar"><span></span></span><b>2</b></li>
+                    <li><i>D</i><span class="bar"><span></span></span><b>1</b></li>
+                  </ul>
+                </div>
+                <div class="stage__view view-b">
+                  <p class="board__title">Zwischenstand</p>
+                  <ol class="rows" data-rows>
+                    <li data-name="Mila"><span class="rank">1.</span><span>Mila</span><span class="up"></span><span class="pts">982</span></li>
+                    <li data-name="Emil" class="is-me"><span class="rank">2.</span><span>Emil</span><span class="up"></span><span class="pts">968</span></li>
+                    <li data-name="Aylin"><span class="rank">3.</span><span>Aylin</span><span class="up"></span><span class="pts">960</span></li>
+                    <li data-name="Sofia"><span class="rank">4.</span><span>Sofia</span><span class="up"></span><span class="pts">942</span></li>
+                    <li data-name="Jonas"><span class="rank">5.</span><span>Jonas</span><span class="up"></span><span class="pts">310</span></li>
+                  </ol>
+                </div>
+              </div>
+              <div class="phone">
+                <div class="phone__screen">
+                  <div class="ph-top"><span class="wordmark">leaqizz</span><span>Emil</span></div>
+                  <div class="ph-tiles">
+                    <span class="o0"><b>A</b></span>
+                    <span class="o1" data-tile-b><b>B</b></span>
+                    <span class="o2"><b>C</b></span>
+                    <span class="o3"><b>D</b></span>
+                  </div>
+                  <div class="ph-grow"></div>
+                  <div class="ph-sent">
+                    <p class="ph-big">B</p>
+                    <p class="ph-label">Gesendet</p>
+                    <p class="ph-dots" data-dots><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></p>
+                  </div>
+                  <div class="ph-result">
+                    <p class="ph-label">Richtig</p>
+                    <p class="ph-pts" data-pts>+964</p>
+                    <p class="ph-small">Platz 2</p>
+                  </div>
+                </div>
+              </div>
+              <span class="tap"></span>
+            </div>
+            <button class="demo__pause" type="button" id="demo-pause" aria-pressed="false" hidden>Animation anhalten</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- M03 Problem → Lücke → Lösung, als Quizfrage -->
+      <section class="section ask tone-paper" id="frage" aria-labelledby="ask-title">
+        <div class="wrap">
+          <div class="section__head">
+            <p class="kicker">Kurze Frage, bevor es losgeht</p>
+            <h2 class="h2" id="ask-title">Was braucht deine Klasse, um mitzuspielen?</h2>
+          </div>
+          <div class="ask__tiles" role="group" aria-label="Antworten">
+            <button class="ask__tile o0" type="button" data-choice="0"><b>A</b>Ein Konto mit E-Mail-Adresse</button>
+            <button class="ask__tile o1" type="button" data-choice="1"><b>B</b>Eine App aus dem Store</button>
+            <button class="ask__tile o2" type="button" data-choice="2"><b>C</b>Zehn Minuten Einrichtung</button>
+            <button class="ask__tile o3 is-right" type="button" data-choice="3"><b>D</b>Eine PIN und einen Spielnamen</button>
+          </div>
+          <button class="ask__skip textlink" type="button" id="ask-skip">Gleich auflösen</button>
+          <div class="ask__reveal" id="ask-reveal" aria-live="polite">
+            <p class="ask__letter" aria-hidden="true">D</p>
+            <p class="ask__lbl">Richtig ist</p>
+            <h3 class="h3">Eine PIN und ein Spielname.</h3>
+            <p class="prose">Jede Minute vor dem Quiz fehlt im Unterricht. Konten anlegen, Apps installieren, Einwilligungen einholen: Das kostet Zeit, bevor die erste Frage steht. Bei leaqizz scannt die Klasse den QR-Code an der Leinwand oder tippt die PIN ein, wählt einen Spielnamen und ist dabei.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- M04 Produkt-Module -->
+      <section class="section tone-white" id="leinwand" aria-labelledby="features-title">
+        <div class="wrap">
+          <div class="section__head">
+            <h2 class="h2" id="features-title">Gemacht für Leinwand und Handy</h2>
+          </div>
+          <div class="features">
+            <article class="feature">
+              <div class="feature__art art-flood" aria-hidden="true">
+                <span class="reveal__big">B</span>
+                <span class="art-lines"><span></span><span></span><span></span></span>
+              </div>
+              <h3 class="h3">Die Auflösung flutet die Leinwand</h3>
+              <p class="feature__core">Nach jeder Frage färbt sich die Leinwand in der Farbe der richtigen Antwort, darunter steht die Verteilung aller Antworten.</p>
+              <p class="feature__feel">So sieht auch die letzte Reihe sofort, was richtig war. Und du siehst, wo die Klasse steht.</p>
+            </article>
+            <article class="feature">
+              <div class="feature__art art-board" aria-hidden="true">
+                <span>1. Emil <em>▲ 1</em></span>
+                <span>2. Sofia</span>
+                <span>3. Mila</span>
+              </div>
+              <h3 class="h3">Jede Antwort zählt</h3>
+              <p class="feature__core">Punkte für richtige und schnelle Antworten, Bonus für Serien, doppelte Punkte für einzelne Fragen. Der Zwischenstand zeigt, wer aufsteigt.</p>
+              <p class="feature__feel">Am Ende gibt es Auszeichnungen wie „Aufholjagd“ oder „Fehlerfrei“, nicht nur für die ersten drei Plätze.</p>
+            </article>
+            <article class="feature">
+              <div class="feature__art art-switch" aria-hidden="true">
+                <div><i></i><b>×2</b></div>
+              </div>
+              <h3 class="h3">Fragen schnell angelegt</h3>
+              <p class="feature__core">Multiple Choice oder Wahr/Falsch, Zeitlimit je Frage, doppelte Punkte per Schalter. Quizze exportierst du als Datei und teilst sie im Kollegium.</p>
+              <p class="feature__feel">Du bereitest am Laptop vor und startest in der Stunde mit einem Klick.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ablauf -->
+      <section class="section tone-ink" id="runde" aria-labelledby="steps-title">
+        <div class="wrap">
+          <div class="section__head">
+            <h2 class="h2" id="steps-title">So läuft eine Runde</h2>
+          </div>
+          <ol class="steps" id="steps">
+            <li class="step">
+              <span class="step__no" aria-hidden="true">1</span>
+              <h3 class="h3">Quiz wählen</h3>
+              <p>Ein Beispiel-Quiz ist dabei. Eigene Quizze legst du im Editor an.</p>
+            </li>
+            <li class="step">
+              <span class="step__no" aria-hidden="true">2</span>
+              <h3 class="h3">PIN zeigen</h3>
+              <p>Die Leinwand zeigt PIN und QR-Code. Die Klasse tritt mit dem Handy bei.</p>
+            </li>
+            <li class="step">
+              <span class="step__no" aria-hidden="true">3</span>
+              <h3 class="h3">Antworten</h3>
+              <p>Alle tippen ihre Antwort, die Leinwand zählt mit.</p>
+            </li>
+            <li class="step">
+              <span class="step__no" aria-hidden="true">4</span>
+              <h3 class="h3">Auflösung und Podium</h3>
+              <p>Nach jeder Frage Auflösung und Zwischenstand, am Ende Podium und Auszeichnungen.</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- M07 Einsatz -->
+      <section class="section tone-paper" id="einsatz" aria-labelledby="cases-title">
+        <div class="wrap">
+          <div class="section__head">
+            <h2 class="h2" id="cases-title">Vier Momente, in denen ein Quiz hilft</h2>
+          </div>
+          <div class="cases">
+            <article class="case">
+              <h3 class="h3">Stundeneinstieg</h3>
+              <p>Vorwissen bleibt unsichtbar, bis jemand fragt. Drei Fragen zu Beginn, und die Verteilung zeigt allen den Stand. Du weißt, wo du ansetzt.</p>
+            </article>
+            <article class="case">
+              <h3 class="h3">Wiederholung vor der Klassenarbeit</h3>
+              <p>Üben fühlt sich oft nach Pflicht an. Als Runde mit Zwischenstand wird daraus ein Spiel, und jede Auflösung bespricht ihr direkt.</p>
+            </article>
+            <article class="case">
+              <h3 class="h3">Exit-Ticket</h3>
+              <p>Ob der Stoff angekommen ist, zeigt sich oft erst in der Arbeit. Zwei Fragen am Ende der Stunde zeigen es heute. Die Ergebnisse lädst du als CSV-Datei herunter.</p>
+            </article>
+            <article class="case">
+              <h3 class="h3">Konferenz und Fortbildung</h3>
+              <p>Auch im Kollegium hat niemand Lust auf neue Konten. PIN an die Wand, und alle spielen mit.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- M08 Vertrauen -->
+      <section class="section tone-white" id="daten" aria-labelledby="trust-title">
+        <div class="wrap trust">
+          <div>
+            <div class="section__head">
+              <h2 class="h2" id="trust-title">Datensparsam gebaut</h2>
+            </div>
+            <ul class="facts">
+              <li>Kein Konto für Schüler:innen. Der Spielname ist frei wählbar, ein Klarname ist nicht nötig.</li>
+              <li>Deine Quizze liegen nur in deinem Browser. Es gibt keinen leaqizz-Server und keine Datenbank.</li>
+              <li>Spielnamen und Antworten liegen während des Spiels im Browser der Spielleitung.</li>
+              <li>Keine Cookies und kein Tracking, weder auf dieser Seite noch in der App.</li>
+              <li>Im Live-Spiel vermittelt ein öffentlicher Server (PeerJS) die Verbindung. Danach laufen die Daten direkt zwischen den Geräten.</li>
+              <li>Die Seiten liefert GitHub Pages aus (GitHub Inc., USA). Dabei verarbeitet GitHub technisch nötige Daten wie IP-Adressen.</li>
+            </ul>
+          </div>
+          <aside class="proto" aria-labelledby="proto-title">
+            <h3 class="h3" id="proto-title">Ehrlich gesagt: ein Prototyp</h3>
+            <p>Die Demo läuft überall. Das Live-Spiel mit den Handys der Klasse testen wir noch: Je nach Schulnetz kann die Direktverbindung zwischen den Geräten scheitern.</p>
+            <a class="textlink" href="../check/">Verbindungstest öffnen</a>
+          </aside>
+        </div>
+      </section>
+
+      <!-- M06 Unterstützen -->
+      <section class="section tone-ink" id="unterstuetzen" aria-labelledby="support-title">
+        <div class="wrap support">
+          <div class="support__copy">
+            <h2 class="h2" id="support-title">Hilf mit, aus dem Prototyp ein Werkzeug für jede Klasse zu machen.</h2>
+            <p>leaqizz ist kostenlos und soll es bleiben. Ein einmaliger Beitrag hilft, das Live-Spiel stabil zu machen und neue Fragetypen zu bauen.</p>
+          </div>
+          <div>
+            <fieldset class="amounts">
+              <legend>Betrag wählen</legend>
+              <div class="podium" id="podium">
+                <input type="radio" name="amount" id="a5" value="5" />
+                <label class="p5" for="a5">5 €</label>
+                <input type="radio" name="amount" id="a10" value="10" checked />
+                <label class="p10" for="a10">10 €</label>
+                <input type="radio" name="amount" id="a25" value="25" />
+                <label class="p25" for="a25">25 €</label>
+                <input type="radio" name="amount" id="ac" value="custom" />
+                <label class="pc" for="ac">Eigener<br />Betrag</label>
+              </div>
+            </fieldset>
+            <div class="support__action">
+              <a class="btn btn--light" id="donate" aria-disabled="true" role="link">Mit 10 € unterstützen</a>
+              <p class="support__note small" id="donate-note">Freiwillig und einmalig. leaqizz ist nicht gemeinnützig, es gibt keine Spendenquittung. Der Zahlungsweg wird gerade eingerichtet.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- M09 FAQ -->
+      <section class="section tone-paper" id="fragen" aria-labelledby="faq-title">
+        <div class="wrap">
+          <div class="section__head">
+            <h2 class="h2" id="faq-title">Häufige Fragen</h2>
+          </div>
+          <div class="faq">
+            <details>
+              <summary>Brauchen Schüler:innen ein Konto oder eine App?</summary>
+              <p>Nein. Sie öffnen die Seite im Browser, scannen den QR-Code oder tippen die PIN ein und wählen einen Spielnamen.</p>
+            </details>
+            <details>
+              <summary>Was kostet leaqizz?</summary>
+              <p>Nichts. Wer das Projekt unterstützen möchte, kann freiwillig einen Betrag geben. Das ist keine Spende im steuerlichen Sinn, eine Spendenquittung gibt es nicht.</p>
+            </details>
+            <details>
+              <summary>Welche Daten speichert leaqizz?</summary>
+              <p>Quizze speichert nur dein Browser. Spielnamen und Antworten liegen während des Spiels im Browser der Spielleitung. Die Ergebnisse lädst du bei Bedarf als CSV-Datei herunter. Es gibt keine Cookies und kein Tracking.</p>
+            </details>
+            <details>
+              <summary>Funktioniert das im Schul-WLAN?</summary>
+              <p>Die Demo immer, denn nach dem Laden braucht sie kein Netz. Das Live-Spiel verbindet die Geräte direkt miteinander, und manche Schulnetze blockieren das. Der <a href="../check/">Verbindungstest</a> zeigt vorab, ob es bei dir klappt.</p>
+            </details>
+            <details>
+              <summary>Kann ich eigene Fragen erstellen?</summary>
+              <p>Ja. Im Editor legst du Multiple-Choice- und Wahr/Falsch-Fragen mit Zeitlimit an. Quizze kannst du als Datei exportieren und wieder importieren.</p>
+            </details>
+            <details>
+              <summary>Wofür wird meine Unterstützung verwendet?</summary>
+              <p>Für den Betrieb, zum Beispiel einen Verbindungsserver für das Live-Spiel, und für die Weiterentwicklung.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- M11 Fuß -->
+    <footer class="foot tone-ink">
+      <div class="wrap">
+        <p class="foot__claim">Damit jede Antwort zählt.</p>
+        <div class="foot__row">
+          <nav aria-label="Weitere Seiten">
+            <a href="../host/">Zur App</a>
+            <a href="../check/">Verbindungstest</a>
+            <a href="../impressum/">Impressum</a>
+            <a href="../datenschutz/">Datenschutz</a>
+          </nav>
+          <p class="small">leaqizz · Prototyp · 2026</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- M10 Fester Knopf (nur Handy) -->
+    <aside class="sticky" id="sticky" aria-label="Schnellstart">
+      <a class="btn btn--primary" href="../host/?start=demo" tabindex="-1">Demo starten</a>
+    </aside>
+
+    <script src="../js/config.js?v=dev"></script>
+    <script src="../js/landing.js?v=dev"></script>
+  </body>
+</html>

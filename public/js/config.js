@@ -13,4 +13,10 @@ window.LEAQIZ_CONFIG = {
   peer: {},
   turnCredentialsUrl: '',
   iceServers: [],
+  // Unterstützen (Landingpage /lehrkraefte/): Links zu einer gehosteten Bezahlseite, z. B. Stripe Payment Links.
+  //   provider: Name, der unter dem Knopf steht („Weiter zu …“)
+  //   amounts:  Betrag in Euro -> Link mit festem Betrag
+  //   custom:   Link, auf dem der Betrag frei gewählt wird (wird genutzt, wenn für einen Betrag kein Link da ist)
+  //   Alles leer = Knopf inaktiv mit Hinweis „wird eingerichtet“. Nur https-Links werden verwendet.
+  donate: { provider: '', amounts: { 5: '', 10: '', 25: '' }, custom: '' },
 };

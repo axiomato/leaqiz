@@ -1245,6 +1245,12 @@
   const savedGame = session.get(GAME_KEY);
   if (savedGame && savedGame.v === 1) {
     resumeGame(savedGame);
+  } else if (new URLSearchParams(location.search).get('start') === 'demo') {
+    // Direkt aus der Landingpage: erstes Quiz als Demo starten; Parameter entfernen, damit Neuladen nicht neu startet
+    history.replaceState(null, '', location.pathname);
+    const list = loadQuizzes();
+    renderLibrary();
+    if (list.length) startGame(list[0], { demo: true });
   } else {
     renderLibrary();
   }
