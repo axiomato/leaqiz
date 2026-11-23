@@ -132,7 +132,7 @@ test('HTTP: Spiel anlegen nur mit Freigabe, Konfiguration und Robots-Header', as
     assert.match(body.error, /melde dich an/);
 
     const cfg = await fetch(`${closed.base}/js/config.js`).then((r) => r.text());
-    assert.match(cfg, /window\.LEAQIZ_CONFIG\.server = \{ ws: '\/ws', api: '\/api\/' \}/);
+    assert.ok(cfg.includes('window.LEAQIZ_CONFIG.server = {"ws":"/ws","api":"/api/","abo":false,"aboPflicht":false};'));
 
     const page = await fetch(`${closed.base}/`);
     assert.equal(page.headers.get('x-robots-tag'), 'noindex, nofollow');

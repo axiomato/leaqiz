@@ -165,6 +165,8 @@
         // Der Verbindungstest prüft die Direktverbindung; mit eigenem Server laufen Spiele darüber nicht
         window.LQNet.serverMode() ? null : h('a', { class: 'btn btn--quiet', href: 'check/', text: 'Verbindung testen' }),
         h('a', { class: 'legal-link', href: 'datenschutz/', text: 'Datenschutz' }),
+        // Mit Abo-Betrieb: Kündigen und Widerrufen von jeder Seite aus erreichbar (§ 312k, § 356a BGB)
+        window.LEAQIZ_CONFIG.server && window.LEAQIZ_CONFIG.server.abo ? h('a', { class: 'legal-link', href: 'vertraege-kuendigen/', text: 'Verträge hier kündigen' }) : null,
       ),
     );
     input.focus();

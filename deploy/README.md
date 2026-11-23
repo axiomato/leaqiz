@@ -85,6 +85,29 @@ einem echten Hetzner-Server (erst mit der Bestellung möglich).
 | `LEAQIZ_GRENZE_VERBINDUNGEN_MINUTE` | neue Verbindungen je IP und Minute (eine Schule teilt sich oft eine IP) | 300 |
 | `LEAQIZ_GRENZE_FALSCHE_PIN_MINUTE` | falsche PINs je IP und Minute | 30 |
 | `LEAQIZ_GRENZE_SPIELE_STUNDE` | neue Spiele je IP und Stunde | 60 |
+| `LEAQIZ_ABO` | `ja`: Live-Spiele nur mit Abo (Demo, Editor, Quizze im Konto bleiben frei) | nein |
+| `LEAQIZ_ZAHLUNG` | `paypal`; leer = kein Abo, keine Kündigungs-Links. `simulation` nur lokal (Entwicklung) | leer |
+| `LEAQIZ_BETREIBER_MAIL` | Hinweise an dich (Kündigung ohne passenden Vertrag, Erstattung fehlgeschlagen) | leer (nur Log) |
+| `PAYPAL_UMGEBUNG`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `PAYPAL_PLAN_ID` | PayPal-Zugang (siehe „Abo“) | `sandbox`, sonst Pflicht bei `paypal` |
+
+## Abo (D-58)
+
+Erst einschalten, wenn **AGB und Widerrufsbelehrung** von einer Fachperson stehen (Platzhalter unter
+`server/seiten/agb.html` und `widerrufsbelehrung.html`) und das **Gewerbe** angemeldet ist.
+
+1. developer.paypal.com mit dem PayPal-Geschäftskonto: unter „Apps & Credentials“ eine App anlegen
+   (zuerst **Sandbox**). Client-ID und Secret notieren, nirgends einchecken.
+2. Plan und Benachrichtigung anlegen (auf dem eigenen Rechner oder dem Server):
+   `cd server && PAYPAL_UMGEBUNG=sandbox PAYPAL_CLIENT_ID=… PAYPAL_CLIENT_SECRET=… node scripts/paypal-plan.js --webhook https://DOMAIN/api/abo/paypal`
+   Ausgabe: `PAYPAL_PLAN_ID` und `PAYPAL_WEBHOOK_ID`.
+3. In `/etc/leaqizz/einstellungen.env` eintragen: `LEAQIZ_ZAHLUNG='paypal'`, die PayPal-Werte,
+   `LEAQIZ_BETREIBER_MAIL`, dann `leaqizz-einrichten`. Erst testen, dann `LEAQIZ_ABO='ja'`.
+4. In der Sandbox einmal ganz durchspielen: abonnieren (Sandbox-Käuferkonto), Rückkehr, Zahlung im Konto,
+   „Verträge hier kündigen“, „Vertrag widerrufen“ mit Erstattung. **Nicht geprüft:** wie PayPal den bezahlten
+   ersten Abschnitt (ein Jahr) anzeigt, und der Erstattungsweg (`/v1/payments/sale/{id}/refund`).
+5. Für echtes Geld: Schritte 1 bis 3 mit einer Live-App und `PAYPAL_UMGEBUNG='live'` wiederholen.
+
+Lokal ohne PayPal: `LEAQIZ_ZAHLUNG=simulation LEAQIZ_ABO=ja` – die Zustimmungsseite ist dann `/abo/simulation/`.
 
 ## Privates Code-Repo, öffentliches Seiten-Repo
 

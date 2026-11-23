@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Vertrag widerrufen | leaqizz</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../css/landing.css?v=dev" />
+  </head>
+  <!-- Widerrufsfunktion (§ 356a BGB): erste Stufe „Vertrag widerrufen“ (Link im Fuß), zweite Stufe „Widerruf bestätigen“. Ohne Anmeldung. -->
+  <body class="lp">
+    <header class="top tone-ink">
+      <div class="wrap top__inner">
+        <a class="wordmark" href="../lehrkraefte/">leaqizz</a>
+        <nav class="top__nav" aria-label="Seitenbereiche"><a href="../lehrkraefte/">Zur Startseite</a></nav>
+      </div>
+    </header>
+    <main class="legal wrap">
+      <h1>Vertrag widerrufen</h1>
+      <p>Du kannst dein leaqizz Abo innerhalb von 14 Tagen nach Vertragsschluss widerrufen. Einen Grund musst du nicht nennen, eine Anmeldung brauchst du nicht.</p>
+      <noscript><p class="draft">Für dieses Formular braucht der Browser JavaScript. Ohne JavaScript erreichst du uns per Mail an <a href="mailto:info@uwebrandt.net">info@uwebrandt.net</a>.</p></noscript>
+      <form class="vform" id="vertrag-form" data-art="widerrufen" novalidate>
+        <label class="vform__field" for="v-name">Name <input id="v-name" name="name" type="text" autocomplete="name" required aria-describedby="v-fehler" /></label>
+        <div class="vform__field">
+          <label for="v-email">E-Mail-Adresse</label>
+          <span class="vform__hint" id="v-email-hinweis">Die Adresse, mit der du das Abo abgeschlossen hast. Dorthin schicken wir die Bestätigung.</span>
+          <input id="v-email" name="email" type="email" autocomplete="email" inputmode="email" required aria-describedby="v-email-hinweis v-fehler" />
+        </div>
+        <div class="vform__field">
+          <label for="v-nummer">Vertragsnummer (freiwillig)</label>
+          <span class="vform__hint" id="v-nummer-hinweis">Steht in der Bestätigungsmail und beginnt mit LQ-.</span>
+          <input id="v-nummer" name="number" type="text" autocomplete="off" aria-describedby="v-nummer-hinweis" />
+        </div>
+        <p class="vform__error" id="v-fehler" role="alert"></p>
+        <div class="vform__actions"><button class="btn btn--primary" type="submit">Widerruf bestätigen</button></div>
+      </form>
+      <section class="beleg" id="beleg" hidden tabindex="-1" aria-labelledby="beleg-title">
+        <h2 id="beleg-title">Dein Widerruf ist eingegangen</h2>
+        <dl id="beleg-daten"></dl>
+        <p class="vform__hint">Das bestätigt den Eingang. Ist zu deiner E-Mail-Adresse ein Abo hinterlegt, bekommst du die Bestätigung auch per Mail, dazu den Betrag, den wir zurückzahlen.</p>
+        <div class="vform__actions no-print">
+          <button class="btn btn--ghost" type="button" id="beleg-speichern">Bestätigung speichern</button>
+          <button class="btn btn--ghost" type="button" id="beleg-drucken">Drucken</button>
+        </div>
+      </section>
+    </main>
+    <footer class="foot tone-ink">
+      <div class="wrap">
+        <div class="foot__row">
+          <nav aria-label="Weitere Seiten">
+            <a href="../host/">Zur App</a>
+            <a href="../agb/">AGB</a>
+            <a href="../widerrufsbelehrung/">Widerrufsbelehrung</a>
+            <a href="../impressum/">Impressum</a>
+            <a href="../datenschutz/">Datenschutz</a>
+          </nav>
+          <p class="small">leaqizz · 2026</p>
+        </div>
+      </div>
+    </footer>
+    <script src="/vertrag/vertrag.js?v=dev"></script>
+  </body>
+</html>

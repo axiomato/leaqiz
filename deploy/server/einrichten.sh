@@ -66,6 +66,14 @@ schreibe_env() {
     wert SMTP_PASS "${SMTP_PASS:-}"
     wert MAIL_FROM "${MAIL_FROM:-leaqizz <noreply@$DOMAIN>}"
     wert LEAQIZ_INDEXIERBAR "${LEAQIZ_INDEXIERBAR:-nein}"
+    wert LEAQIZ_ABO "${LEAQIZ_ABO:-nein}"
+    wert LEAQIZ_ZAHLUNG "${LEAQIZ_ZAHLUNG:-}"
+    wert LEAQIZ_BETREIBER_MAIL "${LEAQIZ_BETREIBER_MAIL:-}"
+    wert PAYPAL_UMGEBUNG "${PAYPAL_UMGEBUNG:-sandbox}"
+    wert PAYPAL_CLIENT_ID "${PAYPAL_CLIENT_ID:-}"
+    wert PAYPAL_CLIENT_SECRET "${PAYPAL_CLIENT_SECRET:-}"
+    wert PAYPAL_WEBHOOK_ID "${PAYPAL_WEBHOOK_ID:-}"
+    wert PAYPAL_PLAN_ID "${PAYPAL_PLAN_ID:-}"
   } > "$ziel"
 }
 

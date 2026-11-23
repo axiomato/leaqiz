@@ -8,6 +8,9 @@ import { openDb } from './db/index.js';
 import { attachGateway } from './games/gateway.js';
 import { GameRegistry } from './games/registry.js';
 import { PgGameStore } from './games/store.js';
+import { createAboService } from './billing/service.js';
+import { createPayPal } from './billing/paypal.js';
+import { createSimulation } from './billing/simulation.js';
 
 let config;
 try {
@@ -32,7 +35,10 @@ const restored = await registry.restoreAll();
 
 const mailer = createMailer(config.mail, console);
 const auth = createAuth({ config, db: db.db, mailer });
-const app = await buildApp({ config, registry, db, auth, log: { level: process.env.LOG_LEVEL || 'info' }, limits: config.limits });
+// Abo: Zahlungsweg aus der Konfiguration (PayPal; „simulation“ nur lokal)
+const provider = config.billing.provider === 'paypal' ? createPayPal(config.billing.paypal) : config.billing.provider === 'simulation' ? createSimulation() : null;
+const abo = provider ? createAboService({ db: db.db, provider, mailer, origin: config.origin, operator: config.billing.operatorMail, log: console }) : null;
+const app = await buildApp({ config, registry, db, auth, abo, log: { level: process.env.LOG_LEVEL || 'info' }, limits: config.limits });
 const gateway = attachGateway({ server: app.server, registry, config, log: app.log, limits: config.limits });
 await app.listen({ port: config.port, host: config.host });
 registry.startSweep();

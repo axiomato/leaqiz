@@ -56,6 +56,7 @@ Leinwand und Handys ──► WebSocket /ws über Port 443 (kein Relais, kein Pe
 - Der Browser erkennt den Server an `window.LEAQIZ_CONFIG.server` und nutzt dann WebSocket statt Direktverbindung. Ohne diesen Eintrag (GitHub Pages) bleibt alles wie oben. Die Demo läuft immer im Browser.
 - Spiele überstehen Neuladen der Leinwand und Neustart des Servers.
 - Live-Spiele starten nur angemeldete Lehrkräfte: Anmeldelink per Mail oder Passkey (Better Auth, `public/js/account.js`). Schüler:innen brauchen kein Konto.
+- Abo (D-58, eingebaut, noch aus): Mit `LEAQIZ_ABO=ja` starten Live-Spiele nur mit Abo; Demo, Editor und Quizze im Konto bleiben kostenlos. Zahlung über PayPal, Kündigen und Widerrufen ohne Anmeldung (`/vertraege-kuendigen/`, `/vertrag-widerrufen/`, Links im Fuß jeder Seite). Lokal ohne PayPal: `LEAQIZ_ZAHLUNG=simulation`.
 - Betrieb: `deploy/README.md`. Zielarchitektur und Entscheidungen: Projekt „Kahoot! Nachbau“, `claude/leaqiz-architektur.md`.
 
 ## Grenzen des Prototyps
@@ -133,7 +134,9 @@ test/                   Tests (node:test)
 server/                 Spielserver: Fastify, WebSocket (ws), PostgreSQL (Drizzle)
   src/games/            Spiele verwalten, sichern, wiederherstellen; WebSocket-Zugang
   src/results.js        Ergebnisse vergangener Live-Spiele (aus dem gesicherten Endstand)
-  seiten/               Seiten nur für den Serverbetrieb (Datenschutzerklärung)
+  src/billing/          Abo: Angebot, PayPal, Simulation, Kündigen und Widerrufen, Mails
+  seiten/               Seiten nur für den Serverbetrieb (Datenschutz, AGB, Widerrufsbelehrung, Kündigen, Widerrufen)
+  scripts/paypal-plan.js Abo-Plan und Benachrichtigung bei PayPal anlegen
   drizzle/              Datenbank-Migrationen (erzeugt, eingecheckt)
   scripts/lasttest.js   viele Spiele mit simulierten Handys gleichzeitig
 deploy/                 Docker Compose mit Caddy und PostgreSQL, Betriebsanleitung

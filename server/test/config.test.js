@@ -50,3 +50,14 @@ test('Konfiguration: ungültige Zahlen und Adressen werden abgelehnt', () => {
   assert.throws(() => loadConfig({ ...BASE, LEAQIZ_LOESCHFRIST_TAGE: '0' }), /LOESCHFRIST/);
   assert.throws(() => loadConfig({ ...BASE, LEAQIZ_ORIGIN: 'ftp://x' }), /LEAQIZ_ORIGIN/);
 });
+
+test('Konfiguration: Abo nur mit Zahlungsweg; Simulation nur lokal; PayPal braucht alle Zugangsdaten', () => {
+  assert.deepEqual(loadConfig(BASE).billing, { required: false, provider: null, paypal: null, operatorMail: null });
+  assert.throws(() => loadConfig({ ...BASE, LEAQIZ_ABO: 'ja' }), (err) => /LEAQIZ_ZAHLUNG=paypal/.test(err.message));
+  assert.throws(() => loadConfig({ ...BASE, LEAQIZ_ZAHLUNG: 'simulation' }), (err) => /nur lokal/.test(err.message));
+  assert.throws(() => loadConfig({ ...BASE, LEAQIZ_ZAHLUNG: 'paypal' }), (err) => ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET', 'PAYPAL_WEBHOOK_ID', 'PAYPAL_PLAN_ID'].every((n) => err.message.includes(n)));
+  const c = loadConfig({ ...BASE, LEAQIZ_ABO: 'ja', LEAQIZ_ZAHLUNG: 'paypal', PAYPAL_CLIENT_ID: 'id', PAYPAL_CLIENT_SECRET: 's', PAYPAL_WEBHOOK_ID: 'w', PAYPAL_PLAN_ID: 'P-1', LEAQIZ_BETREIBER_MAIL: 'info@example.org' });
+  assert.equal(c.billing.required, true);
+  assert.equal(c.billing.paypal.environment, 'sandbox', 'Vorgabe ist die Sandbox, nie aus Versehen echtes Geld');
+  assert.equal(c.billing.operatorMail, 'info@example.org');
+});

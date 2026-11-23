@@ -10,7 +10,7 @@ export const ENDED_ACCOUNT_DELETED = 'Die Spielleitung hat ihr Konto gelöscht. 
 const iso = (d) => (d ? new Date(d).toISOString() : null);
 const sameEmail = (a, b) => typeof a === 'string' && typeof b === 'string' && a.trim().toLowerCase() === b.trim().toLowerCase();
 
-export function registerAccountRoutes(app, { db, auth, registry, requireUser, requireSameOrigin, log }) {
+export function registerAccountRoutes(app, { db, auth, abo = null, registry, requireUser, requireSameOrigin, log }) {
   // Alles, was zum Konto gespeichert ist, als eine JSON-Datei.
   // Spiele ohne Spielstand (enthält Spielnamen der Schüler:innen; die Ergebnisse gibt es als CSV an der Leinwand).
   app.get('/api/account/export', async (request, reply) => {
@@ -26,6 +26,7 @@ export function registerAccountRoutes(app, { db, auth, registry, requireUser, re
       .from(game)
       .where(eq(game.ownerId, me.id))
       .orderBy(desc(game.createdAt));
+    const billing = abo ? await abo.exportFor(me.id) : { subs: [], payments: [] };
     const exportedAt = new Date();
     const data = {
       format: 'leaqizz-konto-export',
@@ -36,6 +37,14 @@ export function registerAccountRoutes(app, { db, auth, registry, requireUser, re
       sessions: sessions.map((s) => ({ createdAt: iso(s.createdAt), expiresAt: iso(s.expiresAt) })),
       quizzes: quizzes.map((q) => ({ title: q.title, questions: q.questions, createdAt: iso(q.createdAt), updatedAt: iso(q.updatedAt) })),
       games: games.map((g) => ({ title: g.title, state: g.state, createdAt: iso(g.createdAt), endedAt: iso(g.endedAt) })),
+      subscriptions: billing.subs.map((s) => ({
+        number: s.number,
+        status: s.status,
+        startedAt: iso(s.startedAt),
+        firstTermEnd: iso(s.firstTermEnd),
+        endsAt: iso(s.endsAt),
+        payments: billing.payments.filter((p) => p.subscriptionId === s.id).map((p) => ({ kind: p.kind, grossCent: p.grossCent, vatCent: p.vatCent, paidAt: iso(p.paidAt) })),
+      })),
     };
     reply.header('Content-Disposition', `attachment; filename="leaqizz-daten-${exportedAt.toISOString().slice(0, 10)}.json"`);
     reply.type('application/json; charset=utf-8');
@@ -53,7 +62,16 @@ export function registerAccountRoutes(app, { db, auth, registry, requireUser, re
 
     // 1. Laufende Spiele beenden: Leinwand und Handys erfahren es, der Endstand wird noch gesichert
     const ended = await registry.endForOwner(me.id, ENDED_ACCOUNT_DELETED);
-    // 2. Abmelden über Better Auth, damit der Browser seine Cookies verliert
+    // 2. Abo beenden: keine weiteren Abbuchungen. Vertrag und Zahlungen bleiben (Aufbewahrung 8 Jahre).
+    if (abo) {
+      try {
+        await abo.onAccountDeleted(me.id);
+      } catch (err) {
+        log.error(`Abo beim Löschen nicht beendet: ${err.message}`);
+        return reply.code(502).send({ error: 'Dein Abo ließ sich gerade nicht beenden. Bitte später erneut versuchen.' });
+      }
+    }
+    // 3. Abmelden über Better Auth, damit der Browser seine Cookies verliert
     let cookies = [];
     try {
       const res = await auth.api.signOut({ headers: sessionHeaders(request), asResponse: true });
@@ -61,7 +79,7 @@ export function registerAccountRoutes(app, { db, auth, registry, requireUser, re
     } catch (err) {
       log.warn(`Abmelden vor dem Löschen fehlgeschlagen: ${err.message}`);
     }
-    // 3. Konto löschen (nimmt Sitzungen, Passkeys, Quizze und Spiele mit) und offene Anmeldelinks
+    // 4. Konto löschen (nimmt Sitzungen, Passkeys, Quizze und Spiele mit) und offene Anmeldelinks
     await db.transaction(async (tx) => {
       const needle = JSON.stringify({ email: me.email }).slice(1, -1);
       await tx.delete(verification).where(sql`strpos(${verification.value}, ${needle}) > 0`);

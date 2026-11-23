@@ -76,6 +76,25 @@ export function loadConfig(env = process.env) {
   // Hinter genau einem Reverse-Proxy (Caddy): Client-IP aus X-Forwarded-For
   const trustProxy = yes(env.LEAQIZ_HINTER_PROXY);
 
+  // Abo (D-57, D-58): Live-Spiele nur mit Abo, wenn LEAQIZ_ABO=ja. Zahlung über PayPal;
+  // „simulation“ ersetzt PayPal für Entwicklung und Tests und ist nur lokal erlaubt.
+  const aboRequired = yes(env.LEAQIZ_ABO);
+  const provider = (env.LEAQIZ_ZAHLUNG || '').trim().toLowerCase() || null;
+  let paypal = null;
+  if (provider && !['paypal', 'simulation'].includes(provider)) problems.push('LEAQIZ_ZAHLUNG muss „paypal“ oder „simulation“ sein.');
+  if (aboRequired && !provider) problems.push('LEAQIZ_ABO=ja braucht einen Zahlungsweg (LEAQIZ_ZAHLUNG=paypal).');
+  if (provider === 'simulation' && origin && !local) problems.push('LEAQIZ_ZAHLUNG=simulation ist nur lokal erlaubt (LEAQIZ_ORIGIN auf localhost).');
+  if (provider === 'paypal') {
+    const environment = (env.PAYPAL_UMGEBUNG || 'sandbox').trim().toLowerCase();
+    if (!['sandbox', 'live'].includes(environment)) problems.push('PAYPAL_UMGEBUNG muss „sandbox“ oder „live“ sein.');
+    for (const name of ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET', 'PAYPAL_WEBHOOK_ID', 'PAYPAL_PLAN_ID']) {
+      if (!env[name]) problems.push(`${name} fehlt (PayPal-Entwicklerkonto, Anleitung in deploy/README.md).`);
+    }
+    paypal = { environment, clientId: env.PAYPAL_CLIENT_ID, clientSecret: env.PAYPAL_CLIENT_SECRET, webhookId: env.PAYPAL_WEBHOOK_ID, planId: env.PAYPAL_PLAN_ID };
+  }
+  // Hinweise an den Betreiber (Kündigung ohne passenden Vertrag, Erstattung fehlgeschlagen). Ohne Adresse nur im Log.
+  const operatorMail = (env.LEAQIZ_BETREIBER_MAIL || '').trim() || null;
+
   const config = {
     port,
     host,
@@ -89,6 +108,7 @@ export function loadConfig(env = process.env) {
     mail: smtpHost
       ? { host: smtpHost, port: smtpPort, user: env.SMTP_USER, pass: env.SMTP_PASS, from: mailFrom }
       : null,
+    billing: { required: aboRequired, provider, paypal, operatorMail },
     publicDir: env.LEAQIZ_PUBLIC_DIR ? path.resolve(env.LEAQIZ_PUBLIC_DIR) : DEFAULT_PUBLIC,
     // Seiten nur für den Serverbetrieb (Datenschutzerklärung)
     pagesDir: DEFAULT_PAGES,

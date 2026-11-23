@@ -146,6 +146,16 @@
     return Boolean(Account.enabled() && me);
   }
 
+  // Abo (D-58): nur wenn der Server einen Zahlungsweg hat
+  const aboEnabled = () => Boolean(Account.enabled() && window.LEAQIZ_CONFIG.server && window.LEAQIZ_CONFIG.server.abo);
+
+  // Kündigungs- und Widerrufsschaltfläche (§ 312k, § 356a BGB): in der App neben Impressum und Datenschutz
+  function contractLinks(number = '') {
+    if (!aboEnabled()) return [];
+    const nr = number ? `?nr=${encodeURIComponent(number)}` : '';
+    return [h('a', { class: 'legal-link', href: `/vertraege-kuendigen/${nr}`, text: 'Verträge hier kündigen' }), h('a', { class: 'legal-link', href: `/vertrag-widerrufen/${nr}`, text: 'Vertrag widerrufen' })];
+  }
+
   function libraryList() {
     return onServer() ? serverQuizzes || [] : loadQuizzes();
   }
@@ -464,7 +474,7 @@
         })() : null,
         loading ? null : h('ul', { class: 'quiz-grid', 'aria-label': 'Deine Quizze' }, tiles),
         h('p', { class: 'home__note', text: libraryNote() }),
-        h('nav', { class: 'home__legal', 'aria-label': 'Rechtliches' }, h('a', { class: 'legal-link', href: '../impressum/', text: 'Impressum' }), h('a', { class: 'legal-link', href: '../datenschutz/', text: 'Datenschutz' })),
+        h('nav', { class: 'home__legal', 'aria-label': 'Rechtliches' }, h('a', { class: 'legal-link', href: '../impressum/', text: 'Impressum' }), h('a', { class: 'legal-link', href: '../datenschutz/', text: 'Datenschutz' }), ...contractLinks()),
       ),
     );
   }
@@ -995,9 +1005,11 @@
       }
     });
     const setup = Account.passkeySupported() ? passkeySetupButton(list.length ? 'Weiteren Passkey einrichten' : 'Passkey einrichten', () => renderAccount()) : null;
+    const aboSection = aboEnabled() ? await aboBlock({ heading: 'h2' }) : null;
     accountView(
       h('h1', { text: 'Konto' }),
       h('p', { class: 'lead', text: me.email }),
+      aboSection,
       h(
         'section',
         { class: 'account-section', 'aria-labelledby': 'passkeys-title' },
@@ -1024,6 +1036,101 @@
         h('p', { class: 'hint', text: 'Löscht dein Konto mit allen Quizzen und Spielen. Das lässt sich nicht rückgängig machen.' }),
         h('div', { class: 'actions' }, h('button', { class: 'btn btn--danger', type: 'button', text: 'Konto löschen …', onclick: () => renderDeleteAccount() })),
       ),
+    );
+  }
+
+  // ---------- Abo (D-58): Angebot, Abschluss, Stand ----------
+  // Preis und Laufzeit kommen vom Server (server/src/billing/angebot.js), nie aus dem Browser.
+
+  const euro = (cent) => `${(cent / 100).toFixed(2).replace('.', ',')} €`;
+  const aboDate = (iso) => dateFmt.format(new Date(iso));
+
+  function aboOffer(angebot, headingTag) {
+    const errorEl = h('p', { class: 'error', id: 'abo-error', role: 'alert' });
+    const consent = h('input', { type: 'checkbox', id: 'abo-sofort', 'aria-describedby': 'abo-error' });
+    const submit = h('button', { class: 'btn btn--primary', type: 'submit', text: 'Zahlungspflichtig abonnieren' });
+    const form = h(
+      'form',
+      { class: 'account-form abo-form', novalidate: true },
+      h('label', { class: 'check', for: 'abo-sofort' }, consent, h('span', { text: 'Ich möchte, dass leaqizz sofort startet. Mir ist bekannt: Widerrufe ich, zahle ich für die Tage bis dahin anteilig.' })),
+      errorEl,
+      h('div', { class: 'actions' }, submit),
+    );
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!consent.checked) {
+        errorEl.textContent = 'Bitte bestätige, dass leaqizz sofort starten soll.';
+        consent.focus();
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = 'Weiter zu PayPal …';
+      try {
+        const { approveUrl } = await window.LQQuizApi.abo.start();
+        location.assign(approveUrl);
+      } catch (err) {
+        submit.disabled = false;
+        submit.textContent = 'Zahlungspflichtig abonnieren';
+        errorEl.textContent = err.message;
+      }
+    });
+    return h(
+      'div',
+      { class: 'abo-offer' },
+      h(headingTag, { text: angebot.name }),
+      h('p', { class: 'abo-price' }, h('strong', { text: `${euro(angebot.monatCent)} im Monat` }), ` inkl. ${angebot.ustSatz} % USt`),
+      h(
+        'ul',
+        { class: 'account-list' },
+        h('li', { text: `Erstes Jahr: ${euro(angebot.ersteZahlungCent)}, im Voraus bezahlt` }),
+        h('li', { text: `Danach monatlich ${euro(angebot.monatCent)}, jederzeit mit einem Monat Frist kündbar` }),
+        h('li', { text: 'Kündigen: über „Verträge hier kündigen“, ohne Anmeldung' }),
+        h('li', { text: 'Bezahlen über PayPal. Nur für Kundinnen und Kunden in Deutschland.' }),
+      ),
+      h('p', { class: 'hint' }, 'Es gelten die ', h('a', { href: '/agb/', text: 'AGB' }), ' und die ', h('a', { href: '/widerrufsbelehrung/', text: 'Widerrufsbelehrung' }), '. ', h('a', { href: '../datenschutz/', text: 'Datenschutz' })),
+      form,
+    );
+  }
+
+  function aboStatus(abo, headingTag) {
+    const lines = [h('li', { text: `Vertragsnummer: ${abo.number}` })];
+    if (abo.startedAt) lines.push(h('li', { text: `Seit ${aboDate(abo.startedAt)}` }));
+    if (abo.endsAt) lines.push(h('li', { text: abo.access ? `Gekündigt, endet am ${aboDate(abo.endsAt)}` : `Beendet am ${aboDate(abo.endsAt)}` }));
+    else if (abo.status === 'suspended') lines.push(h('li', { text: 'Pausiert: Die letzte Zahlung hat nicht geklappt. Bitte prüfe dein PayPal-Konto.' }));
+    else if (abo.currentPeriodEnd) lines.push(h('li', { text: `Nächste Zahlung am ${aboDate(abo.currentPeriodEnd)}` }));
+    const list = (kind) => abo.payments.filter((p) => p.kind === kind).map((p) => `${aboDate(p.paidAt)} ${euro(p.grossCent)}`).join(', ');
+    return h(
+      'div',
+      { class: 'abo-status' },
+      h(headingTag, { text: abo.access ? 'Dein Abo läuft' : 'Dein Abo ist beendet' }),
+      h('ul', { class: 'account-list' }, lines),
+      list('payment') ? h('p', { class: 'hint', text: `Zahlungen: ${list('payment')}` }) : null,
+      list('refund') ? h('p', { class: 'hint', text: `Erstattet: ${list('refund')}` }) : null,
+      // Kündigen solange es läuft, Widerrufen nur in der Frist
+      abo.access ? h('nav', { class: 'abo-links', 'aria-label': 'Vertrag' }, ...contractLinks(abo.number).filter((a, i) => i === 0 || abo.canWithdraw)) : null,
+    );
+  }
+
+  // Abschnitt für Konto und Abo-Ansicht. Ohne laufendes Abo: Angebot.
+  async function aboBlock({ heading }) {
+    let data;
+    try {
+      data = await window.LQQuizApi.abo.get();
+    } catch (err) {
+      return h('section', { class: 'account-section' }, h(heading, { text: 'Abo' }), h('p', { class: 'error', role: 'alert', text: err.message }));
+    }
+    const current = data.abo;
+    const body = current && (current.access || current.status === 'suspended') ? aboStatus(current, heading) : aboOffer(data.angebot, heading);
+    return h('section', { class: 'account-section abo', 'aria-label': 'Abo' }, body, current && !current.access && current.status !== 'suspended' ? aboStatus(current, 'h3') : null);
+  }
+
+  async function renderAbo({ reason = '' } = {}) {
+    if (!me) return renderLogin({ reason: 'live' });
+    const block = await aboBlock({ heading: 'h2' });
+    accountView(
+      h('h1', { text: reason === 'live' ? 'Live-Spiele mit dem Abo' : 'Abo' }),
+      h('p', { class: 'lead', text: reason === 'live' ? 'Mit echten Handys spielst du mit dem leaqizz Abo. Quizze bauen und die Demo bleiben kostenlos.' : me.email }),
+      block,
     );
   }
 
@@ -1076,6 +1183,7 @@
         h('li', { text: 'alle Quizze in deinem Konto' }),
         h('li', { text: 'alle Spiele und Ergebnisse samt Spielnamen und Antworten; laufende Spiele werden beendet' }),
         h('li', { text: 'deine Passkeys und Anmeldungen' }),
+        aboEnabled() ? h('li', { text: 'ein laufendes Abo endet sofort, ohne Erstattung. Vertrag und Zahlungen bewahren wir auf, solange das Gesetz es verlangt (8 Jahre).' }) : null,
       ),
       h('p', { class: 'hint', text: 'Vorher sichern: „Daten herunterladen“ im Konto oder einzelne Quizze exportieren. Den Passkey auf deinem Gerät kannst du danach in den Einstellungen des Geräts entfernen.' }),
       form,
@@ -1392,6 +1500,10 @@
         if (err.status === 401) {
           me = null;
           renderLogin({ reason: 'live' });
+          return;
+        }
+        if (err.status === 402) {
+          renderAbo({ reason: 'live' });
           return;
         }
         toast(err.message);
@@ -2054,6 +2166,21 @@
       if (params.has('anmeldung')) renderLogin({ error: 'Der Link ist abgelaufen oder wurde schon benutzt. Fordere einen neuen an.' });
       else if (me) afterLogin();
       else renderLogin({ error: 'Die Anmeldung hat nicht geklappt. Fordere einen neuen Link an.' });
+      return;
+    }
+    // Rückkehr vom Zahlungsanbieter (/abo/zurueck/ leitet hierher)
+    const aboReturn = params.get('abo');
+    if (aboReturn) {
+      history.replaceState(null, '', location.pathname);
+      const messages = {
+        aktiv: 'Dein Abo läuft. Live-Spiele sind freigeschaltet.',
+        offen: 'Die Zahlung ist noch nicht bestätigt. Das kann ein paar Minuten dauern.',
+        abgebrochen: 'Kein Abo abgeschlossen. Es wurde nichts bezahlt.',
+        anmelden: 'Bitte melde dich an. Danach siehst du den Stand deines Abos im Konto.',
+      };
+      if (me) await renderAccount();
+      else renderLibrary();
+      toast(messages[aboReturn] || messages.offen);
       return;
     }
     if (params.get('start') === 'demo') {

@@ -63,6 +63,16 @@ window.LQQuizApi = (function () {
     async importMany(items) {
       return call('quizzes/import', { method: 'POST', body: { quizzes: items } });
     },
+    // Abo (nur wenn der Server einen Zahlungsweg hat): Stand und Abschluss
+    abo: {
+      async get() {
+        return call('abo');
+      },
+      // Antwort { approveUrl, number }: weiter zur Zustimmung beim Zahlungsanbieter
+      async start() {
+        return call('abo/start', { method: 'POST', body: { sofortBeginnen: true }, messages: { 409: 'Du hast schon ein Abo.' } });
+      },
+    },
     // Ergebnisse vergangener Live-Spiele (gelöscht nach der Löschfrist des Servers)
     results: {
       async list() {

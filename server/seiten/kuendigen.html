@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Abo kündigen | leaqizz</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../css/landing.css?v=dev" />
+  </head>
+  <!-- Bestätigungsseite der Kündigungsschaltfläche „Verträge hier kündigen“ (§ 312k BGB). Ohne Anmeldung erreichbar. -->
+  <body class="lp">
+    <header class="top tone-ink">
+      <div class="wrap top__inner">
+        <a class="wordmark" href="../lehrkraefte/">leaqizz</a>
+        <nav class="top__nav" aria-label="Seitenbereiche"><a href="../lehrkraefte/">Zur Startseite</a></nav>
+      </div>
+    </header>
+    <main class="legal wrap">
+      <h1>Abo kündigen</h1>
+      <p>Hier kündigst du dein leaqizz Abo. Eine Anmeldung brauchst du nicht.</p>
+      <noscript><p class="draft">Für dieses Formular braucht der Browser JavaScript. Ohne JavaScript erreichst du uns per Mail an <a href="mailto:info@uwebrandt.net">info@uwebrandt.net</a>.</p></noscript>
+      <form class="vform" id="vertrag-form" data-art="kuendigen" novalidate>
+        <label class="vform__field" for="v-name">Name <input id="v-name" name="name" type="text" autocomplete="name" required aria-describedby="v-fehler" /></label>
+        <div class="vform__field">
+          <label for="v-email">E-Mail-Adresse</label>
+          <span class="vform__hint" id="v-email-hinweis">Die Adresse, mit der du das Abo abgeschlossen hast. Dorthin schicken wir die Bestätigung.</span>
+          <input id="v-email" name="email" type="email" autocomplete="email" inputmode="email" required aria-describedby="v-email-hinweis v-fehler" />
+        </div>
+        <div class="vform__field">
+          <label for="v-nummer">Vertragsnummer (freiwillig)</label>
+          <span class="vform__hint" id="v-nummer-hinweis">Steht in der Bestätigungsmail und beginnt mit LQ-.</span>
+          <input id="v-nummer" name="number" type="text" autocomplete="off" aria-describedby="v-nummer-hinweis" />
+        </div>
+        <fieldset>
+          <legend>Art der Kündigung</legend>
+          <label class="vform__choice"><input type="radio" name="art" value="ordentlich" checked /> Ordentliche Kündigung</label>
+          <label class="vform__choice"><input type="radio" name="art" value="ausserordentlich" /> Außerordentliche Kündigung aus wichtigem Grund</label>
+        </fieldset>
+        <label class="vform__field" for="v-grund" id="v-grund-feld" hidden>Grund <textarea id="v-grund" name="grund" aria-describedby="v-fehler"></textarea></label>
+        <fieldset>
+          <legend>Wann soll das Abo enden?</legend>
+          <label class="vform__choice"><input type="radio" name="wann" value="naechstmoeglich" checked /> Zum nächstmöglichen Zeitpunkt</label>
+          <label class="vform__choice"><input type="radio" name="wann" value="datum" /> Zu einem späteren Datum</label>
+        </fieldset>
+        <label class="vform__field" for="v-datum" id="v-datum-feld" hidden>Datum <input id="v-datum" name="datum" type="date" aria-describedby="v-fehler" /></label>
+        <p class="vform__error" id="v-fehler" role="alert"></p>
+        <div class="vform__actions"><button class="btn btn--primary" type="submit">jetzt kündigen</button></div>
+      </form>
+      <section class="beleg" id="beleg" hidden tabindex="-1" aria-labelledby="beleg-title">
+        <h2 id="beleg-title">Deine Kündigung ist eingegangen</h2>
+        <dl id="beleg-daten"></dl>
+        <p class="vform__hint">Ist zu deiner E-Mail-Adresse ein Abo hinterlegt, bekommst du diese Bestätigung mit dem Datum, an dem das Abo endet, auch per Mail.</p>
+        <div class="vform__actions no-print">
+          <button class="btn btn--ghost" type="button" id="beleg-speichern">Bestätigung speichern</button>
+          <button class="btn btn--ghost" type="button" id="beleg-drucken">Drucken</button>
+        </div>
+      </section>
+    </main>
+    <footer class="foot tone-ink">
+      <div class="wrap">
+        <div class="foot__row">
+          <nav aria-label="Weitere Seiten">
+            <a href="../host/">Zur App</a>
+            <a href="../agb/">AGB</a>
+            <a href="../widerrufsbelehrung/">Widerrufsbelehrung</a>
+            <a href="../impressum/">Impressum</a>
+            <a href="../datenschutz/">Datenschutz</a>
+          </nav>
+          <p class="small">leaqizz · 2026</p>
+        </div>
+      </div>
+    </footer>
+    <script src="/vertrag/vertrag.js?v=dev"></script>
+  </body>
+</html>

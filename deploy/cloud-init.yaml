@@ -24,6 +24,16 @@ write_files:
       SMTP_PASS=''
       MAIL_FROM='leaqizz <noreply@leaqizz.com>'
 
+      # Abo (D-58): leer lassen, bis AGB, Widerrufsbelehrung und Gewerbe stehen (deploy/README.md, „Abo“).
+      LEAQIZ_ABO='nein'
+      LEAQIZ_ZAHLUNG=''
+      LEAQIZ_BETREIBER_MAIL=''
+      PAYPAL_UMGEBUNG='sandbox'
+      PAYPAL_CLIENT_ID=''
+      PAYPAL_CLIENT_SECRET=''
+      PAYPAL_WEBHOOK_ID=''
+      PAYPAL_PLAN_ID=''
+
   - path: /usr/local/sbin/leaqizz-start
     permissions: "0700"
     content: |

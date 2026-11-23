@@ -1616,6 +1616,177 @@ a {
   font-weight: 700;
 }
 
+/* ---------- Verträge: Fuß-Links, Kündigen, Widerrufen (nur Serverbetrieb) ---------- */
+
+/* Vom Server ans Ende jeder Seite gesetzt (§ 312k, § 356a BGB) */
+.vertrag-fuss {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-3);
+  padding: 0 max(var(--gutter), calc((100% - var(--wrap)) / 2 + var(--gutter))) var(--s-6);
+  background: var(--ink);
+}
+
+.vertrag-fuss__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #ffffff;
+  font-weight: 700;
+  text-underline-offset: 4px;
+}
+
+.vertrag-fuss__link:focus-visible {
+  outline-color: #ffffff;
+}
+
+.vform[hidden],
+.vform [hidden],
+.beleg[hidden] {
+  display: none !important;
+}
+
+.vform {
+  display: grid;
+  gap: var(--s-3);
+  max-width: 40rem;
+  margin-top: var(--s-4);
+}
+
+.vform__field {
+  display: grid;
+  gap: var(--s-1);
+  font-weight: 700;
+}
+
+.vform__hint {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.vform input[type='text'],
+.vform input[type='email'],
+.vform input[type='date'],
+.vform textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: var(--s-1) var(--s-2);
+  border: 2px solid var(--ink-3);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+
+.vform textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.vform fieldset {
+  display: grid;
+  gap: var(--s-1);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.vform legend {
+  font-weight: 700;
+  margin-bottom: var(--s-1);
+}
+
+.vform__choice {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 44px;
+  font-weight: 400;
+}
+
+.vform__choice input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--ink);
+}
+
+.vform__error {
+  min-height: 1.5em;
+  color: #b0234f;
+  font-weight: 700;
+}
+
+.vform__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.btn--ghost:hover {
+  background: #e6ebf2;
+}
+
+.beleg {
+  margin-top: var(--s-4);
+  padding: var(--s-3);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  max-width: 40rem;
+}
+
+.legal .beleg h2 {
+  margin-top: 0;
+}
+
+.beleg .vform__actions {
+  margin-top: var(--s-3);
+}
+
+.beleg dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--s-1) var(--s-3);
+  margin-top: var(--s-2);
+}
+
+.beleg dt {
+  font-weight: 700;
+}
+
+.beleg dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .beleg dl {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .beleg dd {
+    margin-bottom: var(--s-1);
+  }
+}
+
+@media print {
+  .top,
+  .foot,
+  .vertrag-fuss,
+  .vform__actions,
+  .no-print {
+    display: none !important;
+  }
+}
+
 /* ---------- Bewegung ---------- */
 
 @keyframes rise {
@@ -1723,8 +1894,9 @@ a {
     padding-inline: var(--s-2);
   }
 
-  /* Fester Knopf: erscheint, sobald der Hero-Knopf aus dem Bild ist; Platz unten frei halten */
-  body {
+  /* Fester Knopf: erscheint, sobald der Hero-Knopf aus dem Bild ist; Platz unten frei halten
+     (nur auf Seiten mit diesem Knopf, sonst bliebe unter dem Fuß ein heller Streifen) */
+  body:has(.sticky) {
     padding-bottom: 88px;
   }
 

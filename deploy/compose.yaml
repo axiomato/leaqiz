@@ -38,6 +38,15 @@ services:
       SMTP_USER: ${SMTP_USER:?SMTP_USER fehlt in deploy/.env}
       SMTP_PASS: ${SMTP_PASS:?SMTP_PASS fehlt in deploy/.env}
       MAIL_FROM: ${MAIL_FROM:?MAIL_FROM fehlt in deploy/.env}
+      # Abo (D-58): erst mit LEAQIZ_ABO=ja Pflicht für Live-Spiele; ohne LEAQIZ_ZAHLUNG kein Abo
+      LEAQIZ_ABO: ${LEAQIZ_ABO:-nein}
+      LEAQIZ_ZAHLUNG: ${LEAQIZ_ZAHLUNG:-}
+      LEAQIZ_BETREIBER_MAIL: ${LEAQIZ_BETREIBER_MAIL:-}
+      PAYPAL_UMGEBUNG: ${PAYPAL_UMGEBUNG:-sandbox}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-}
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:-}
+      PAYPAL_PLAN_ID: ${PAYPAL_PLAN_ID:-}
       LOG_LEVEL: info
     depends_on:
       db:

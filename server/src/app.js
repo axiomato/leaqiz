@@ -11,12 +11,19 @@ import { RateLimiter } from './limits.js';
 import { registerQuizRoutes } from './quizzes.js';
 import { registerAccountRoutes } from './account.js';
 import { registerResultRoutes } from './results.js';
+import { registerBillingRoutes } from './billing/routes.js';
 
 // Seiten, die Suchmaschinen finden dürfen, sobald LEAQIZ_INDEXIERBAR=ja (D-46).
 // Spielleitung und Verbindungstest bleiben immer gesperrt: dort gibt es nichts zu finden.
 export const INDEXABLE = new Set(['/', '/lehrkraefte/', '/datenschutz/', '/impressum/']);
 
 const ROBOTS_META = /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/i;
+
+// Kündigungs- und Widerrufsschaltfläche im Fuß jeder Seite (§ 312k, § 356a BGB), sobald Verträge
+// möglich sind. Spielleitung und Spielerseite sind Anwendungen ohne Fuß: dort zeigt die App die Links.
+const APP_PAGES = new Set(['/', '/index.html', '/host/', '/host/index.html']);
+export const CONTRACT_FOOTER =
+  '<nav class="vertrag-fuss" aria-label="Verträge"><a class="vertrag-fuss__link" href="/vertraege-kuendigen/">Verträge hier kündigen</a><a class="vertrag-fuss__link" href="/vertrag-widerrufen/">Vertrag widerrufen</a></nav>';
 
 // Protokoll ohne IP-Adressen und ohne Abfrageteil der Adresse: Anfragen werden nur mit Methode,
 // Pfad und Status geloggt (Datensparsamkeit, siehe Datenschutzerklärung).
@@ -31,7 +38,8 @@ export function withoutAddresses(log) {
   };
 }
 
-export async function buildApp({ config, registry, db = null, auth = null, log = false, limits = {} }) {
+export async function buildApp({ config, registry, db = null, auth = null, abo = null, log = false, limits = {} }) {
+  const billing = config.billing || { required: false, provider: null };
   const app = Fastify({
     logger: withoutAddresses(log),
     trustProxy: config.trustProxy ? 1 : false,
@@ -58,6 +66,7 @@ export async function buildApp({ config, registry, db = null, auth = null, log =
     // WebSocket zur eigenen Adresse erlauben (ältere Safari-Versionen zählen ws: nicht zu 'self')
     html = html.replace("connect-src 'self'", `connect-src 'self' ${wsOrigin}`);
     if (indexable) html = html.replace(ROBOTS_META, '<meta name="robots" content="index, follow" />');
+    if (abo && !APP_PAGES.has(pathname)) html = html.replace('</body>', `${CONTRACT_FOOTER}\n</body>`);
     reply.removeHeader('content-length');
     return html;
   });
@@ -67,7 +76,8 @@ export async function buildApp({ config, registry, db = null, auth = null, log =
   app.get('/js/config.js', async (request, reply) => {
     const base = await fs.readFile(configFile, 'utf8');
     reply.header('Content-Type', 'text/javascript; charset=utf-8').header('Cache-Control', 'no-cache');
-    return `${base}\n// Ergänzt vom Spielserver\nwindow.LEAQIZ_CONFIG.server = { ws: '/ws', api: '/api/' };\n`;
+    const server = { ws: '/ws', api: '/api/', abo: Boolean(abo), aboPflicht: Boolean(abo && billing.required) };
+    return `${base}\n// Ergänzt vom Spielserver\nwindow.LEAQIZ_CONFIG.server = ${JSON.stringify(server)};\n`;
   });
 
   // Datenschutzerklärung für den Serverbetrieb (server/seiten/), nicht die der GitHub-Pages-Fassung.
@@ -137,7 +147,9 @@ export async function buildApp({ config, registry, db = null, auth = null, log =
   // Quizze der Lehrkraft (nur mit Anmeldung und Datenbank)
   const quizzes = auth && db ? registerQuizRoutes(app, { db: db.db, requireUser, requireSameOrigin }) : null;
   // Konto: Daten herunterladen, Konto löschen
-  if (auth && db) registerAccountRoutes(app, { db: db.db, auth, registry, requireUser, requireSameOrigin, log: app.log });
+  if (auth && db) registerAccountRoutes(app, { db: db.db, auth, abo, registry, requireUser, requireSameOrigin, log: app.log });
+  // Abo: Abschluss, Benachrichtigungen des Zahlungsanbieters, Kündigen und Widerrufen
+  if (auth && db && abo) registerBillingRoutes(app, { abo, config: { ...config, billing }, requireUser, requireSameOrigin, currentUser });
   // Ergebnisse vergangener Live-Spiele (aus dem gesicherten Endstand)
   if (auth && db) registerResultRoutes(app, { db: db.db, registry, requireUser, requireSameOrigin, retentionDays: config.retentionDays });
 
@@ -147,6 +159,8 @@ export async function buildApp({ config, registry, db = null, auth = null, log =
     if (!requireSameOrigin(request, reply)) return reply;
     const user = await currentUser(request);
     if (!user && !config.anonGames) return reply.code(401).send({ error: 'Bitte melde dich an, um ein Live-Spiel zu starten.' });
+    // Live-Spiele nur mit Abo (D-58, F1); Demo, Editor und Quizze im Konto bleiben kostenlos
+    if (user && abo && billing.required && !(await abo.entitled(user.id))) return reply.code(402).send({ error: 'Live-Spiele gibt es mit dem leaqizz Abo.', code: 'abo' });
     if (!creates.take(user ? `u:${user.id}` : request.ip)) return reply.code(429).send({ error: 'Zu viele neue Spiele in kurzer Zeit. Bitte später erneut versuchen.' });
     const body = request.body && typeof request.body === 'object' ? request.body : {};
     try {

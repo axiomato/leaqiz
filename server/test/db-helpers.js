@@ -5,21 +5,32 @@ import { createAuth } from '../src/auth.js';
 import { openDb } from '../src/db/index.js';
 import { GameRegistry } from '../src/games/registry.js';
 import { PgGameStore } from '../src/games/store.js';
+import { createAboService } from '../src/billing/service.js';
+import { createSimulation } from '../src/billing/simulation.js';
 import { ORIGIN, quietLog, testConfig } from './helpers.js';
 
 export const dbUrl = process.env.TEST_DATABASE_URL;
 export const json = { 'Content-Type': 'application/json', Origin: ORIGIN };
 
-export async function setupWithAuth() {
+// billing: { required } schaltet das Abo mit dem Zahlungsweg „simulation“ ein; clock.now steuert die Zeit
+export async function setupWithAuth({ billing = null } = {}) {
   const db = await openDb(dbUrl, { max: 4 });
   await db.pool.query('drop schema if exists public cascade; drop schema if exists drizzle cascade; create schema public;');
   await db.migrate();
-  const config = testConfig({ anonGames: false, authSecret: 'test-geheimnis-'.repeat(4) });
+  const config = testConfig({
+    anonGames: false,
+    authSecret: 'test-geheimnis-'.repeat(4),
+    billing: billing ? { required: Boolean(billing.required), provider: 'simulation', paypal: null, operatorMail: 'betrieb@example.org' } : undefined,
+  });
   const outbox = [];
   const mailer = { local: true, send: async (m) => outbox.push(m) };
   const auth = createAuth({ config, db: db.db, mailer });
   const registry = new GameRegistry({ store: new PgGameStore(db.db), log: quietLog });
-  const app = await buildApp({ config, registry, db, auth });
+  const clock = { now: null };
+  const now = () => clock.now || new Date();
+  const provider = billing ? createSimulation({ now }) : null;
+  const abo = billing ? createAboService({ db: db.db, provider, mailer, origin: ORIGIN, operator: 'betrieb@example.org', log: quietLog, now }) : null;
+  const app = await buildApp({ config, registry, db, auth, abo });
   await app.listen({ port: 0, host: '127.0.0.1' });
   const base = `http://127.0.0.1:${app.server.address().port}`;
 
@@ -39,6 +50,9 @@ export async function setupWithAuth() {
     base,
     registry,
     login,
+    abo,
+    provider,
+    clock,
     async stop() {
       registry.dispose();
       await app.close();

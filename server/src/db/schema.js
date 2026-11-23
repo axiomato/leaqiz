@@ -1,7 +1,7 @@
 // Datenbankschema (Drizzle). Änderungen: hier anpassen, dann `npm run db:generate`
 // und die neue Datei unter drizzle/ mit einchecken. Der Server wendet Migrationen beim Start an.
 import { sql } from 'drizzle-orm';
-import { index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { user } from './auth-schema.js';
 
 export * from './auth-schema.js';
@@ -54,3 +54,84 @@ export const game = pgTable(
     index('game_owner_id').on(t.ownerId),
   ],
 );
+
+// ---------- Abo (D-57, D-58) ----------
+// Verträge und Zahlungen bleiben erhalten, wenn das Konto gelöscht wird (user_id wird leer):
+// Buchungsbelege sind 8 Jahre aufzubewahren (§ 147 AO). Die E-Mail-Adresse bleibt, damit
+// Kündigung und Widerruf ohne Anmeldung zugeordnet werden können.
+export const subscription = pgTable(
+  'subscription',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // Vertragsnummer für Kundinnen und Kunden, z. B. LQ-7K2M-9XQP
+    number: text('number').notNull(),
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    email: text('email').notNull(),
+    provider: text('provider').notNull(),
+    providerId: text('provider_id'),
+    // pending, active, cancelled, suspended, expired, withdrawn
+    status: text('status').notNull(),
+    // Zustimmung zum sofortigen Beginn vor Ablauf der Widerrufsfrist (Wertersatz bei Widerruf)
+    immediateStart: boolean('immediate_start').notNull().default(false),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    firstTermEnd: timestamp('first_term_end', { withTimezone: true }),
+    currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+    cancelRequestedAt: timestamp('cancel_requested_at', { withTimezone: true }),
+    // Zugang endet zu diesem Zeitpunkt (Kündigung, Widerruf, Konto gelöscht)
+    endsAt: timestamp('ends_at', { withTimezone: true }),
+    withdrawnAt: timestamp('withdrawn_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('subscription_number').on(t.number),
+    uniqueIndex('subscription_provider_id').on(t.provider, t.providerId).where(sql`${t.providerId} is not null`),
+    index('subscription_user_id').on(t.userId),
+    index('subscription_email').on(sql`lower(${t.email})`),
+  ],
+);
+
+// Zahlungen und Erstattungen (Beträge in Cent, brutto mit 19 % USt)
+export const payment = pgTable(
+  'payment',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    subscriptionId: uuid('subscription_id')
+      .notNull()
+      .references(() => subscription.id),
+    // payment, refund, reversal
+    kind: text('kind').notNull(),
+    providerPaymentId: text('provider_payment_id').notNull(),
+    grossCent: integer('gross_cent').notNull(),
+    vatCent: integer('vat_cent').notNull(),
+    currency: text('currency').notNull(),
+    paidAt: timestamp('paid_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('payment_provider').on(t.kind, t.providerPaymentId), index('payment_subscription').on(t.subscriptionId)],
+);
+
+// Eingang von Kündigung und Widerruf, mit Inhalt, Datum und Uhrzeit (Nachweis, § 312k, § 356a BGB)
+export const contractEvent = pgTable(
+  'contract_event',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // kuendigung, widerruf
+    kind: text('kind').notNull(),
+    subscriptionId: uuid('subscription_id').references(() => subscription.id),
+    // Angaben aus dem Formular, wie abgeschickt
+    content: jsonb('content').notNull(),
+    receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
+    // Ergebnis der Zuordnung, z. B. „endet am …“ oder „kein Vertrag gefunden“
+    result: text('result').notNull(),
+  },
+  (t) => [index('contract_event_subscription').on(t.subscriptionId)],
+);
+
+// Bereits verarbeitete Benachrichtigungen des Zahlungsanbieters (jede nur einmal)
+export const providerEvent = pgTable('provider_event', {
+  id: text('id').primaryKey(),
+  provider: text('provider').notNull(),
+  type: text('type').notNull(),
+  receivedAt: timestamp('received_at', { withTimezone: true }).notNull().defaultNow(),
+});

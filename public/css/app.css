@@ -1315,6 +1315,41 @@ textarea.input {
   list-style: disc;
 }
 
+/* ---------- Abo (nur mit eigenem Server und Zahlungsweg) ---------- */
+
+.abo-offer,
+.abo-status {
+  display: grid;
+  gap: var(--s-2);
+  justify-items: start;
+}
+
+.abo-price strong {
+  font-size: var(--t-2);
+  font-weight: 850;
+}
+
+.abo-form .check {
+  align-items: flex-start;
+  white-space: normal;
+  font-weight: 400;
+}
+
+.abo-form .check input {
+  flex: none;
+  margin-top: 0.1rem;
+}
+
+.abo-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s-3);
+}
+
+.abo-links .legal-link {
+  color: var(--ink);
+}
+
 /* ---------- Ergebnisse vergangener Live-Spiele (nur mit eigenem Server) ---------- */
 
 .results {
