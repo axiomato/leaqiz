@@ -69,6 +69,7 @@ export class GameRegistry {
       const id = randomUUID();
       const hostToken = randomBytes(24).toString('base64url');
       const entry = this.#entry(id, hashToken(hostToken));
+      entry.ownerId = ownerId;
       entry.engine = HostEngine.create({ quiz, pin, ...this.#hooks(entry) });
       this.#mount(entry);
       try {
@@ -90,6 +91,7 @@ export class GameRegistry {
     let restored = 0;
     for (const row of rows) {
       const entry = this.#entry(row.id, row.hostTokenHash);
+      entry.ownerId = row.ownerId ?? null;
       try {
         entry.engine = HostEngine.restore(row.snapshot, this.#hooks(entry));
       } catch (err) {
@@ -112,6 +114,7 @@ export class GameRegistry {
     return {
       id,
       hostTokenHash,
+      ownerId: null,
       engine: null,
       hosts: new Set(),
       players: new Map(), // connId -> Verbindung
@@ -293,6 +296,15 @@ export class GameRegistry {
     // Abschiedsnachricht zustellen lassen, dann Verbindungen schließen
     const conns = [...entry.hosts, ...entry.players.values()];
     setTimeout(() => conns.forEach((c) => c.close()), 1000).unref?.();
+  }
+
+  // Alle laufenden Spiele einer Lehrkraft beenden (Konto löschen). Wartet, bis der Endstand gesichert ist.
+  async endForOwner(ownerId, reason) {
+    if (!ownerId) return 0;
+    const entries = [...this.games.values()].filter((e) => e.ownerId === ownerId);
+    for (const entry of entries) entry.engine.end(reason);
+    await Promise.all(entries.map((e) => e.saving));
+    return entries.length;
   }
 
   // ---------- Aufräumen ----------

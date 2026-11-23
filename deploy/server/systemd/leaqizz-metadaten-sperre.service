@@ -1,0 +1,13 @@
+[Unit]
+Description=leaqizz: Container dürfen den Metadaten-Dienst (169.254.169.254) nicht erreichen
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'iptables -C DOCKER-USER -d 169.254.169.254 -j DROP 2>/dev/null || iptables -I DOCKER-USER -d 169.254.169.254 -j DROP'
+
+[Install]
+WantedBy=multi-user.target docker.service

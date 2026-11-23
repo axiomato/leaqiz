@@ -1,0 +1,10 @@
+[Unit]
+Description=leaqizz: alle 10 Minuten nach einem neuen Stand sehen
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target

@@ -1,6 +1,6 @@
 # leaqizz auf dem eigenen Server
 
-Stand: 22.11.2026, Phase 1 im Aufbau. Ziel: Hetzner Cloud (D-43), Ersatz netcup. Live-Spiele starten nur angemeldete Lehrkräfte (Anmeldelink per Mail oder Passkey). Ohne funktionierenden Mailversand startet der Server nicht.
+Stand: 23.11.2026, Phase 1 im Aufbau. Ziel: Hetzner Cloud (D-43), Ersatz netcup. Live-Spiele starten nur angemeldete Lehrkräfte (Anmeldelink per Mail oder Passkey). Ohne funktionierenden Mailversand startet der Server nicht.
 
 ## Was läuft
 
@@ -8,40 +8,64 @@ Stand: 22.11.2026, Phase 1 im Aufbau. Ziel: Hetzner Cloud (D-43), Ersatz netcup.
 |---|---|
 | `caddy` | HTTPS mit automatischem Zertifikat, leitet alles an `app` weiter (auch WebSocket) |
 | `app` | Spielserver: liefert die Seiten aus `public/`, führt Live-Spiele über `/ws`, API unter `/api/`, Anmeldung unter `/api/auth/` |
-| `db` | PostgreSQL 17, Spielstände (überstehen einen Neustart) |
+| `db` | PostgreSQL 17: Konten, Quizze, Spielstände (überstehen einen Neustart) |
 
 Gemessen (lokal, 2 Kerne, Testclients im selben Rechner): 100 gleichzeitige Spiele mit je 30 Handys, Antwortzeit im Median unter 1 ms, 95 % unter 13 ms, Server-Spitze 150 MB Speicher und 12 % eines Kerns (`npm run lasttest` in `server/`).
 
 ## Einmalig einrichten
 
-1. **Server bestellen** (Hetzner Cloud Console): Ubuntu 24.04, SSH-Schlüssel hinterlegen, IPv4 und IPv6. Größe siehe Entscheidung D-43.
-2. **Firewall** in der Hetzner Console: eingehend nur 22/tcp, 80/tcp, 443/tcp, 443/udp.
-   **AV-Vertrag** im Hetzner-Kundenkonto abschließen (Konto → Datenschutz).
-3. **Mail**: Hetzner Webhosting S, Postfach `noreply@…` anlegen, DKIM aktivieren, SPF und DMARC setzen (konsoleH). Zugangsdaten in `deploy/.env`.
-4. **DNS**: A- und AAAA-Eintrag der Domain auf den Server; `www` ebenfalls (wird umgeleitet).
-5. **Docker** installieren (offizielle Anleitung für Ubuntu: docs.docker.com/engine/install/ubuntu).
-6. **Code holen und starten**:
-   ```sh
-   git clone https://github.com/axiomato/leaqiz.git && cd leaqiz/deploy
-   cp .env.example .env && nano .env          # DOMAIN, POSTGRES_PASSWORD, BETTER_AUTH_SECRET, SMTP_*
-   VERSION=$(git rev-parse --short HEAD) docker compose up -d --build
-   curl https://leaqizz.com/api/health        # {"ok":true,"database":true,…}
-   ```
-7. **Prüfen**: `https://leaqizz.com/host/` → Anmelden → Link kommt per Mail (auch Spam-Ordner prüfen) → Passkey einrichten → Live-Spiel starten.
+Alles Weitere erledigt der Server beim ersten Start selbst (`deploy/cloud-init.yaml` → `deploy/server/einrichten.sh`):
+Docker, Firewall (nur 22, 80, 443), automatische Sicherheitsupdates mit Neustart um 04:30 wenn nötig,
+Logs höchstens 7 Tage, Swap bei wenig Speicher, SSH nur mit Schlüssel, Container ohne Zugriff auf den
+Metadaten-Dienst, Code holen und starten.
+
+1. **Domain und Mail:** leaqizz.com registrieren; Hetzner Webhosting S mit Postfach `noreply@…`, DKIM, SPF und DMARC (D-44).
+2. **Token** (nur nach der Repo-Aufteilung): GitHub → Settings → Developer settings → Fine-grained tokens → Generate.
+   Nur Repository `axiomato/leaqiz-quellcode`, Permissions → Contents: **Read-only**. Vorher (Repo öffentlich) kein Token
+   und `REPO=axiomato/leaqiz`.
+3. **AV-Vertrag** im Hetzner-Kundenkonto abschließen (`accounts.hetzner.com/account/dpa`).
+4. **Server erstellen** (Hetzner Cloud Console): Ubuntu 24.04, Typ nach D-43, SSH-Schlüssel hinterlegen,
+   Firewall mit eingehend 22/tcp, 80/tcp, 443/tcp, 443/udp. Unter **Cloud config** den Inhalt von
+   `deploy/cloud-init.yaml` einfügen und dort nur den Block `einstellungen.env` ausfüllen (Domain, Repo, Token, SMTP).
+5. **DNS:** A- und AAAA-Eintrag der Domain (und `www`) auf die Adressen des neuen Servers. Das Zertifikat holt
+   Caddy von selbst, sobald der Eintrag gilt.
+6. **Prüfen** nach etwa 10 Minuten: `https://leaqizz.com/api/health` → `{"ok":true,"database":true,…}`, dann
+   `https://leaqizz.com/host/` → Anmelden → Link kommt per Mail (auch Spam-Ordner) → Passkey → Live-Spiel.
+
+Einstellungen später ändern (SSH oder Konsole in der Hetzner Console):
+
+```sh
+nano /etc/leaqizz/einstellungen.env   # z. B. SMTP-Passwort, LEAQIZ_INDEXIERBAR=ja (D-46)
+leaqizz-einrichten                    # übernimmt die Werte und startet neu
+```
+
+Die Geheimnisse (Datenbank-Passwort, Sitzungsschlüssel) erzeugt der Server einmal und legt sie in
+`/etc/leaqizz/geheimnisse.env` ab. Nicht ändern: Ein neuer Sitzungsschlüssel meldet alle ab.
+
+Wo was liegt: Code `/opt/leaqizz`, Einstellungen `/etc/leaqizz/`, Logs `journalctl -u leaqizz-aktualisieren`
+und `docker compose -p leaqizz logs` (in `/opt/leaqizz/deploy`).
 
 ## Aktualisieren
 
+Von selbst: GitHub Actions setzt den Branch `live` auf jeden Stand von `main`, dessen Tests grün sind. Der Server
+sieht alle 10 Minuten nach (`leaqizz-aktualisieren.timer`), baut den neuen Stand und startet ihn. Wird er nicht
+gesund, geht der Server auf den vorherigen Stand zurück und versucht den kranken nicht erneut. Sofort:
+
 ```sh
-cd leaqiz && git pull && cd deploy
-VERSION=$(git rev-parse --short HEAD) docker compose up -d --build
+leaqizz-aktualisieren               # nur wenn es einen neuen Stand gibt
+leaqizz-aktualisieren --erzwingen   # immer neu bauen und starten
 ```
 
-Laufende Spiele überstehen das: Der Server sichert beim Herunterfahren alle Spielstände, Leinwand und Handys verbinden sich danach von selbst neu.
+Laufende Spiele überstehen das: Der Server sichert beim Herunterfahren alle Spielstände, Leinwand und Handys
+verbinden sich danach von selbst neu (im Browser geprüft, D-47).
+
+Geprüft ohne echten Server (`bash deploy/server/test.sh`, läuft in jedem CI-Lauf): Erzeugung der `.env`,
+Sonderzeichen im Passwort, Aktualisierung, Rückfall auf den vorherigen Stand. **Nicht geprüft:** ein Lauf auf
+einem echten Hetzner-Server (erst mit der Bestellung möglich).
 
 ## Noch offen (Phase 1)
 
-- Konto löschen in der Oberfläche (die Datenbank löscht Spiele und Quizze mit dem Konto schon mit)
-- Sicherung der Datenbank außer Haus (restic), Überwachung, Logrotation auf 7 Tage
+- Sicherung der Datenbank außer Haus (restic; Ziel noch offen), Überwachung von außen
 - Datenschutzerklärung für den Serverbetrieb
 
 ## Einstellungen (Umgebungsvariablen des Dienstes `app`)

@@ -20,6 +20,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Server-Skripte prüfen
+        run: |
+          shellcheck -x deploy/server/*.sh
+          bash deploy/server/test.sh
 
   # Spielserver: Tests mit echter PostgreSQL-Datenbank und Bau des Docker-Images
   server:
@@ -84,6 +88,29 @@ jobs:
           path: public
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Branch „live“ = letzter Stand von main mit grünen Tests. Der Server folgt nur diesem Branch
+  # (deploy/server/aktualisieren.sh, alle 10 Minuten). Geht nur vorwärts, nie auf einen älteren Stand.
+  live:
+    needs: [test, server]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: live
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: live auf diesen Stand setzen
+        run: |
+          if git fetch --quiet origin live 2>/dev/null && ! git merge-base --is-ancestor FETCH_HEAD HEAD; then
+            echo "live ist schon weiter als ${GITHUB_SHA::7}, bleibt."
+            exit 0
+          fi
+          git push --quiet origin HEAD:refs/heads/live
 
   # Nach der Aufteilung (deploy/README.md, „Privates Code-Repo, öffentliches Seiten-Repo“):
   # Dieses Repo ist privat, die Website liegt im öffentlichen Repo aus der Variable SITE_REPO

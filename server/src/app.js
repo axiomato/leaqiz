@@ -8,6 +8,7 @@ import { AUTH_BASE, sessionHeaders, toWebRequest } from './auth.js';
 import { RegistryError } from './games/registry.js';
 import { RateLimiter } from './limits.js';
 import { registerQuizRoutes } from './quizzes.js';
+import { registerAccountRoutes } from './account.js';
 
 // Seiten, die Suchmaschinen finden dürfen, sobald LEAQIZ_INDEXIERBAR=ja (D-46).
 // Spielleitung und Verbindungstest bleiben immer gesperrt: dort gibt es nichts zu finden.
@@ -108,6 +109,8 @@ export async function buildApp({ config, registry, db = null, auth = null, log =
 
   // Quizze der Lehrkraft (nur mit Anmeldung und Datenbank)
   const quizzes = auth && db ? registerQuizRoutes(app, { db: db.db, requireUser, requireSameOrigin }) : null;
+  // Konto: Daten herunterladen, Konto löschen
+  if (auth && db) registerAccountRoutes(app, { db: db.db, auth, registry, requireUser, requireSameOrigin, log: app.log });
 
   // Neues Live-Spiel: nur für angemeldete Lehrkräfte. Ohne Konto nur lokal (LEAQIZ_SPIELE_OHNE_ANMELDUNG).
   app.post('/api/games', async (request, reply) => {

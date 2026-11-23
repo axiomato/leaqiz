@@ -24,7 +24,7 @@ export class PgGameStore {
   // Laufende Spiele für die Wiederherstellung nach einem Neustart
   async loadActive() {
     return this.db
-      .select({ id: game.id, pin: game.pin, hostTokenHash: game.hostTokenHash, snapshot: game.snapshot })
+      .select({ id: game.id, ownerId: game.ownerId, pin: game.pin, hostTokenHash: game.hostTokenHash, snapshot: game.snapshot })
       .from(game)
       .where(isNull(game.endedAt));
   }
@@ -59,7 +59,7 @@ export class MemoryGameStore {
   }
 
   async loadActive() {
-    return [...this.rows.values()].filter((r) => !r.endedAt).map((r) => structuredClone({ id: r.id, pin: r.pin, hostTokenHash: r.hostTokenHash, snapshot: r.snapshot }));
+    return [...this.rows.values()].filter((r) => !r.endedAt).map((r) => structuredClone({ id: r.id, ownerId: r.ownerId ?? null, pin: r.pin, hostTokenHash: r.hostTokenHash, snapshot: r.snapshot }));
   }
 
   async deleteEndedBefore(date) {

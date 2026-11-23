@@ -995,9 +995,79 @@
         setup ? setup.errorEl : null,
         setup ? h('div', { class: 'actions' }, setup.btn) : null,
       ),
+      h(
+        'section',
+        { class: 'account-section', 'aria-labelledby': 'data-title' },
+        h('h2', { id: 'data-title', text: 'Deine Daten' }),
+        h('p', { class: 'hint', text: 'Eine Datei mit allem, was zu deinem Konto gespeichert ist: Quizze, Spiele (ohne Spielnamen und Antworten), Passkeys und Anmeldungen.' }),
+        h('div', { class: 'actions' }, h('a', { class: 'btn btn--quiet', href: Account.exportUrl(), download: '', text: 'Daten herunterladen' })),
+      ),
       errorEl,
       h('div', { class: 'actions' }, signOut),
+      h(
+        'section',
+        { class: 'account-section', 'aria-labelledby': 'delete-title' },
+        h('h2', { id: 'delete-title', text: 'Konto löschen' }),
+        h('p', { class: 'hint', text: 'Löscht dein Konto mit allen Quizzen und Spielen. Das lässt sich nicht rückgängig machen.' }),
+        h('div', { class: 'actions' }, h('button', { class: 'btn btn--danger', type: 'button', text: 'Konto löschen …', onclick: () => renderDeleteAccount() })),
+      ),
     );
+  }
+
+  // Konto endgültig löschen: Bestätigung mit der eigenen E-Mail-Adresse
+  function renderDeleteAccount() {
+    if (!me) return renderLogin();
+    const errorEl = h('p', { class: 'error', id: 'delete-error', role: 'alert' });
+    const input = h('input', { class: 'input', id: 'delete-email', type: 'email', name: 'email', autocomplete: 'off', inputmode: 'email', required: true, 'aria-describedby': 'delete-error' });
+    const submit = h('button', { class: 'btn btn--danger', type: 'submit', text: 'Konto endgültig löschen' });
+    const form = h(
+      'form',
+      { class: 'account-form', novalidate: true },
+      h('label', { class: 'field', for: 'delete-email' }, h('span', { text: 'Zur Bestätigung deine E-Mail-Adresse' }), input),
+      errorEl,
+      h('div', { class: 'actions' }, submit, h('button', { class: 'btn btn--quiet', type: 'button', text: 'Abbrechen', onclick: () => renderAccount() })),
+    );
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (input.value.trim().toLowerCase() !== me.email.toLowerCase()) {
+        errorEl.textContent = 'Die E-Mail-Adresse stimmt nicht mit deinem Konto überein.';
+        input.focus();
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = 'Lösche …';
+      try {
+        await Account.deleteAccount(input.value.trim());
+      } catch (err) {
+        submit.disabled = false;
+        submit.textContent = 'Konto endgültig löschen';
+        errorEl.textContent = err.message;
+        if (err.status === 401) me = null;
+        return;
+      }
+      me = null;
+      serverQuizzes = null;
+      serverOwner = null;
+      local.remove(IMPORT_HIDDEN_KEY);
+      session.remove(GAME_KEY);
+      renderLibrary();
+      toast('Dein Konto ist gelöscht.');
+    });
+    accountView(
+      h('h1', { text: 'Konto löschen' }),
+      h('p', { class: 'lead', text: 'Das lässt sich nicht rückgängig machen.' }),
+      h('p', { text: `Gelöscht werden dein Konto ${me.email} und alles, was dazu gehört:` }),
+      h(
+        'ul',
+        { class: 'account-list' },
+        h('li', { text: 'alle Quizze in deinem Konto' }),
+        h('li', { text: 'alle Spiele samt Spielnamen und Antworten; laufende Spiele werden beendet' }),
+        h('li', { text: 'deine Passkeys und Anmeldungen' }),
+      ),
+      h('p', { class: 'hint', text: 'Vorher sichern: „Daten herunterladen“ im Konto oder einzelne Quizze exportieren. Den Passkey auf deinem Gerät kannst du danach in den Einstellungen des Geräts entfernen.' }),
+      form,
+    );
+    input.focus();
   }
 
   // ---------- Spiel starten und fortsetzen ----------

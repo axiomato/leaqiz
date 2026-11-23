@@ -1,0 +1,50 @@
+#cloud-config
+# leaqizz: Server beim ersten Start einrichten.
+# Hetzner Cloud Console → Server erstellen → Ubuntu 24.04 → „Cloud config“: diesen Text einfügen.
+# Nur die Werte im Block „einstellungen.env“ ausfüllen. Anleitung: deploy/README.md
+# Danach läuft alles von selbst (etwa 5 bis 10 Minuten): Docker, Firewall, Updates, Code holen, Start.
+# Später ändern: per SSH /etc/leaqizz/einstellungen.env bearbeiten, dann  leaqizz-einrichten
+
+write_files:
+  - path: /etc/leaqizz/einstellungen.env
+    permissions: "0600"
+    content: |
+      # Domain ohne https://. A- und AAAA-Eintrag müssen auf diesen Server zeigen.
+      DOMAIN=leaqizz.com
+
+      # Woher der Code kommt. Vor der Repo-Aufteilung: REPO=axiomato/leaqiz und kein Token.
+      # Danach: axiomato/leaqiz-quellcode und ein Token (nur dieses Repo, „Contents: Read-only“).
+      REPO=axiomato/leaqiz-quellcode
+      REPO_TOKEN=
+
+      # Mailversand der Anmeldelinks (Hetzner Webhosting, Port 587). Ohne startet leaqizz nicht.
+      # Werte zwischen die einfachen Anführungszeichen schreiben (das Passwort darf selbst keins enthalten).
+      SMTP_HOST=''
+      SMTP_USER=''
+      SMTP_PASS=''
+      MAIL_FROM='leaqizz <noreply@leaqizz.com>'
+
+  - path: /usr/local/sbin/leaqizz-start
+    permissions: "0700"
+    content: |
+      #!/usr/bin/env bash
+      # Holt den Code und übergibt an deploy/server/einrichten.sh (dort steht alles Weitere).
+      set -euo pipefail
+      set -a
+      # shellcheck source=/dev/null
+      . /etc/leaqizz/einstellungen.env
+      set +a
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update -q
+      apt-get install -y -q git
+      if [ ! -d /opt/leaqizz/.git ]; then
+        auth=()
+        if [ -n "${REPO_TOKEN:-}" ]; then
+          auth=(-c "http.extraHeader=Authorization: Basic $(printf 'x-access-token:%s' "$REPO_TOKEN" | base64 -w0)")
+        fi
+        git "${auth[@]}" clone --quiet "https://github.com/$REPO.git" /opt/leaqizz
+      fi
+      exec /opt/leaqizz/deploy/server/einrichten.sh
+
+runcmd:
+  - [/usr/local/sbin/leaqizz-start]

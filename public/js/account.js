@@ -111,5 +111,33 @@ window.LQAccount = (function () {
     return call('sign-out', { method: 'POST', body: {} });
   }
 
-  return { enabled, current, sendLink, passkeySupported, passkeySignIn, passkeyAdd, passkeys, signOut };
+  // Konto-Routen des Servers (nicht Better Auth): Daten herunterladen, Konto löschen
+  const accountUrl = (path) => new URL(`${server().api}account/${path}`, location.href).href;
+  const exportUrl = () => accountUrl('export');
+
+  // Konto endgültig löschen; zur Bestätigung die eigene E-Mail-Adresse
+  async function deleteAccount(email) {
+    const known = await passkeys();
+    let res;
+    try {
+      res = await fetch(accountUrl('delete'), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+    } catch {
+      throw new Error('Keine Verbindung zum Server. Bitte Internet prüfen.');
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(res.status === 400 && data.error ? data.error : MESSAGES[res.status] || 'Das Konto ließ sich nicht löschen. Bitte erneut versuchen.'), { status: res.status });
+    // Dem Gerät mitteilen, dass seine Passkeys nicht mehr gelten (wo der Browser das kann)
+    if (window.PublicKeyCredential && typeof PublicKeyCredential.signalUnknownCredential === 'function') {
+      for (const p of known) {
+        if (p && p.credentialID) PublicKeyCredential.signalUnknownCredential({ rpId: location.hostname, credentialId: p.credentialID }).catch(() => {});
+      }
+    }
+  }
+
+  return { enabled, current, sendLink, passkeySupported, passkeySignIn, passkeyAdd, passkeys, signOut, exportUrl, deleteAccount };
 })();

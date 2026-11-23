@@ -1,5 +1,7 @@
 # leaqizz auf einem eigenen Server: Caddy (HTTPS), Spielserver, PostgreSQL.
-# Anleitung: deploy/README.md. Werte kommen aus deploy/.env (Vorlage: .env.example).
+# Anleitung: deploy/README.md. Werte kommen aus deploy/.env (Vorlage: .env.example;
+# auf dem Server erzeugt deploy/server/einrichten.sh die Datei).
+# Logs: Vorgabe des Docker-Dienstes; auf dem Server journald mit 7 Tagen Aufbewahrung.
 
 services:
   caddy:
@@ -17,11 +19,6 @@ services:
       - caddy_config:/config
     depends_on:
       - app
-    logging: &logs
-      driver: local
-      options:
-        max-size: 10m
-        max-file: "3"
 
   app:
     build:
@@ -45,7 +42,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    logging: *logs
 
   db:
     image: postgres:17-alpine
@@ -61,7 +57,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-    logging: *logs
 
 volumes:
   caddy_data:
