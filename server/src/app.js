@@ -1,6 +1,7 @@
 // HTTP-Teil: liefert public/ aus, ergänzt die Browser-Konfiguration um den Spielserver
 // und stellt die API bereit. Der WebSocket-Teil hängt in gateway.js am selben Server.
 import fs from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
@@ -9,6 +10,7 @@ import { RegistryError } from './games/registry.js';
 import { RateLimiter } from './limits.js';
 import { registerQuizRoutes } from './quizzes.js';
 import { registerAccountRoutes } from './account.js';
+import { registerResultRoutes } from './results.js';
 
 // Seiten, die Suchmaschinen finden dürfen, sobald LEAQIZ_INDEXIERBAR=ja (D-46).
 // Spielleitung und Verbindungstest bleiben immer gesperrt: dort gibt es nichts zu finden.
@@ -16,9 +18,22 @@ export const INDEXABLE = new Set(['/', '/lehrkraefte/', '/datenschutz/', '/impre
 
 const ROBOTS_META = /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/i;
 
+// Protokoll ohne IP-Adressen und ohne Abfrageteil der Adresse: Anfragen werden nur mit Methode,
+// Pfad und Status geloggt (Datensparsamkeit, siehe Datenschutzerklärung).
+export function withoutAddresses(log) {
+  if (!log || typeof log !== 'object') return log;
+  return {
+    ...log,
+    serializers: {
+      req: (req) => ({ method: req.method, url: String(req.url || '').split('?')[0] }),
+      res: (res) => ({ statusCode: res.statusCode }),
+    },
+  };
+}
+
 export async function buildApp({ config, registry, db = null, auth = null, log = false, limits = {} }) {
   const app = Fastify({
-    logger: log,
+    logger: withoutAddresses(log),
     trustProxy: config.trustProxy ? 1 : false,
     bodyLimit: 256 * 1024,
   });
@@ -54,6 +69,18 @@ export async function buildApp({ config, registry, db = null, auth = null, log =
     reply.header('Content-Type', 'text/javascript; charset=utf-8').header('Cache-Control', 'no-cache');
     return `${base}\n// Ergänzt vom Spielserver\nwindow.LEAQIZ_CONFIG.server = { ws: '/ws', api: '/api/' };\n`;
   });
+
+  // Datenschutzerklärung für den Serverbetrieb (server/seiten/), nicht die der GitHub-Pages-Fassung.
+  // Als Stream, damit die HTML-Anpassungen oben (Robots, CSP) greifen.
+  const privacyFile = path.join(config.pagesDir, 'datenschutz.html');
+  const privacy = (request, reply) => reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-cache').send(createReadStream(privacyFile));
+  app.get('/datenschutz/', privacy);
+  app.get('/datenschutz/index.html', privacy);
+
+  // Der Verbindungstest prüft die Direktverbindung (PeerJS, STUN, TURN) und spricht dafür Server Dritter an.
+  // Im Serverbetrieb laufen Spiele über den eigenen Server; der Test wäre irreführend.
+  app.get('/check/', (request, reply) => reply.redirect('/'));
+  app.get('/check/index.html', (request, reply) => reply.redirect('/'));
 
   app.get('/api/health', async (request, reply) => {
     let database = null;
@@ -111,6 +138,8 @@ export async function buildApp({ config, registry, db = null, auth = null, log =
   const quizzes = auth && db ? registerQuizRoutes(app, { db: db.db, requireUser, requireSameOrigin }) : null;
   // Konto: Daten herunterladen, Konto löschen
   if (auth && db) registerAccountRoutes(app, { db: db.db, auth, registry, requireUser, requireSameOrigin, log: app.log });
+  // Ergebnisse vergangener Live-Spiele (aus dem gesicherten Endstand)
+  if (auth && db) registerResultRoutes(app, { db: db.db, registry, requireUser, requireSameOrigin, retentionDays: config.retentionDays });
 
   // Neues Live-Spiel: nur für angemeldete Lehrkräfte. Ohne Konto nur lokal (LEAQIZ_SPIELE_OHNE_ANMELDUNG).
   app.post('/api/games', async (request, reply) => {

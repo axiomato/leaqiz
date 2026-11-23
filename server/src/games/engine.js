@@ -5,6 +5,8 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const Engine = require('../../../public/js/engine/host-engine.js');
 const Validate = require('../../../public/js/engine/validate.js');
+const GameLib = require('../../../public/js/engine/game.js');
 
 export const { HostEngine, randomPin, GameError } = Engine;
 export const { validateQuiz, normalizeDraft, isPin, ValidationError } = Validate;
+export const { Game } = GameLib;

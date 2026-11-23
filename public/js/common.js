@@ -242,6 +242,22 @@ window.LQ = (function () {
     return String.fromCharCode(0xfeff) + rows.map((r) => r.map(cell).join(';')).join('\r\n');
   }
 
+  // Auswertung als CSV (Leinwand am Spielende und Ergebnisse im Konto): eine Zeile je Mitspieler:in
+  function reportCsv(report) {
+    const head = ['Platz', 'Spielname', 'Punkte', 'Richtige Antworten'];
+    report.questions.forEach((_, i) => head.push(`F${i + 1} Antwort`, `F${i + 1} richtig`, `F${i + 1} Sekunden`, `F${i + 1} Punkte`));
+    const rows = [head];
+    for (const p of report.players) {
+      const row = [p.rank, p.nickname, p.score, p.correctCount];
+      p.answers.forEach((a, i) => {
+        if (!a) row.push('–', 'nein', '', 0);
+        else row.push(`${LETTERS[a.choice]}: ${report.questions[i].options[a.choice]}`, a.correct ? 'ja' : 'nein', (a.elapsedMs / 1000).toFixed(1).replace('.', ','), a.points);
+      });
+      rows.push(row);
+    }
+    return toCsv(rows);
+  }
+
   function download(filename, text, type) {
     const blob = new Blob([text], { type });
     const url = URL.createObjectURL(blob);
@@ -270,5 +286,5 @@ window.LQ = (function () {
     }
   }
 
-  return { APP_NAME, LETTERS, h, avatar, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, toCsv, download, keepAwake };
+  return { APP_NAME, LETTERS, h, avatar, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, emit, toCsv, reportCsv, download, keepAwake };
 })();

@@ -28,6 +28,7 @@ export function testConfig(overrides = {}) {
     indexable: false,
     trustProxy: false,
     publicDir: new URL('../../public', import.meta.url).pathname,
+    pagesDir: new URL('../seiten', import.meta.url).pathname,
     gameIdleMs: 3600_000,
     retentionDays: 30,
     ...overrides,

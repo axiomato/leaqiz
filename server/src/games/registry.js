@@ -307,6 +307,15 @@ export class GameRegistry {
     return entries.length;
   }
 
+  // Ein laufendes Spiel beenden (z. B. vor dem Löschen seines Ergebnisses). Wartet, bis der Endstand gesichert ist.
+  async endById(id, reason) {
+    const entry = this.games.get(id);
+    if (!entry) return false;
+    entry.engine.end(reason);
+    await entry.saving;
+    return true;
+  }
+
   // ---------- Aufräumen ----------
 
   async sweep() {

@@ -161,3 +161,30 @@ test('Suchmaschinen: erst mit LEAQIZ_INDEXIERBAR frei, Spielleitung bleibt gespe
     await srv.stop();
   }
 });
+
+test('Serverbetrieb: eigene Datenschutzerklärung, kein Verbindungstest mit Servern Dritter', async () => {
+  const srv = await startServer();
+  const open = await startServer({ config: { indexable: true } });
+  try {
+    for (const path of ['/datenschutz/', '/datenschutz/index.html']) {
+      const res = await fetch(`${srv.base}${path}`);
+      assert.equal(res.status, 200);
+      assert.match(res.headers.get('content-type'), /text\/html/);
+      assert.equal(res.headers.get('x-robots-tag'), 'noindex, nofollow');
+      const html = await res.text();
+      assert.match(html, /Hetzner Online GmbH/, 'Fassung für den eigenen Server');
+      assert.ok(!/GitHub Pages|PeerJS/.test(html), 'nicht die Fassung für GitHub Pages');
+      assert.match(html, /<meta name="robots" content="noindex, nofollow"/);
+    }
+    const free = await fetch(`${open.base}/datenschutz/`);
+    assert.equal(free.headers.get('x-robots-tag'), 'index, follow');
+    assert.match(await free.text(), /<meta name="robots" content="index, follow" \/>/);
+
+    const check = await fetch(`${srv.base}/check/`, { redirect: 'manual' });
+    assert.equal(check.status, 302);
+    assert.equal(check.headers.get('location'), '/');
+  } finally {
+    await srv.stop();
+    await open.stop();
+  }
+});

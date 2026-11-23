@@ -1,6 +1,6 @@
 'use strict';
 
-// Quizze im Konto der Lehrkraft (nur mit eigenem Server): /api/quizzes.
+// Quizze und Ergebnisse im Konto der Lehrkraft (nur mit eigenem Server): /api/quizzes, /api/results.
 // Ohne Server (GitHub Pages) wird nichts davon aufgerufen; die Bibliothek bleibt im Browser.
 
 window.LQQuizApi = (function () {
@@ -14,7 +14,7 @@ window.LQQuizApi = (function () {
     429: 'Zu viele Anfragen. Bitte warte einen Moment.',
   };
 
-  async function call(path, { method = 'GET', body } = {}) {
+  async function call(path, { method = 'GET', body, messages = {} } = {}) {
     let res;
     try {
       res = await fetch(url(path), {
@@ -35,11 +35,13 @@ window.LQQuizApi = (function () {
       /* leere Antwort (204) */
     }
     if (!res.ok) {
-      const message = MESSAGES[res.status] || (data && data.error) || 'Das hat nicht geklappt. Bitte erneut versuchen.';
+      const message = messages[res.status] || MESSAGES[res.status] || (data && data.error) || 'Das hat nicht geklappt. Bitte erneut versuchen.';
       throw Object.assign(new Error(message), { status: res.status });
     }
     return data;
   }
+
+  const RESULT_GONE = 'Dieses Ergebnis gibt es nicht mehr. Es wurde gelöscht oder die Löschfrist ist abgelaufen.';
 
   // Nur die Felder, die der Server speichert
   const body = (quiz) => ({ title: quiz.title, questions: quiz.questions });
@@ -60,6 +62,18 @@ window.LQQuizApi = (function () {
     // items: [{ localId?, title, questions }]; Antwort { imported, skipped, invalid }
     async importMany(items) {
       return call('quizzes/import', { method: 'POST', body: { quizzes: items } });
+    },
+    // Ergebnisse vergangener Live-Spiele (gelöscht nach der Löschfrist des Servers)
+    results: {
+      async list() {
+        return call('results');
+      },
+      async get(id) {
+        return (await call(`results/${encodeURIComponent(id)}`, { messages: { 404: RESULT_GONE } })).result;
+      },
+      async remove(id) {
+        await call(`results/${encodeURIComponent(id)}`, { method: 'DELETE', messages: { 404: RESULT_GONE } });
+      },
     },
   };
 })();

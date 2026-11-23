@@ -132,6 +132,8 @@ dev/avatar/             Teile-Bogen der Avatare; neu erzeugen mit python3 dev/av
 test/                   Tests (node:test)
 server/                 Spielserver: Fastify, WebSocket (ws), PostgreSQL (Drizzle)
   src/games/            Spiele verwalten, sichern, wiederherstellen; WebSocket-Zugang
+  src/results.js        Ergebnisse vergangener Live-Spiele (aus dem gesicherten Endstand)
+  seiten/               Seiten nur für den Serverbetrieb (Datenschutzerklärung)
   drizzle/              Datenbank-Migrationen (erzeugt, eingecheckt)
   scripts/lasttest.js   viele Spiele mit simulierten Handys gleichzeitig
 deploy/                 Docker Compose mit Caddy und PostgreSQL, Betriebsanleitung

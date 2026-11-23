@@ -1,7 +1,7 @@
 'use strict';
 
 (function () {
-  const { APP_NAME, LETTERS, h, avatar, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, toCsv, download, keepAwake } = window.LQ;
+  const { APP_NAME, LETTERS, h, avatar, num, optionTile, startTimer, reducedMotion, countUp, pulse, awardTitle, awardDetail, awardColor, flameIcon, doubleBadge, store, toast, announce, reportCsv, download, keepAwake } = window.LQ;
   const FX = window.LQFX;
   const local = store('local');
   const session = store('session');
@@ -75,7 +75,12 @@
     return (
       String(text)
         .toLowerCase()
+        .replace(/ä/g, 'ae')
+        .replace(/ö/g, 'oe')
+        .replace(/ü/g, 'ue')
+        .replace(/ß/g, 'ss')
         .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
         .slice(0, 40) || 'quiz'
@@ -441,7 +446,7 @@
         { class: 'bar' },
         h('span', { class: 'wordmark', text: APP_NAME }),
         h('span', { class: 'bar__info', text: 'Spielleitung' }),
-        h('div', { class: 'bar__actions' }, accountButton(), h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Importieren', title: 'Quiz-Datei (JSON) importieren', onclick: () => fileInput.click() }), fileInput),
+        h('div', { class: 'bar__actions' }, resultsButton(), accountButton(), h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Importieren', title: 'Quiz-Datei (JSON) importieren', onclick: () => fileInput.click() }), fileInput),
       ),
       h(
         'main',
@@ -459,6 +464,7 @@
         })() : null,
         loading ? null : h('ul', { class: 'quiz-grid', 'aria-label': 'Deine Quizze' }, tiles),
         h('p', { class: 'home__note', text: libraryNote() }),
+        h('nav', { class: 'home__legal', 'aria-label': 'Rechtliches' }, h('a', { class: 'legal-link', href: '../impressum/', text: 'Impressum' }), h('a', { class: 'legal-link', href: '../datenschutz/', text: 'Datenschutz' })),
       ),
     );
   }
@@ -832,8 +838,9 @@
       : h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Anmelden', onclick: () => renderLogin() });
   }
 
-  function accountView(...children) {
-    mode = 'account';
+  // Helle Arbeitsansicht (Konto, Ergebnisse) mit Leiste; nav: weitere Knöpfe vor „Zur Übersicht“
+  function workView(viewMode, { nav = [], cls = '' } = {}, ...children) {
+    mode = viewMode;
     renderedKey = '';
     stopTimer();
     stopMailWatch();
@@ -844,10 +851,14 @@
         'header',
         { class: 'bar bar--ink' },
         h('span', { class: 'wordmark', text: APP_NAME }),
-        h('div', { class: 'bar__actions' }, h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Zur Übersicht', onclick: () => renderLibrary() })),
+        h('div', { class: 'bar__actions' }, ...nav, h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Zur Übersicht', onclick: () => renderLibrary() })),
       ),
-      h('main', { class: 'work account' }, ...children),
+      h('main', { class: `work ${cls}`.trim() }, ...children),
     );
+  }
+
+  function accountView(...children) {
+    workView('account', { cls: 'account' }, ...children);
   }
 
   const looksLikeEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -896,10 +907,12 @@
       passkeyBlock = h('section', { class: 'account-alt', 'aria-label': 'Passkey' }, h('p', { class: 'hint', text: 'Schon einen Passkey für leaqizz auf diesem Gerät?' }), passkeyBtn);
     }
 
+    const privacy = h('p', { class: 'hint' }, 'Wir speichern deine E-Mail-Adresse für dein Konto und schicken dir nur Anmeldelinks. ', h('a', { href: '../datenschutz/', text: 'Mehr zum Datenschutz' }));
     accountView(
       h('h1', { text: 'Anmelden' }),
       h('p', { class: 'hint', text: reason === 'live' ? 'Für Live-Spiele brauchst du ein Konto. Ein Link per Mail genügt, ein Passwort gibt es nicht.' : 'Ein Link per Mail genügt, ein Passwort gibt es nicht.' }),
       form,
+      privacy,
       passkeyBlock,
     );
     input.focus();
@@ -1061,13 +1074,213 @@
         'ul',
         { class: 'account-list' },
         h('li', { text: 'alle Quizze in deinem Konto' }),
-        h('li', { text: 'alle Spiele samt Spielnamen und Antworten; laufende Spiele werden beendet' }),
+        h('li', { text: 'alle Spiele und Ergebnisse samt Spielnamen und Antworten; laufende Spiele werden beendet' }),
         h('li', { text: 'deine Passkeys und Anmeldungen' }),
       ),
       h('p', { class: 'hint', text: 'Vorher sichern: „Daten herunterladen“ im Konto oder einzelne Quizze exportieren. Den Passkey auf deinem Gerät kannst du danach in den Einstellungen des Geräts entfernen.' }),
       form,
     );
     input.focus();
+  }
+
+  // ---------- Ansicht: Ergebnisse vergangener Live-Spiele (nur mit eigenem Server) ----------
+  // Der Server liest sie aus dem gesicherten Endstand und löscht sie mit dem Spiel nach der Löschfrist.
+
+  const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeFmt = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const playedAt = (r) => `${dateFmt.format(new Date(r.createdAt))} um ${timeFmt.format(new Date(r.createdAt))} Uhr`;
+  const people = (n) => `${n} ${n === 1 ? 'Person' : 'Personen'}`;
+  const questionsOf = (r) => `${r.played} von ${r.questionCount} ${r.questionCount === 1 ? 'Frage' : 'Fragen'}`;
+  const seconds = (ms) => (ms / 1000).toFixed(1).replace('.', ',');
+
+  function resultsButton() {
+    if (!onServer()) return null;
+    return h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Ergebnisse', onclick: () => renderResults() });
+  }
+
+  function resultState(r) {
+    if (r.running) return 'Die Leinwand ist noch geöffnet. Die Löschfrist beginnt, wenn du das Spiel schließt.';
+    const gone = `Wird am ${dateFmt.format(new Date(r.deleteAt))} gelöscht.`;
+    return r.complete ? gone : `Vorzeitig beendet. ${gone}`;
+  }
+
+  // Laden gescheitert: Grund nennen, erneut versuchen. Abgelaufene Anmeldung führt zur Anmeldung.
+  function resultsFailed(err, retry) {
+    if (err.status === 401) {
+      me = null;
+      serverQuizzes = null;
+      renderLogin({ error: err.message });
+      return null;
+    }
+    return h(
+      'div',
+      { class: 'results-status', role: 'alert' },
+      h('p', { text: err.message }),
+      h('div', { class: 'actions' }, h('button', { class: 'btn btn--quiet', type: 'button', text: 'Erneut versuchen', onclick: retry })),
+    );
+  }
+
+  async function deleteResult(r, after) {
+    const running = r.running ? ' Das Spiel ist noch geöffnet und wird dabei beendet.' : '';
+    if (!window.confirm(`Ergebnis „${r.title}“ vom ${dateFmt.format(new Date(r.createdAt))} endgültig löschen? Spielnamen und Antworten sind danach weg.${running}`)) return;
+    try {
+      await QuizApi.results.remove(r.id);
+    } catch (err) {
+      toast(err.message);
+      if (err.status === 401 || err.status === 404) after();
+      return;
+    }
+    toast('Ergebnis gelöscht.');
+    after();
+  }
+
+  async function renderResults() {
+    if (!onServer()) return renderLogin();
+    const status = h('p', { class: 'hint', role: 'status', text: 'Ergebnisse werden geladen …' });
+    workView('results', { cls: 'results' }, h('h1', { text: 'Ergebnisse' }), status);
+    let data;
+    try {
+      data = await QuizApi.results.list();
+    } catch (err) {
+      if (mode !== 'results') return;
+      const failed = resultsFailed(err, () => renderResults());
+      if (failed) status.replaceWith(failed);
+      return;
+    }
+    if (mode !== 'results') return;
+    const items = data.results.map((r, i) => {
+      const titleId = `result-${i}-title`;
+      return h(
+        'li',
+        { class: 'result-item' },
+        h('h2', { class: 'result-item__title', id: titleId, text: r.title || 'Ohne Titel' }),
+        h('p', { text: `Gespielt am ${playedAt(r)}. ${people(r.players)}, ${questionsOf(r)}.` }),
+        h('p', { class: 'hint', text: resultState(r) }),
+        h(
+          'div',
+          { class: 'actions' },
+          h('button', { class: 'btn btn--quiet btn--small', type: 'button', text: 'Auswertung ansehen', 'aria-describedby': titleId, onclick: () => renderResult(r.id) }),
+          h('button', {
+            class: 'btn btn--link',
+            type: 'button',
+            text: 'Löschen',
+            'aria-label': `Ergebnis „${r.title}“ vom ${dateFmt.format(new Date(r.createdAt))} löschen`,
+            onclick: () => deleteResult(r, () => renderResults()),
+          }),
+        ),
+      );
+    });
+    status.replaceWith(
+      h('p', { class: 'hint', text: `Hier stehen die Ergebnisse deiner Live-Spiele. Sie werden ${data.retentionDays} Tage nach Spielende gelöscht, mit allen Spielnamen und Antworten. Brauchst du sie länger, lade die CSV-Datei herunter. Demos werden nicht gespeichert.` }),
+      items.length
+        ? h('ul', { class: 'result-list', 'aria-label': 'Deine Ergebnisse' }, items)
+        : h('p', { class: 'results-empty', text: 'Noch keine Ergebnisse. Sobald du ein Live-Spiel mit mindestens einer Frage gespielt hast, steht es hier.' }),
+    );
+  }
+
+  async function renderResult(id) {
+    if (!onServer()) return renderLogin();
+    const allResults = h('button', { class: 'btn btn--small btn--quiet', type: 'button', text: 'Alle Ergebnisse', onclick: () => renderResults() });
+    const status = h('p', { class: 'hint', role: 'status', text: 'Auswertung wird geladen …' });
+    workView('results', { nav: [allResults], cls: 'results' }, h('h1', { text: 'Auswertung' }), status);
+    let r;
+    try {
+      r = await QuizApi.results.get(id);
+    } catch (err) {
+      if (mode !== 'results') return;
+      const failed = resultsFailed(err, () => renderResult(id));
+      if (failed) status.replaceWith(failed);
+      return;
+    }
+    if (mode !== 'results') return;
+
+    const ranking = h(
+      'section',
+      { class: 'result-section', 'aria-labelledby': 'ranking-title' },
+      h('h2', { id: 'ranking-title', text: 'Rangliste' }),
+      h(
+        'div',
+        { class: 'table-wrap' },
+        h(
+          'table',
+          { class: 'result-table' },
+          h('thead', null, h('tr', null, h('th', { scope: 'col', class: 'result-table__rank', text: 'Platz' }), h('th', { scope: 'col', text: 'Spielname' }), h('th', { scope: 'col', class: 'result-table__n', text: 'Punkte' }), h('th', { scope: 'col', class: 'result-table__n', text: 'Richtig' }))),
+          h(
+            'tbody',
+            null,
+            r.players.map((p) =>
+              h(
+                'tr',
+                null,
+                h('td', { class: 'result-table__rank num', text: `${p.rank}.` }),
+                h('th', { scope: 'row', class: 'result-table__name' }, h('span', { class: 'result-table__who' }, avatar(p.avatar, p.nickname, 'result-table__pic'), h('span', { text: p.nickname }))),
+                h('td', { class: 'result-table__n num', text: num(p.score) }),
+                h('td', { class: 'result-table__n', text: `${p.correctCount} von ${r.played}` }),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    const questions = r.questions.map((q, i) => {
+      const s = r.stats[i];
+      const total = r.players.length;
+      const missing = total - s.answered;
+      const max = Math.max(1, ...s.counts);
+      const bars = q.options.map((text, k) => {
+        const isRight = q.correct.includes(k);
+        const fill = h('span', { class: 'rbar__fill' });
+        fill.style.width = `${(s.counts[k] / max) * 100}%`;
+        return h(
+          'li',
+          { class: `rbar${isRight ? ' is-right' : ''}`, dataset: { i: String(k) } },
+          h('span', { class: 'rbar__letter', 'aria-hidden': 'true', text: LETTERS[k] }),
+          h('span', { class: 'rbar__text' }, h('span', { class: 'visually-hidden', text: `Antwort ${LETTERS[k]}: ` }), text, isRight ? [' ', h('span', { class: 'rbar__right', text: 'richtig' })] : null),
+          h('span', { class: 'rbar__track', 'aria-hidden': 'true' }, fill),
+          h('span', { class: 'rbar__count num' }, String(s.counts[k]), h('span', { class: 'visually-hidden', text: s.counts[k] === 1 ? ' Antwort' : ' Antworten' })),
+        );
+      });
+      const summary = [`${s.correct} von ${people(total)} richtig`];
+      if (missing) summary.push(`${missing} ohne Antwort`);
+      let line = `${summary.join(', ')}.`;
+      if (s.avgMs !== null) line += ` Im Schnitt ${seconds(s.avgMs)} Sekunden.`;
+      if (q.double) line += ' Doppelte Punkte.';
+      return h(
+        'li',
+        { class: 'result-q' },
+        h('h3', { class: 'result-q__title' }, h('span', { class: 'result-q__no', text: `Frage ${i + 1}` }), h('span', { text: q.text })),
+        h('p', { class: 'hint', text: line }),
+        h('ol', { class: 'rbars', 'aria-label': `Verteilung der Antworten zu Frage ${i + 1}` }, bars),
+      );
+    });
+
+    const awards = r.awards.length
+      ? h(
+          'section',
+          { class: 'result-section', 'aria-labelledby': 'awards-title' },
+          h('h2', { id: 'awards-title', text: 'Auszeichnungen' }),
+          h(
+            'ul',
+            { class: 'result-awards' },
+            r.awards.map((a) => h('li', null, h('strong', { text: `${awardTitle(a.key)}: ` }), `${a.winners.join(', ')}. ${awardDetail(a)}.`)),
+          ),
+        )
+      : null;
+
+    const csv = h('button', { class: 'btn btn--quiet', type: 'button', text: 'CSV herunterladen', onclick: () => exportCsv(r, r.createdAt) });
+    const remove = h('button', { class: 'btn btn--danger', type: 'button', text: 'Ergebnis löschen …', onclick: () => deleteResult(r, () => renderResults()) });
+    workView(
+      'results',
+      { nav: [allResults], cls: 'results' },
+      h('h1', { text: r.title || 'Ohne Titel' }),
+      h('p', { class: 'lead', text: `Gespielt am ${playedAt(r)}` }),
+      h('p', { class: 'hint', text: `${people(r.players.length)}, ${questionsOf(r)}. ${resultState(r)}` }),
+      h('div', { class: 'actions' }, csv, remove),
+      ranking,
+      h('section', { class: 'result-section', 'aria-labelledby': 'questions-title' }, h('h2', { id: 'questions-title', text: 'Fragen' }), h('ol', { class: 'result-questions' }, questions)),
+      awards,
+    );
   }
 
   // ---------- Spiel starten und fortsetzen ----------
@@ -1798,21 +2011,10 @@
     keepAwake(false);
   }
 
-  function exportCsv(report) {
+  function exportCsv(report, when = new Date()) {
     if (!report) return;
-    const head = ['Platz', 'Spielname', 'Punkte', 'Richtige Antworten'];
-    report.questions.forEach((_, i) => head.push(`F${i + 1} Antwort`, `F${i + 1} richtig`, `F${i + 1} Sekunden`, `F${i + 1} Punkte`));
-    const rows = [head];
-    for (const p of report.players) {
-      const row = [p.rank, p.nickname, p.score, p.correctCount];
-      p.answers.forEach((a, i) => {
-        if (!a) row.push('–', 'nein', '', 0);
-        else row.push(`${LETTERS[a.choice]}: ${report.questions[i].options[a.choice]}`, a.correct ? 'ja' : 'nein', (a.elapsedMs / 1000).toFixed(1).replace('.', ','), a.points);
-      });
-      rows.push(row);
-    }
-    const date = new Date().toISOString().slice(0, 10);
-    download(`${slug(report.title)}-${date}.csv`, toCsv(rows), 'text/csv;charset=utf-8');
+    const date = new Date(when).toISOString().slice(0, 10);
+    download(`${slug(report.title)}-${date}.csv`, reportCsv(report), 'text/csv;charset=utf-8');
   }
 
   // Präsentations-Fernbedienungen senden Pfeil rechts / Bild runter.

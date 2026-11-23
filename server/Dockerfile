@@ -14,10 +14,11 @@ COPY --from=deps /app/server/node_modules server/node_modules
 COPY server/package.json server/
 COPY server/src server/src
 COPY server/drizzle server/drizzle
+COPY server/seiten server/seiten
 COPY public public
 # Versionsnummer an CSS/JS hängen, damit Browser nach jedem Update die neuen Dateien laden
 ARG VERSION=dev
-RUN find public -name '*.html' -exec sed -i "s/?v=dev/?v=${VERSION}/g" {} + && rm -rf public/__snap
+RUN find public server/seiten -name '*.html' -exec sed -i "s/?v=dev/?v=${VERSION}/g" {} + && rm -rf public/__snap
 USER node
 WORKDIR /app/server
 EXPOSE 3000

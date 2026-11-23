@@ -66,7 +66,9 @@ einem echten Hetzner-Server (erst mit der Bestellung möglich).
 ## Noch offen (Phase 1)
 
 - Sicherung der Datenbank außer Haus (restic; Ziel noch offen), Überwachung von außen
-- Datenschutzerklärung für den Serverbetrieb
+- Datenschutzerklärung prüfen lassen: Der Server zeigt unter `/datenschutz/` die Fassung für den
+  Serverbetrieb (`server/seiten/datenschutz.html`, Entwurf), GitHub Pages weiter `public/datenschutz/`.
+  Nach der Bestellung den Standort des Servers eintragen; sobald Sicherungen laufen, Ort und Frist ergänzen.
 
 ## Einstellungen (Umgebungsvariablen des Dienstes `app`)
 
@@ -79,7 +81,7 @@ einem echten Hetzner-Server (erst mit der Bestellung möglich).
 | `BETTER_AUTH_SECRET` | Schlüssel für Anmeldesitzungen (mind. 32 Zeichen); ändern meldet alle ab | Pflicht |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | Mailversand der Anmeldelinks | Pflicht (lokal ohne: Links im Log) |
 | `LEAQIZ_SPIEL_LEERLAUF_MIN` | Spiel ohne Leinwand und Aktivität endet nach … Minuten | 120 |
-| `LEAQIZ_LOESCHFRIST_TAGE` | beendete Spiele samt Spielnamen und Antworten löschen nach … Tagen | 30 |
+| `LEAQIZ_LOESCHFRIST_TAGE` | beendete Spiele und ihre Ergebnisse samt Spielnamen und Antworten löschen nach … Tagen (steht auch in der Datenschutzerklärung) | 30 |
 | `LEAQIZ_GRENZE_VERBINDUNGEN_MINUTE` | neue Verbindungen je IP und Minute (eine Schule teilt sich oft eine IP) | 300 |
 | `LEAQIZ_GRENZE_FALSCHE_PIN_MINUTE` | falsche PINs je IP und Minute | 30 |
 | `LEAQIZ_GRENZE_SPIELE_STUNDE` | neue Spiele je IP und Stunde | 60 |

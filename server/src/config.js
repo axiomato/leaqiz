@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PUBLIC = path.resolve(HERE, '..', '..', 'public');
+const DEFAULT_PAGES = path.resolve(HERE, '..', 'seiten');
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 export class ConfigError extends Error {
@@ -89,6 +90,8 @@ export function loadConfig(env = process.env) {
       ? { host: smtpHost, port: smtpPort, user: env.SMTP_USER, pass: env.SMTP_PASS, from: mailFrom }
       : null,
     publicDir: env.LEAQIZ_PUBLIC_DIR ? path.resolve(env.LEAQIZ_PUBLIC_DIR) : DEFAULT_PUBLIC,
+    // Seiten nur für den Serverbetrieb (Datenschutzerklärung)
+    pagesDir: DEFAULT_PAGES,
     // Spiele ohne Leinwand und ohne Aktivität werden nach dieser Zeit beendet
     gameIdleMs: int(env, 'LEAQIZ_SPIEL_LEERLAUF_MIN', 120, { min: 5, max: 24 * 60 }, problems) * 60_000,
     // Beendete Spiele (mit Spielnamen und Antworten) werden nach dieser Frist gelöscht

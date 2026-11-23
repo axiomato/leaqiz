@@ -1,5 +1,6 @@
 // Start: Konfiguration prüfen, Datenbank migrieren, Spiele wiederherstellen, Server öffnen.
 import { buildApp } from './app.js';
+import { startCleanup } from './cleanup.js';
 import { createAuth } from './auth.js';
 import { createMailer } from './mail.js';
 import { ConfigError, loadConfig } from './config.js';
@@ -35,6 +36,7 @@ const app = await buildApp({ config, registry, db, auth, log: { level: process.e
 const gateway = attachGateway({ server: app.server, registry, config, log: app.log, limits: config.limits });
 await app.listen({ port: config.port, host: config.host });
 registry.startSweep();
+const stopCleanup = startCleanup(db.db, app.log);
 app.log.info(`leaqizz-Server bereit unter ${config.origin} (${restored} Spiele wiederhergestellt)`);
 
 // Herunterfahren (z. B. bei einem Update): Spielstände sichern, Spiele laufen nach dem Neustart weiter
@@ -46,6 +48,7 @@ async function shutdown(signal) {
   const force = setTimeout(() => process.exit(1), 10_000);
   force.unref();
   try {
+    stopCleanup();
     await registry.flush();
     gateway.close();
     await new Promise((r) => setTimeout(r, 100));

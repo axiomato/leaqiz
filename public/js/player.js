@@ -162,7 +162,9 @@
         h('p', { class: 'hint', text: 'Die PIN steht auf der großen Leinwand.' }),
         form,
         error,
-        h('a', { class: 'btn btn--quiet', href: 'check/', text: 'Verbindung testen' }),
+        // Der Verbindungstest prüft die Direktverbindung; mit eigenem Server laufen Spiele darüber nicht
+        window.LQNet.serverMode() ? null : h('a', { class: 'btn btn--quiet', href: 'check/', text: 'Verbindung testen' }),
+        h('a', { class: 'legal-link', href: 'datenschutz/', text: 'Datenschutz' }),
       ),
     );
     input.focus();

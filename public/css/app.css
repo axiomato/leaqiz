@@ -1245,6 +1245,7 @@ textarea.input {
   font-stretch: var(--wide);
   font-weight: 850;
   line-height: 1.1;
+  text-wrap: balance;
 }
 
 .work > .hint {
@@ -1308,6 +1309,235 @@ textarea.input {
 }
 
 .account-list {
+  display: grid;
+  gap: var(--s-1);
+  padding-left: 1.2em;
+  list-style: disc;
+}
+
+/* ---------- Ergebnisse vergangener Live-Spiele (nur mit eigenem Server) ---------- */
+
+.results {
+  max-width: 48rem;
+}
+
+.result-list,
+.result-questions {
+  display: grid;
+  gap: var(--s-3);
+  padding: 0;
+  list-style: none;
+}
+
+.result-item {
+  display: grid;
+  gap: var(--s-1);
+  justify-items: start;
+  padding-top: var(--s-3);
+  border-top: 2px solid var(--line);
+}
+
+.result-item__title {
+  font-size: var(--t-1);
+  font-weight: 850;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.result-item .actions {
+  margin-top: var(--s-1);
+}
+
+.results-status {
+  display: grid;
+  gap: var(--s-2);
+  justify-items: start;
+  color: var(--error);
+  font-weight: 700;
+}
+
+.results-empty {
+  padding: var(--s-3);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius-s);
+  color: var(--muted);
+}
+
+.result-section {
+  display: grid;
+  gap: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 2px solid var(--line);
+}
+
+/* Rangliste: Zahlen rechtsbündig und gleich breit, Zeilen durch Linien getrennt */
+.table-wrap {
+  overflow-x: auto;
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.result-table th,
+.result-table td {
+  padding: var(--s-1) var(--s-1);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.result-table thead th {
+  color: var(--muted);
+  font-size: var(--t--1);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.result-table__rank {
+  width: 4rem;
+}
+
+.result-table .result-table__n {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.result-table__name {
+  font-weight: 700;
+}
+
+/* Flex im Inhalt, nicht an der Zelle: sonst verliert die Zeile ihre Tabellen-Ausrichtung */
+.result-table__who {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  overflow-wrap: anywhere;
+}
+
+.result-table__pic {
+  width: 2rem;
+  height: 2rem;
+}
+
+/* Fragen: Verteilung der Antworten, Buchstabe und Farbe der Antwort, „richtig“ als Text */
+.result-q {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.result-q + .result-q {
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--line);
+}
+
+.result-q__title {
+  display: grid;
+  gap: 0.25rem;
+  font-size: var(--t-0);
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.result-q__no {
+  color: var(--muted);
+  font-size: var(--t--1);
+  font-weight: 700;
+}
+
+.rbars {
+  display: grid;
+  gap: var(--s-1);
+  padding: 0;
+  list-style: none;
+}
+
+.rbar {
+  --c: var(--opt-0);
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) 3rem;
+  grid-template-areas:
+    'letter text count'
+    'letter track count';
+  column-gap: var(--s-1);
+  row-gap: 0.25rem;
+  align-items: center;
+}
+
+.rbar[data-i='1'] {
+  --c: var(--opt-1);
+}
+.rbar[data-i='2'] {
+  --c: var(--opt-2);
+}
+.rbar[data-i='3'] {
+  --c: var(--opt-3);
+}
+
+.rbar__letter {
+  grid-area: letter;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--c);
+  border-radius: 50%;
+  color: var(--c);
+  font-stretch: var(--wide);
+  font-weight: 850;
+}
+
+.rbar.is-right .rbar__letter {
+  background: var(--c);
+  color: #fff;
+}
+
+.rbar__text {
+  grid-area: text;
+  overflow-wrap: anywhere;
+}
+
+.rbar__right {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0 0.4em;
+  border-radius: 4px;
+  background: var(--ink);
+  color: #fff;
+  font-size: var(--t--1);
+  font-weight: 700;
+  vertical-align: 0.1em;
+}
+
+.rbar__track {
+  grid-area: track;
+  height: 0.5rem;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.rbar__fill {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: var(--c);
+  opacity: 0.45;
+}
+
+.rbar.is-right .rbar__fill {
+  opacity: 1;
+}
+
+.rbar__count {
+  grid-area: count;
+  justify-self: end;
+  font-size: var(--t-1);
+}
+
+.result-awards {
   display: grid;
   gap: var(--s-1);
   padding-left: 1.2em;
@@ -1468,6 +1698,30 @@ textarea.input {
   max-width: 48ch;
   color: var(--muted);
   line-height: 1.5;
+}
+
+/* Impressum und Datenschutz: leise, aber als Link erkennbar und gut antippbar */
+.home__legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+.legal-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--muted-on-dark);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.legal-link:hover {
+  color: #fff;
+}
+
+.screen__center > .legal-link {
+  justify-self: center;
 }
 
 /* Laden der Quizze aus dem Konto, oder Fehler mit „Erneut versuchen“ */
@@ -2747,6 +3001,14 @@ html.embedded .screen__top {
   .reveal {
     grid-template-columns: 1fr;
   }
+  /* Lange Titel (z. B. Quiz-Titel in der Auswertung) passen auf schmale Bildschirme */
+  .work h1 {
+    font-size: var(--t-3);
+    font-stretch: 100%;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
   .editor__inner,
   .savebar__inner {
     width: min(100% - 2 * var(--s-2), 50rem);
@@ -2826,7 +3088,14 @@ html.embedded .screen__top {
   .host .bar__fs {
     display: none;
   }
+  /* Mehr Knöpfe als Platz (Ergebnisse, Konto, Importieren): in die nächste Zeile umbrechen */
+  .host .bar {
+    flex-wrap: wrap;
+    row-gap: var(--s-1);
+  }
   .host .bar__actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: var(--s-1);
   }
   .host .bar .btn--small {
