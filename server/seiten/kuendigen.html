@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
     <meta name="referrer" content="no-referrer" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>Abo kündigen | leaqizz</title>
+    <title>Vertrag kündigen | leaqizz</title>
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="../css/landing.css?v=dev" />
   </head>
@@ -19,14 +19,14 @@
       </div>
     </header>
     <main class="legal wrap">
-      <h1>Abo kündigen</h1>
-      <p>Hier kündigst du dein leaqizz Abo. Eine Anmeldung brauchst du nicht.</p>
+      <h1>Vertrag kündigen</h1>
+      <p>Hier kündigst du dein leaqizz Monatsabo oder deinen Jahrespass. Eine Anmeldung brauchst du nicht. Der Jahrespass endet ohnehin nach zwölf Monaten; kündigen musst du ihn nur aus wichtigem Grund.</p>
       <noscript><p class="draft">Für dieses Formular braucht der Browser JavaScript. Ohne JavaScript erreichst du uns per Mail an <a href="mailto:info@uwebrandt.net">info@uwebrandt.net</a>.</p></noscript>
       <form class="vform" id="vertrag-form" data-art="kuendigen" novalidate>
         <label class="vform__field" for="v-name">Name <input id="v-name" name="name" type="text" autocomplete="name" required aria-describedby="v-fehler" /></label>
         <div class="vform__field">
           <label for="v-email">E-Mail-Adresse</label>
-          <span class="vform__hint" id="v-email-hinweis">Die Adresse, mit der du das Abo abgeschlossen hast. Dorthin schicken wir die Bestätigung.</span>
+          <span class="vform__hint" id="v-email-hinweis">Die Adresse, mit der du den Vertrag abgeschlossen hast. Dorthin schicken wir die Bestätigung.</span>
           <input id="v-email" name="email" type="email" autocomplete="email" inputmode="email" required aria-describedby="v-email-hinweis v-fehler" />
         </div>
         <div class="vform__field">
@@ -41,7 +41,7 @@
         </fieldset>
         <label class="vform__field" for="v-grund" id="v-grund-feld" hidden>Grund <textarea id="v-grund" name="grund" aria-describedby="v-fehler"></textarea></label>
         <fieldset>
-          <legend>Wann soll das Abo enden?</legend>
+          <legend>Wann soll der Vertrag enden?</legend>
           <label class="vform__choice"><input type="radio" name="wann" value="naechstmoeglich" checked /> Zum nächstmöglichen Zeitpunkt</label>
           <label class="vform__choice"><input type="radio" name="wann" value="datum" /> Zu einem späteren Datum</label>
         </fieldset>
@@ -52,7 +52,7 @@
       <section class="beleg" id="beleg" hidden tabindex="-1" aria-labelledby="beleg-title">
         <h2 id="beleg-title">Deine Kündigung ist eingegangen</h2>
         <dl id="beleg-daten"></dl>
-        <p class="vform__hint">Ist zu deiner E-Mail-Adresse ein Abo hinterlegt, bekommst du diese Bestätigung mit dem Datum, an dem das Abo endet, auch per Mail.</p>
+        <p class="vform__hint">Ist zu deiner E-Mail-Adresse ein Vertrag hinterlegt, bekommst du diese Bestätigung mit dem Datum, an dem er endet, auch per Mail.</p>
         <div class="vform__actions no-print">
           <button class="btn btn--ghost" type="button" id="beleg-speichern">Bestätigung speichern</button>
           <button class="btn btn--ghost" type="button" id="beleg-drucken">Drucken</button>

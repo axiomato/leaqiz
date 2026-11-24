@@ -69,17 +69,24 @@ export const subscription = pgTable(
     email: text('email').notNull(),
     provider: text('provider').notNull(),
     providerId: text('provider_id'),
+    // Tarif (src/billing/angebot.js): monat = Monatsabo, jahr = Jahrespass
+    plan: text('plan').notNull().default('monat'),
     // pending, active, cancelled, suspended, expired, withdrawn
     status: text('status').notNull(),
     // Zustimmung zum sofortigen Beginn vor Ablauf der Widerrufsfrist (Wertersatz bei Widerruf)
     immediateStart: boolean('immediate_start').notNull().default(false),
+    // Vertragsschluss (bezahlt bzw. beim Zahlungsanbieter aktiv); Widerrufsfrist läuft ab hier
+    concludedAt: timestamp('concluded_at', { withTimezone: true }),
+    // Beginn des Zugangs; beim verlängerten Jahrespass erst am Ende des vorigen
     startedAt: timestamp('started_at', { withTimezone: true }),
-    firstTermEnd: timestamp('first_term_end', { withTimezone: true }),
+    // Monatsabo: bezahlt bis (nächste Abbuchung)
     currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
     cancelRequestedAt: timestamp('cancel_requested_at', { withTimezone: true }),
-    // Zugang endet zu diesem Zeitpunkt (Kündigung, Widerruf, Konto gelöscht)
+    // Zugang endet zu diesem Zeitpunkt (Ende des Jahrespasses, Kündigung, Widerruf, Konto gelöscht)
     endsAt: timestamp('ends_at', { withTimezone: true }),
     withdrawnAt: timestamp('withdrawn_at', { withTimezone: true }),
+    // Jahrespass: Erinnerung vor dem Ende verschickt
+    reminderSentAt: timestamp('reminder_sent_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

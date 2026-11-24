@@ -9,12 +9,12 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#121826" />
     <title>Preise | leaqizz</title>
-    <meta name="description" content="leaqizz kostenlos ausprobieren: Quizze bauen und die Demo spielen. Live mit den Handys der Klasse im Abo für 3,99 € im Monat." />
+    <meta name="description" content="leaqizz kostenlos ausprobieren: Quizze bauen und die Demo spielen. Live mit den Handys der Klasse im Monatsabo für 4,99 € oder im Jahrespass für 47,88 €." />
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
     <link rel="preload" href="../fonts/archivo-wdth.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="../css/landing.css?v=dev" />
   </head>
-  <!-- Preise (D-58). Beträge stehen in server/src/billing/angebot.js; server/test/preise.test.js prüft, dass diese Seite dieselben nennt.
+  <!-- Preise (D-58 bis D-60). Beträge stehen in server/src/billing/angebot.js; server/test/preise.test.js prüft, dass diese Seite dieselben nennt.
        Ohne Server oder ohne eingeschaltetes Abo zeigt die Seite eine Vorschau (js/preise.js). -->
   <body class="lp">
     <a class="skip" href="#main">Zum Inhalt springen</a>
@@ -33,13 +33,13 @@
       <section class="prices tone-ink" aria-labelledby="prices-title">
         <div class="wrap">
           <h1 class="h1 prices__title" id="prices-title">Ausprobieren kostet nichts.</h1>
-          <p class="lead prices__lead">Quizze bauen und die Demo spielen ist kostenlos. Für Runden mit den Handys deiner Klasse brauchst du das Abo.</p>
-          <p class="prices__preview" id="preise-vorschau">Vorschau: So sieht das Abo aus, sobald leaqizz auf leaqizz.com startet. Bis dahin ist alles kostenlos.</p>
+          <p class="lead prices__lead">Quizze bauen und die Demo spielen ist kostenlos. Für Runden mit den Handys deiner Klasse wählst du das Monatsabo oder den Jahrespass.</p>
+          <p class="prices__preview" id="preise-vorschau">Vorschau: So sehen die Tarife aus, sobald leaqizz auf leaqizz.com startet. Bis dahin ist alles kostenlos.</p>
 
           <div class="plans">
             <article class="plan" aria-labelledby="plan-free">
               <h2 class="plan__name" id="plan-free">Kostenlos</h2>
-              <p class="plan__price"><span class="plan__amount">0 €</span> <span class="plan__unit">dauerhaft</span></p>
+              <p class="plan__price"><span class="plan__amount">0&nbsp;€</span> <span class="plan__unit">dauerhaft</span></p>
               <p class="plan__total">Ohne Zahlungsdaten. Für die Demo brauchst du nicht einmal ein Konto.</p>
               <ul class="checks plan__list">
                 <li>Quizze bauen und bearbeiten</li>
@@ -51,10 +51,10 @@
               </div>
             </article>
 
-            <article class="plan plan--abo" aria-labelledby="plan-abo">
-              <h2 class="plan__name" id="plan-abo">Abo</h2>
-              <p class="plan__price"><span class="plan__amount">3,99 €</span> <span class="plan__unit">im Monat</span></p>
-              <p class="plan__total"><strong>47,88 € für das erste Jahr</strong>, im Voraus bezahlt. Danach monatlich 3,99 €, jederzeit mit einem Monat Frist kündbar. Preise inklusive 19 % Umsatzsteuer.</p>
+            <article class="plan" aria-labelledby="plan-monat">
+              <h2 class="plan__name" id="plan-monat">Monatsabo</h2>
+              <p class="plan__price"><span class="plan__amount">4,99&nbsp;€</span> <span class="plan__unit">im Monat</span></p>
+              <p class="plan__total">Monatlich im Voraus bezahlt. Jederzeit kündbar zum Ende des bezahlten Monats. Inklusive 19&nbsp;% Umsatzsteuer.</p>
               <p class="plan__also">Alles aus „Kostenlos“, dazu:</p>
               <ul class="checks plan__list">
                 <li>Live-Spiele mit den Handys deiner Klasse</li>
@@ -62,8 +62,25 @@
                 <li>Kündigen ohne Anmeldung, über den Link unten auf jeder Seite</li>
               </ul>
               <div class="plan__cta">
-                <a class="btn btn--primary" id="abo-cta" role="link" aria-disabled="true" aria-describedby="abo-cta-note">Abo abschließen</a>
-                <p class="plan__note small" id="abo-cta-note">Startet mit leaqizz.com. Bezahlt wird über PayPal.</p>
+                <a class="btn btn--ghost" id="abo-cta-monat" data-tarif="monat" role="link" aria-disabled="true" aria-describedby="abo-cta-note-monat">Monatsabo abschließen</a>
+                <p class="plan__note small" id="abo-cta-note-monat">Startet mit leaqizz.com. Bezahlt wird über PayPal.</p>
+              </div>
+            </article>
+
+            <article class="plan plan--abo" aria-labelledby="plan-jahr">
+              <p class="plan__badge">20&nbsp;% günstiger als monatlich</p>
+              <h2 class="plan__name" id="plan-jahr">Jahrespass</h2>
+              <p class="plan__price"><span class="plan__amount">47,88&nbsp;€</span> <span class="plan__unit">für 12&nbsp;Monate</span></p>
+              <p class="plan__total"><strong>Entspricht 3,99&nbsp;€ im Monat.</strong> Einmal bezahlt, verlängert sich nicht automatisch. Wir erinnern dich 14 Tage vor dem Ende. Inklusive 19&nbsp;% Umsatzsteuer.</p>
+              <p class="plan__also">Alles aus dem Monatsabo, dazu:</p>
+              <ul class="checks plan__list">
+                <li>Ein Betrag im Jahr statt zwölf Abbuchungen</li>
+                <li>Endet von selbst, Kündigen ist nicht nötig</li>
+                <li>Verlängern schließt nahtlos an</li>
+              </ul>
+              <div class="plan__cta">
+                <a class="btn btn--primary" id="abo-cta-jahr" data-tarif="jahr" role="link" aria-disabled="true" aria-describedby="abo-cta-note-jahr">Jahrespass kaufen</a>
+                <p class="plan__note small" id="abo-cta-note-jahr">Startet mit leaqizz.com. Bezahlt wird über PayPal.</p>
               </div>
             </article>
           </div>
@@ -75,14 +92,15 @@
           <div class="section__head">
             <h2 class="h2" id="compare-title">Im Vergleich</h2>
           </div>
-          <div class="compare-wrap">
+          <div class="compare-wrap" tabindex="0" role="region" aria-labelledby="compare-title">
             <table class="compare">
-              <caption class="visually-hidden">Was in „Kostenlos“ und im Abo enthalten ist</caption>
+              <caption class="visually-hidden">Was in „Kostenlos“, im Monatsabo und im Jahrespass enthalten ist</caption>
               <thead>
                 <tr>
                   <th scope="col"><span class="visually-hidden">Funktion</span></th>
-                  <th scope="col">Kostenlos</th>
-                  <th scope="col">Abo</th>
+                  <th scope="col">Kosten&shy;los</th>
+                  <th scope="col">Monats&shy;abo</th>
+                  <th scope="col">Jahres&shy;pass</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,9 +108,11 @@
                   <th scope="row">Quizze bauen und bearbeiten</th>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                 </tr>
                 <tr>
                   <th scope="row">Quizze im Konto, auf allen Geräten</th>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                 </tr>
@@ -100,31 +120,43 @@
                   <th scope="row">Demo mit acht simulierten Mitspielenden</th>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                 </tr>
                 <tr>
                   <th scope="row">Live-Spiel mit den Handys der Klasse</th>
                   <td><span class="mark mark--no" aria-hidden="true"></span><span class="visually-hidden">nicht enthalten</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                 </tr>
                 <tr>
                   <th scope="row">Ergebnisse 30 Tage im Konto, Export als CSV</th>
                   <td><span class="mark mark--no" aria-hidden="true"></span><span class="visually-hidden">nicht enthalten</span></td>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
-                </tr>
-                <tr>
-                  <th scope="row">Schüler:innen ohne Konto und ohne App</th>
-                  <td><span class="mark mark--none" aria-hidden="true">–</span><span class="visually-hidden">entfällt, die Demo spielt ohne Klasse</span></td>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                 </tr>
                 <tr>
                   <th scope="row">Keine Werbung, kein Tracking</th>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
                   <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Laufzeit</th>
+                  <td class="compare__text">–<span class="visually-hidden"> entfällt</span></td>
+                  <td class="compare__text">monatlich, bis du kündigst</td>
+                  <td class="compare__text">12&nbsp;Monate, endet von selbst</td>
+                </tr>
+                <tr>
+                  <th scope="row">Kündigen</th>
+                  <td class="compare__text">–<span class="visually-hidden"> entfällt</span></td>
+                  <td class="compare__text">zum Ende des bezahlten Monats</td>
+                  <td class="compare__text">nicht nötig</td>
                 </tr>
                 <tr class="compare__price">
                   <th scope="row">Preis</th>
-                  <td>0 €</td>
-                  <td>3,99 € im Monat<span class="compare__sub">erstes Jahr 47,88 € im Voraus</span></td>
+                  <td>0&nbsp;€</td>
+                  <td>4,99&nbsp;€ im Monat</td>
+                  <td>47,88&nbsp;€ für 12&nbsp;Monate<span class="compare__sub">entspricht 3,99&nbsp;€ im Monat</span></td>
                 </tr>
               </tbody>
             </table>
@@ -135,32 +167,36 @@
       <section class="section tone-paper" id="fragen" aria-labelledby="faq-title">
         <div class="wrap">
           <div class="section__head">
-            <h2 class="h2" id="faq-title">Fragen zum Abo</h2>
+            <h2 class="h2" id="faq-title">Fragen zu den Tarifen</h2>
           </div>
           <div class="faq">
             <details>
-              <summary>Warum zahle ich das erste Jahr im Voraus?</summary>
-              <p>So bleibt der Preis bei 3,99 € im Monat. Nach dem ersten Jahr läuft das Abo monatlich weiter, und du kannst jederzeit mit einem Monat Frist kündigen.</p>
+              <summary>Monatsabo oder Jahrespass: Was ist der Unterschied?</summary>
+              <p>Beide schalten dasselbe frei. Das Monatsabo zahlst du jeden Monat und kündigst, wenn du es nicht mehr brauchst. Den Jahrespass zahlst du einmal für zwölf Monate, er ist 20&nbsp;% günstiger und endet von selbst.</p>
+            </details>
+            <details>
+              <summary>Verlängert sich der Jahrespass?</summary>
+              <p>Nein. Wir erinnern dich 14 Tage vor dem Ende per Mail. Kaufst du einen neuen Jahrespass, beginnt er am Tag nach dem Ende des alten. Verlängern kannst du ab 30 Tage vor dem Ende.</p>
             </details>
             <details>
               <summary>Wie kündige ich?</summary>
-              <p>Über „Verträge hier kündigen“ unten auf jeder Seite, ohne Anmeldung. Im ersten Jahr endet das Abo zum Ende des Jahres, danach zum Ende des bezahlten Monats.</p>
+              <p>Über „Verträge hier kündigen“ unten auf jeder Seite, ohne Anmeldung. Das Monatsabo endet zum Ende des bezahlten Monats. Den Jahrespass musst du nicht kündigen.</p>
             </details>
             <details>
               <summary>Kann ich es mir noch anders überlegen?</summary>
-              <p>Ja. Innerhalb von 14 Tagen widerrufst du über „Vertrag widerrufen“, ohne Begründung. Du bekommst dein Geld zurück, abzüglich der Tage, die du es schon genutzt hast.</p>
+              <p>Ja. Innerhalb von 14 Tagen widerrufst du über „Vertrag widerrufen“, ohne Begründung. Du bekommst dein Geld zurück, abzüglich der Tage, die du leaqizz schon genutzt hast.</p>
             </details>
             <details>
               <summary>Wie bezahle ich?</summary>
               <p>Über PayPal. Deine Zahlungsdaten gibst du nur bei PayPal ein, leaqizz sieht sie nicht.</p>
             </details>
             <details>
-              <summary>Was passiert mit meinen Quizzen, wenn das Abo endet?</summary>
+              <summary>Was passiert mit meinen Quizzen, wenn mein Tarif endet?</summary>
               <p>Sie bleiben in deinem Konto. Du kannst sie weiter bearbeiten und die Demo spielen. Nur Live-Spiele startest du dann nicht mehr.</p>
             </details>
             <details>
               <summary>Gibt es Lizenzen für ganze Schulen?</summary>
-              <p>Noch nicht. Das Abo gilt für dich als Lehrkraft.</p>
+              <p>Noch nicht. Monatsabo und Jahrespass gelten für dich als Lehrkraft.</p>
             </details>
           </div>
         </div>

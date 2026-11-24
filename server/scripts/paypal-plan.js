@@ -1,11 +1,10 @@
-// Legt bei PayPal das Produkt und den Abo-Plan an (einmal je Umgebung) und auf Wunsch die Benachrichtigung.
-// Preis und Laufzeit kommen aus src/billing/angebot.js.
+// Legt bei PayPal das Produkt und den Plan für das Monatsabo an (einmal je Umgebung) und auf Wunsch die
+// Benachrichtigung. Der Jahrespass braucht keinen Plan (einmalige Bestellung). Preise aus src/billing/angebot.js.
 //
 //   PAYPAL_UMGEBUNG=sandbox PAYPAL_CLIENT_ID=… PAYPAL_CLIENT_SECRET=… node scripts/paypal-plan.js [--webhook https://leaqizz.com/api/abo/paypal]
 //
-// Ausgabe: PAYPAL_PLAN_ID (und PAYPAL_WEBHOOK_ID) für deploy/.env. Erst in der Sandbox prüfen:
-// Wie PayPal den bezahlten ersten Abschnitt (ein Jahr) und den Monatspreis danach anzeigt, ist nicht bestätigt.
-import { ANGEBOT } from '../src/billing/angebot.js';
+// Ausgabe: PAYPAL_PLAN_ID (und PAYPAL_WEBHOOK_ID) für deploy/.env. Erst in der Sandbox prüfen.
+import { ANGEBOT, TARIFE } from '../src/billing/angebot.js';
 
 const env = (process.env.PAYPAL_UMGEBUNG || 'sandbox').trim().toLowerCase();
 const base = { sandbox: 'https://api-m.sandbox.paypal.com', live: 'https://api-m.paypal.com' }[env];
@@ -37,14 +36,12 @@ const plan = await call(
   '/v1/billing/plans',
   {
     product_id: product.id,
-    name: ANGEBOT.name,
-    description: `Erstes Jahr ${(ANGEBOT.ersteZahlungCent / 100).toFixed(2)} €, danach ${(ANGEBOT.monatCent / 100).toFixed(2)} € im Monat, monatlich kündbar`,
+    name: `${ANGEBOT.name} ${TARIFE.monat.name}`,
+    description: `${(TARIFE.monat.preisCent / 100).toFixed(2)} € im Monat, monatlich kündbar`,
     status: 'ACTIVE',
     billing_cycles: [
-      // Erste Laufzeit: ein Jahr im Voraus
-      { frequency: { interval_unit: 'MONTH', interval_count: ANGEBOT.ersteLaufzeitMonate }, tenure_type: 'TRIAL', sequence: 1, total_cycles: 1, pricing_scheme: { fixed_price: money(ANGEBOT.ersteZahlungCent) } },
-      // Danach monatlich, unbefristet (§ 309 Nr. 9 b BGB)
-      { frequency: { interval_unit: 'MONTH', interval_count: 1 }, tenure_type: 'REGULAR', sequence: 2, total_cycles: 0, pricing_scheme: { fixed_price: money(ANGEBOT.monatCent) } },
+      // Monatlich im Voraus, unbefristet, kündbar zum Ende des bezahlten Monats (§ 309 Nr. 9 b BGB)
+      { frequency: { interval_unit: 'MONTH', interval_count: 1 }, tenure_type: 'REGULAR', sequence: 1, total_cycles: 0, pricing_scheme: { fixed_price: money(TARIFE.monat.preisCent) } },
     ],
     payment_preferences: { auto_bill_outstanding: true, payment_failure_threshold: 2 },
     taxes: { percentage: String(ANGEBOT.ustSatz), inclusive: true },
@@ -65,6 +62,11 @@ if (webhookUrl) {
     'PAYMENT.SALE.COMPLETED',
     'PAYMENT.SALE.REFUNDED',
     'PAYMENT.SALE.REVERSED',
+    // Jahrespass (Bestellung)
+    'CHECKOUT.ORDER.APPROVED',
+    'PAYMENT.CAPTURE.COMPLETED',
+    'PAYMENT.CAPTURE.REFUNDED',
+    'PAYMENT.CAPTURE.REVERSED',
   ];
   const hook = await call('POST', '/v1/notifications/webhooks', { url: webhookUrl, event_types: events.map((name) => ({ name })) }, token);
   console.log(`PAYPAL_WEBHOOK_ID=${hook.id}`);

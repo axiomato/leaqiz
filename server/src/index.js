@@ -43,6 +43,11 @@ const gateway = attachGateway({ server: app.server, registry, config, log: app.l
 await app.listen({ port: config.port, host: config.host });
 registry.startSweep();
 const stopCleanup = startCleanup(db.db, app.log);
+// Jahrespass: Erinnerung vor dem Ende (stündlich prüfen, jede Mail nur einmal)
+const reminders = abo
+  ? setInterval(() => abo.remindExpiring().then((n) => n && app.log.info(`${n} Erinnerungen an endende Jahrespässe verschickt.`)).catch((err) => app.log.error(err)), 60 * 60_000)
+  : null;
+if (reminders) reminders.unref();
 app.log.info(`leaqizz-Server bereit unter ${config.origin} (${restored} Spiele wiederhergestellt)`);
 
 // Herunterfahren (z. B. bei einem Update): Spielstände sichern, Spiele laufen nach dem Neustart weiter
@@ -55,6 +60,7 @@ async function shutdown(signal) {
   force.unref();
   try {
     stopCleanup();
+    if (reminders) clearInterval(reminders);
     await registry.flush();
     gateway.close();
     await new Promise((r) => setTimeout(r, 100));

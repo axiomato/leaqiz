@@ -2,7 +2,7 @@
 // Kündigen und Widerrufen ohne Anmeldung (§ 312k, § 356a BGB) samt Seiten.
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
-import { ANGEBOT, hasAccess, withinWithdrawal } from './angebot.js';
+import { ANGEBOT, ersparnisProzent, hasAccess, jahrProMonatCent, tarifOf, withinWithdrawal } from './angebot.js';
 import { AboError } from './service.js';
 import { RateLimiter } from '../limits.js';
 
@@ -18,19 +18,25 @@ export const CONTRACT_PAGES = {
   '/widerrufsbelehrung/': 'widerrufsbelehrung.html',
 };
 
+// Angebot für Oberfläche und Preisseite: Tarife plus abgeleitete Werte (Jahrespass je Monat, Ersparnis)
+const angebotView = () => ({ ...ANGEBOT, jahrProMonatCent, ersparnisProzent });
+
 export function aboView(sub, payments = [], now = new Date()) {
   if (!sub) return null;
+  const tarif = tarifOf(sub);
   return {
     number: sub.number,
+    plan: tarif.id,
+    planName: tarif.name,
     status: sub.status,
     access: hasAccess(sub, now),
+    concludedAt: iso(sub.concludedAt),
     startedAt: iso(sub.startedAt),
-    firstTermEnd: iso(sub.firstTermEnd),
     currentPeriodEnd: iso(sub.currentPeriodEnd),
     cancelRequestedAt: iso(sub.cancelRequestedAt),
     endsAt: iso(sub.endsAt),
     canWithdraw: sub.status !== 'withdrawn' && withinWithdrawal(sub, now),
-    payments: payments.map((p) => ({ kind: p.kind, grossCent: p.grossCent, vatCent: p.vatCent, paidAt: iso(p.paidAt) })),
+    payments: payments.filter((p) => p.subscriptionId === undefined || p.subscriptionId === sub.id).map((p) => ({ kind: p.kind, grossCent: p.grossCent, vatCent: p.vatCent, paidAt: iso(p.paidAt) })),
   };
 }
 
@@ -39,7 +45,7 @@ function contractContent(body, kind) {
   const b = body && typeof body === 'object' ? body : {};
   const content = { name: str(b.name, 120), email: str(b.email, 200), number: str(b.number, 40) || null };
   if (!content.name) throw new AboError('Bitte gib deinen Namen an.');
-  if (!looksLikeEmail(content.email)) throw new AboError('Bitte gib die E-Mail-Adresse an, mit der du das Abo abgeschlossen hast.');
+  if (!looksLikeEmail(content.email)) throw new AboError('Bitte gib die E-Mail-Adresse an, mit der du den Vertrag abgeschlossen hast.');
   if (kind === 'kuendigung') {
     content.art = b.art === 'ausserordentlich' ? 'ausserordentlich' : 'ordentlich';
     content.grund = content.art === 'ausserordentlich' ? str(b.grund, 2000) || null : null;
@@ -55,15 +61,17 @@ export function registerBillingRoutes(app, { abo, config, requireUser, requireSa
 
   app.get('/api/abo/angebot', async (request, reply) => {
     reply.header('Cache-Control', 'no-cache');
-    return { angebot: ANGEBOT, required: config.billing.required, provider: abo.provider.name };
+    return { angebot: angebotView(), required: config.billing.required, provider: abo.provider.name };
   });
 
   app.get('/api/abo', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     const me = await requireUser(request, reply);
     if (!me) return reply;
-    const { sub, payments } = await abo.overview(me.id);
-    return { angebot: ANGEBOT, required: config.billing.required, email: me.email, abo: aboView(sub, payments, abo.now()) };
+    const { sub, next, payments, blocked } = await abo.overview(me.id);
+    const now = abo.now();
+    // kaufbar: je Tarif null (kaufbar) oder der Grund, warum gerade nicht
+    return { angebot: angebotView(), required: config.billing.required, email: me.email, abo: aboView(sub, payments, now), next: aboView(next, payments, now), gesperrt: blocked };
   });
 
   app.post('/api/abo/start', async (request, reply) => {
@@ -72,7 +80,8 @@ export function registerBillingRoutes(app, { abo, config, requireUser, requireSa
     const me = await requireUser(request, reply);
     if (!me) return reply;
     try {
-      return await abo.start(me, { immediateStart: Boolean(request.body && request.body.sofortBeginnen === true) });
+      const body = request.body || {};
+      return await abo.start(me, { immediateStart: body.sofortBeginnen === true, plan: typeof body.tarif === 'string' ? body.tarif : '' });
     } catch (err) {
       if (err instanceof AboError) return reply.code(err.status).send({ error: err.message });
       request.log.error(err);
@@ -85,10 +94,13 @@ export function registerBillingRoutes(app, { abo, config, requireUser, requireSa
     reply.header('Cache-Control', 'no-store');
     const me = await currentUser(request);
     if (!me) return reply.redirect('/host/?abo=anmelden');
-    const providerId = str(request.query && request.query.subscription_id, 64);
+    // Monatsabo kommt mit subscription_id zurück, der Jahrespass (Bestellung) mit token
+    const q = request.query || {};
+    const providerId = str(q.subscription_id, 64) || str(q.token, 64);
     try {
       const sub = await abo.confirmReturn(me, providerId);
-      return reply.redirect(sub && hasAccess(sub, abo.now()) ? '/host/?abo=aktiv' : '/host/?abo=offen');
+      // Aktiv auch, wenn ein verlängerter Jahrespass erst später beginnt
+      return reply.redirect(sub && (hasAccess(sub, abo.now()) || ['active', 'cancelled'].includes(sub.status)) ? '/host/?abo=aktiv' : '/host/?abo=offen');
     } catch (err) {
       request.log.error(err);
       return reply.redirect('/host/?abo=offen');
@@ -124,9 +136,9 @@ export function registerBillingRoutes(app, { abo, config, requireUser, requireSa
     app.get('/abo/simulation/', async (request, reply) => {
       reply.header('Cache-Control', 'no-store');
       const approved = abo.provider.approve(str(request.query && request.query.id, 64));
-      if (!approved) return reply.code(404).type('text/plain; charset=utf-8').send('Unbekanntes Abo');
-      await abo.applyEvent(approved.payment);
-      return reply.redirect(`${approved.returnUrl}?subscription_id=${encodeURIComponent(approved.payment.providerId)}`);
+      if (!approved) return reply.code(404).type('text/plain; charset=utf-8').send('Unbekannter Vertrag');
+      if (approved.payment) await abo.applyEvent(approved.payment);
+      return reply.redirect(approved.returnUrl);
     });
   }
 

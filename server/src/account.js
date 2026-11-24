@@ -39,9 +39,12 @@ export function registerAccountRoutes(app, { db, auth, abo = null, registry, req
       games: games.map((g) => ({ title: g.title, state: g.state, createdAt: iso(g.createdAt), endedAt: iso(g.endedAt) })),
       subscriptions: billing.subs.map((s) => ({
         number: s.number,
+        plan: s.plan,
         status: s.status,
+        concludedAt: iso(s.concludedAt),
         startedAt: iso(s.startedAt),
-        firstTermEnd: iso(s.firstTermEnd),
+        currentPeriodEnd: iso(s.currentPeriodEnd),
+        cancelRequestedAt: iso(s.cancelRequestedAt),
         endsAt: iso(s.endsAt),
         payments: billing.payments.filter((p) => p.subscriptionId === s.id).map((p) => ({ kind: p.kind, grossCent: p.grossCent, vatCent: p.vatCent, paidAt: iso(p.paidAt) })),
       })),

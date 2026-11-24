@@ -1,0 +1,1 @@
+ALTER TABLE "subscription" DROP COLUMN "first_term_end";

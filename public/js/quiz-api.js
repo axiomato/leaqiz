@@ -68,9 +68,10 @@ window.LQQuizApi = (function () {
       async get() {
         return call('abo');
       },
-      // Antwort { approveUrl, number }: weiter zur Zustimmung beim Zahlungsanbieter
-      async start() {
-        return call('abo/start', { method: 'POST', body: { sofortBeginnen: true }, messages: { 409: 'Du hast schon ein Abo.' } });
+      // tarif: 'monat' | 'jahr'. Antwort { approveUrl, number }: weiter zur Zustimmung beim Zahlungsanbieter.
+      // Bei 409 nennt der Server den Grund (z. B. „Verlängern kannst du ab …“).
+      async start(tarif) {
+        return call('abo/start', { method: 'POST', body: { sofortBeginnen: true, tarif } });
       },
     },
     // Ergebnisse vergangener Live-Spiele (gelöscht nach der Löschfrist des Servers)

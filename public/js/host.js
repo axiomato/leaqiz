@@ -922,7 +922,7 @@
     const privacy = h('p', { class: 'hint' }, 'Wir speichern deine E-Mail-Adresse für dein Konto und schicken dir nur Anmeldelinks. ', h('a', { href: '../datenschutz/', text: 'Mehr zum Datenschutz' }));
     accountView(
       h('h1', { text: 'Anmelden' }),
-      h('p', { class: 'hint', text: reason === 'live' ? 'Für Live-Spiele brauchst du ein Konto. Ein Link per Mail genügt, ein Passwort gibt es nicht.' : reason === 'abo' ? 'Für das Abo brauchst du ein Konto. Ein Link per Mail genügt, ein Passwort gibt es nicht.' : 'Ein Link per Mail genügt, ein Passwort gibt es nicht.' }),
+      h('p', { class: 'hint', text: reason === 'live' ? 'Für Live-Spiele brauchst du ein Konto. Ein Link per Mail genügt, ein Passwort gibt es nicht.' : reason === 'abo' ? 'Für Monatsabo oder Jahrespass brauchst du ein Konto. Ein Link per Mail genügt, ein Passwort gibt es nicht.' : 'Ein Link per Mail genügt, ein Passwort gibt es nicht.' }),
       form,
       privacy,
       passkeyBlock,
@@ -955,7 +955,7 @@
     if (next) {
       local.remove(AFTER_LOGIN_KEY);
       if (next.to === 'abo' && Date.now() - next.at < 30 * 60_000 && aboEnabled()) {
-        await renderAbo();
+        await renderAbo({ tarif: next.tarif || '' });
         toast('Du bist angemeldet.');
         return;
       }
@@ -1050,25 +1050,68 @@
     );
   }
 
-  // ---------- Abo (D-58): Angebot, Abschluss, Stand ----------
-  // Preis und Laufzeit kommen vom Server (server/src/billing/angebot.js), nie aus dem Browser.
+  // ---------- Abo (D-58, D-60): Monatsabo und Jahrespass, Abschluss, Stand ----------
+  // Preise und Laufzeiten kommen vom Server (server/src/billing/angebot.js), nie aus dem Browser.
+  // Ob ein Tarif gerade kaufbar ist, entscheidet ebenfalls der Server (gesperrt: Grund oder null).
 
-  const euro = (cent) => `${(cent / 100).toFixed(2).replace('.', ',')} €`;
+  const euro = (cent) => `${(cent / 100).toFixed(2).replace('.', ',')}\u00a0€`;
   const aboDate = (iso) => dateFmt.format(new Date(iso));
 
-  function aboOffer(angebot, headingTag) {
+  // Bedingungen je Tarif; gleicher Wortlaut wie Preisseite und Vertragsbestätigung
+  function tarifTerms(angebot, id) {
+    const t = angebot.tarife[id];
+    if (id === 'jahr') {
+      return {
+        price: `${euro(t.preisCent)} für 12 Monate`,
+        lines: [
+          `Entspricht ${euro(angebot.jahrProMonatCent)} im Monat, ${angebot.ersparnisProzent}\u00a0% günstiger als monatlich.`,
+          'Einmal bezahlt, verlängert sich nicht automatisch.',
+          `Wir erinnern dich ${angebot.erinnerungTage} Tage vor dem Ende. Ein neuer Jahrespass schließt nahtlos an.`,
+        ],
+      };
+    }
+    return { price: `${euro(t.preisCent)} im Monat`, lines: ['Monatlich im Voraus bezahlt.', 'Jederzeit kündbar zum Ende des bezahlten Monats.'] };
+  }
+
+  function aboOffer(data, headingTag, { preselect = '', renew = '' } = {}) {
+    const { angebot, gesperrt } = data;
+    const all = Object.keys(angebot.tarife);
+    const ids = all.filter((id) => !gesperrt[id]);
+    const chosen = ids.includes(preselect) ? preselect : ids.includes('jahr') ? 'jahr' : ids[0];
     const errorEl = h('p', { class: 'error', id: 'abo-error', role: 'alert' });
     const consent = h('input', { type: 'checkbox', id: 'abo-sofort', 'aria-describedby': 'abo-error' });
-    const submit = h('button', { class: 'btn btn--primary', type: 'submit', text: 'Zahlungspflichtig abonnieren' });
+    const submit = h('button', { class: 'btn btn--primary', type: 'submit', text: 'Zahlungspflichtig bestellen' });
+    const radios = ids.map((id) => {
+      const t = angebot.tarife[id];
+      const terms = tarifTerms(angebot, id);
+      const input = h('input', { type: 'radio', name: 'tarif', id: `abo-tarif-${id}`, value: id, 'aria-describedby': `abo-tarif-${id}-terms` });
+      input.checked = id === chosen;
+      return h(
+        'label',
+        { class: `abo-plan${id === 'jahr' ? ' abo-plan--jahr' : ''}`, for: `abo-tarif-${id}` },
+        input,
+        h(
+          'span',
+          { class: 'abo-plan__body' },
+          h('span', { class: 'abo-plan__name', text: t.name }),
+          h('span', { class: 'abo-plan__price', text: terms.price }),
+          h('span', { class: 'abo-plan__terms', id: `abo-tarif-${id}-terms` }, ...terms.lines.map((line) => h('span', { text: line }))),
+        ),
+      );
+    });
     const form = h(
       'form',
       { class: 'account-form abo-form', novalidate: true },
+      h('fieldset', { class: 'abo-plans' }, h('legend', { class: 'visually-hidden', text: 'Tarif' }), ...radios),
+      h('p', { class: 'hint', text: `Preise inklusive ${angebot.ustSatz}\u00a0% Umsatzsteuer. Bezahlen über PayPal. Nur für Kundinnen und Kunden in Deutschland.` }),
+      ...all.filter((id) => gesperrt[id]).map((id) => h('p', { class: 'hint', text: `${angebot.tarife[id].name}: ${gesperrt[id]}` })),
       h('label', { class: 'check', for: 'abo-sofort' }, consent, h('span', { text: 'Ich möchte, dass leaqizz sofort startet. Mir ist bekannt: Widerrufe ich, zahle ich für die Tage bis dahin anteilig.' })),
       errorEl,
       h('div', { class: 'actions' }, submit),
     );
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const picked = form.querySelector('input[name="tarif"]:checked');
       if (!consent.checked) {
         errorEl.textContent = 'Bitte bestätige, dass leaqizz sofort starten soll.';
         consent.focus();
@@ -1077,53 +1120,55 @@
       submit.disabled = true;
       submit.textContent = 'Weiter zu PayPal …';
       try {
-        const { approveUrl } = await window.LQQuizApi.abo.start();
+        const { approveUrl } = await window.LQQuizApi.abo.start(picked ? picked.value : chosen);
         location.assign(approveUrl);
       } catch (err) {
         submit.disabled = false;
-        submit.textContent = 'Zahlungspflichtig abonnieren';
+        submit.textContent = 'Zahlungspflichtig bestellen';
         errorEl.textContent = err.message;
       }
     });
     return h(
       'div',
       { class: 'abo-offer' },
-      h(headingTag, { text: angebot.name }),
-      h('p', { class: 'abo-price' }, h('strong', { text: `${euro(angebot.monatCent)} im Monat` }), ` inkl. ${angebot.ustSatz} % USt`),
-      h(
-        'ul',
-        { class: 'account-list' },
-        h('li', { text: `Erstes Jahr: ${euro(angebot.ersteZahlungCent)}, im Voraus bezahlt` }),
-        h('li', { text: `Danach monatlich ${euro(angebot.monatCent)}, jederzeit mit einem Monat Frist kündbar` }),
-        h('li', { text: 'Kündigen: über „Verträge hier kündigen“, ohne Anmeldung' }),
-        h('li', { text: 'Bezahlen über PayPal. Nur für Kundinnen und Kunden in Deutschland.' }),
-      ),
-      h('p', { class: 'hint' }, 'Es gelten die ', h('a', { href: '/agb/', text: 'AGB' }), ' und die ', h('a', { href: '/widerrufsbelehrung/', text: 'Widerrufsbelehrung' }), '. ', h('a', { href: '../datenschutz/', text: 'Datenschutz' }), ' · ', h('a', { href: '/preise/', text: 'Kostenlos und Abo im Vergleich' })),
+      // renew: Tarif des laufenden Vertrags; dann geht es um den Anschluss
+      h(headingTag, { text: renew === 'jahr' ? 'Jahrespass verlängern' : renew ? 'Danach weiter mit dem Jahrespass' : 'Tarif wählen' }),
       form,
+      h('p', { class: 'hint' }, 'Es gelten die ', h('a', { href: '/agb/', text: 'AGB' }), ' und die ', h('a', { href: '/widerrufsbelehrung/', text: 'Widerrufsbelehrung' }), '. ', h('a', { href: '../datenschutz/', text: 'Datenschutz' }), ', ', h('a', { href: '/preise/', text: 'alle Tarife im Vergleich' }), '.'),
     );
   }
 
-  function aboStatus(abo, headingTag) {
-    const lines = [h('li', { text: `Vertragsnummer: ${abo.number}` })];
-    if (abo.startedAt) lines.push(h('li', { text: `Seit ${aboDate(abo.startedAt)}` }));
-    if (abo.endsAt) lines.push(h('li', { text: abo.access ? `Gekündigt, endet am ${aboDate(abo.endsAt)}` : `Beendet am ${aboDate(abo.endsAt)}` }));
-    else if (abo.status === 'suspended') lines.push(h('li', { text: 'Pausiert: Die letzte Zahlung hat nicht geklappt. Bitte prüfe dein PayPal-Konto.' }));
-    else if (abo.currentPeriodEnd) lines.push(h('li', { text: `Nächste Zahlung am ${aboDate(abo.currentPeriodEnd)}` }));
+  function aboStatus(abo, headingTag, next = null) {
+    const pass = abo.plan === 'jahr';
+    const lines = [h('li', { text: `${abo.planName}, Vertragsnummer ${abo.number}` })];
+    if (abo.status === 'withdrawn') lines.push(h('li', { text: `Widerrufen am ${aboDate(abo.endsAt)}` }));
+    else if (pass) {
+      if (abo.startedAt) lines.push(h('li', { text: `Gültig vom ${aboDate(abo.startedAt)} bis ${aboDate(abo.endsAt)}` }));
+      if (abo.access && abo.cancelRequestedAt) lines.push(h('li', { text: 'Deine Kündigung ist eingegangen. Der Jahrespass endet zum vereinbarten Tag.' }));
+    } else {
+      if (abo.startedAt) lines.push(h('li', { text: `Seit ${aboDate(abo.startedAt)}` }));
+      if (abo.endsAt) lines.push(h('li', { text: abo.access ? `Gekündigt, endet am ${aboDate(abo.endsAt)}` : `Beendet am ${aboDate(abo.endsAt)}` }));
+      else if (abo.status === 'suspended') lines.push(h('li', { text: 'Pausiert: Die letzte Zahlung hat nicht geklappt. Bitte prüfe dein PayPal-Konto.' }));
+      else if (abo.currentPeriodEnd) lines.push(h('li', { text: `Nächste Zahlung am ${aboDate(abo.currentPeriodEnd)}` }));
+    }
+    if (next) lines.push(h('li', { text: `Danach: neuer ${next.planName} vom ${aboDate(next.startedAt)} bis ${aboDate(next.endsAt)} (Vertragsnummer ${next.number})` }));
     const list = (kind) => abo.payments.filter((p) => p.kind === kind).map((p) => `${aboDate(p.paidAt)} ${euro(p.grossCent)}`).join(', ');
+    const heading = abo.access ? `Dein ${abo.planName} läuft` : abo.status === 'withdrawn' ? `Dein ${abo.planName} ist widerrufen` : `Dein ${abo.planName} ist beendet`;
     return h(
       'div',
       { class: 'abo-status' },
-      h(headingTag, { text: abo.access ? 'Dein Abo läuft' : 'Dein Abo ist beendet' }),
+      h(headingTag, { text: heading }),
       h('ul', { class: 'account-list' }, lines),
       list('payment') ? h('p', { class: 'hint', text: `Zahlungen: ${list('payment')}` }) : null,
       list('refund') ? h('p', { class: 'hint', text: `Erstattet: ${list('refund')}` }) : null,
-      // Kündigen solange es läuft, Widerrufen nur in der Frist
+      // Kündigen solange es läuft, Widerrufen nur in der Frist (auch für einen schon gekauften Anschluss)
       abo.access ? h('nav', { class: 'abo-links', 'aria-label': 'Vertrag' }, ...contractLinks(abo.number).filter((a, i) => i === 0 || abo.canWithdraw)) : null,
+      next && next.canWithdraw ? h('nav', { class: 'abo-links', 'aria-label': 'Anschlussvertrag' }, ...contractLinks(next.number).filter((a, i) => i === 1)) : null,
     );
   }
 
-  // Abschnitt für Konto und Abo-Ansicht. Ohne laufendes Abo: Angebot.
-  async function aboBlock({ heading }) {
+  // Abschnitt für Konto und Abo-Ansicht: laufender Vertrag, dazu das Angebot, soweit gerade kaufbar
+  async function aboBlock({ heading, tarif = '' }) {
     let data;
     try {
       data = await window.LQQuizApi.abo.get();
@@ -1131,16 +1176,25 @@
       return h('section', { class: 'account-section' }, h(heading, { text: 'Abo' }), h('p', { class: 'error', role: 'alert', text: err.message }));
     }
     const current = data.abo;
-    const body = current && (current.access || current.status === 'suspended') ? aboStatus(current, heading) : aboOffer(data.angebot, heading);
-    return h('section', { class: 'account-section abo', 'aria-label': 'Abo' }, body, current && !current.access && current.status !== 'suspended' ? aboStatus(current, 'h3') : null);
+    const running = Boolean(current && (current.access || current.status === 'suspended'));
+    const buyable = Object.keys(data.angebot.tarife).some((id) => !data.gesperrt[id]);
+    return h(
+      'section',
+      { class: 'account-section abo', 'aria-label': 'Abo' },
+      running ? aboStatus(current, heading, data.next) : null,
+      // Jahrespass läuft, Verlängern noch nicht möglich: sagen, ab wann
+      running && !buyable && current.plan === 'jahr' && !data.next && data.gesperrt.jahr ? h('p', { class: 'hint', text: data.gesperrt.jahr }) : null,
+      buyable ? aboOffer(data, running ? 'h3' : heading, { preselect: tarif, renew: running ? current.plan : '' }) : null,
+      current && !running ? aboStatus(current, 'h3') : null,
+    );
   }
 
-  async function renderAbo({ reason = '' } = {}) {
+  async function renderAbo({ reason = '', tarif = '' } = {}) {
     if (!me) return renderLogin({ reason: 'live' });
-    const block = await aboBlock({ heading: 'h2' });
+    const block = await aboBlock({ heading: 'h2', tarif });
     accountView(
-      h('h1', { text: reason === 'live' ? 'Live-Spiele mit dem Abo' : 'Abo' }),
-      h('p', { class: 'lead', text: reason === 'live' ? 'Mit echten Handys spielst du mit dem leaqizz Abo. Quizze bauen und die Demo bleiben kostenlos.' : me.email }),
+      h('h1', { text: reason === 'live' ? 'Live-Spiele freischalten' : 'Abo' }),
+      h('p', { class: 'lead', text: reason === 'live' ? 'Mit echten Handys spielst du mit dem Monatsabo oder dem Jahrespass. Quizze bauen und die Demo bleiben kostenlos.' : me.email }),
       block,
     );
   }
@@ -1194,7 +1248,7 @@
         h('li', { text: 'alle Quizze in deinem Konto' }),
         h('li', { text: 'alle Spiele und Ergebnisse samt Spielnamen und Antworten; laufende Spiele werden beendet' }),
         h('li', { text: 'deine Passkeys und Anmeldungen' }),
-        aboEnabled() ? h('li', { text: 'ein laufendes Abo endet sofort, ohne Erstattung. Vertrag und Zahlungen bewahren wir auf, solange das Gesetz es verlangt (8 Jahre).' }) : null,
+        aboEnabled() ? h('li', { text: 'ein laufendes Monatsabo oder ein Jahrespass endet sofort, ohne Erstattung. Vertrag und Zahlungen bewahren wir auf, solange das Gesetz es verlangt (8 Jahre).' }) : null,
       ),
       h('p', { class: 'hint', text: 'Vorher sichern: „Daten herunterladen“ im Konto oder einzelne Quizze exportieren. Den Passkey auf deinem Gerät kannst du danach in den Einstellungen des Geräts entfernen.' }),
       form,
@@ -2183,19 +2237,21 @@
     const aboReturn = params.get('abo');
     // Von der Preisseite: „Abo abschließen“
     if (aboReturn === 'start') {
+      // tarif=monat|jahr wählt den Tarif vor (Preisseite, Erinnerungsmail)
+      const tarif = ['monat', 'jahr'].includes(params.get('tarif')) ? params.get('tarif') : '';
       history.replaceState(null, '', location.pathname);
       if (!aboEnabled()) return renderLibrary();
-      if (me) return renderAbo();
-      local.set(AFTER_LOGIN_KEY, { to: 'abo', at: Date.now() });
+      if (me) return renderAbo({ tarif });
+      local.set(AFTER_LOGIN_KEY, { to: 'abo', tarif, at: Date.now() });
       return renderLogin({ reason: 'abo' });
     }
     if (aboReturn) {
       history.replaceState(null, '', location.pathname);
       const messages = {
-        aktiv: 'Dein Abo läuft. Live-Spiele sind freigeschaltet.',
+        aktiv: 'Danke! Dein Vertrag ist abgeschlossen. Live-Spiele sind freigeschaltet.',
         offen: 'Die Zahlung ist noch nicht bestätigt. Das kann ein paar Minuten dauern.',
-        abgebrochen: 'Kein Abo abgeschlossen. Es wurde nichts bezahlt.',
-        anmelden: 'Bitte melde dich an. Danach siehst du den Stand deines Abos im Konto.',
+        abgebrochen: 'Abgebrochen. Es wurde nichts bezahlt.',
+        anmelden: 'Bitte melde dich an. Danach siehst du den Stand deines Vertrags im Konto.',
       };
       if (me) await renderAccount();
       else renderLibrary();

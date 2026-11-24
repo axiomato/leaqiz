@@ -56,7 +56,7 @@ Leinwand und Handys ──► WebSocket /ws über Port 443 (kein Relais, kein Pe
 - Der Browser erkennt den Server an `window.LEAQIZ_CONFIG.server` und nutzt dann WebSocket statt Direktverbindung. Ohne diesen Eintrag (GitHub Pages) bleibt alles wie oben. Die Demo läuft immer im Browser.
 - Spiele überstehen Neuladen der Leinwand und Neustart des Servers.
 - Live-Spiele starten nur angemeldete Lehrkräfte: Anmeldelink per Mail oder Passkey (Better Auth, `public/js/account.js`). Schüler:innen brauchen kein Konto.
-- Abo (D-58, eingebaut, noch aus): Mit `LEAQIZ_ABO=ja` starten Live-Spiele nur mit Abo; Demo, Editor und Quizze im Konto bleiben kostenlos. Zahlung über PayPal, Kündigen und Widerrufen ohne Anmeldung (`/vertraege-kuendigen/`, `/vertrag-widerrufen/`, Links im Fuß jeder Seite). Lokal ohne PayPal: `LEAQIZ_ZAHLUNG=simulation`.
+- Tarife (D-58, D-60, eingebaut, noch aus): **Monatsabo** 4,99 € im Monat (kündbar zum Ende des bezahlten Monats) und **Jahrespass** 47,88 € für zwölf Monate (endet von selbst, Erinnerung 14 Tage vorher, Verlängern schließt an). Mit `LEAQIZ_ABO=ja` starten Live-Spiele nur mit einem der beiden; Demo, Editor und Quizze im Konto bleiben kostenlos. Zahlung über PayPal, Kündigen und Widerrufen ohne Anmeldung (`/vertraege-kuendigen/`, `/vertrag-widerrufen/`, Links im Fuß jeder Seite). Lokal ohne PayPal: `LEAQIZ_ZAHLUNG=simulation`.
 - Betrieb: `deploy/README.md`. Zielarchitektur und Entscheidungen: Projekt „Kahoot! Nachbau“, `claude/leaqiz-architektur.md`.
 
 ## Grenzen des Prototyps
@@ -127,7 +127,7 @@ public/                 die veröffentlichte Seite
   js/avatar.js          Avatare: schräge Wesen aus sechs Zahlen, gezeichnet als SVG
   js/config.js          Vermittlungsserver (leer = öffentlicher PeerJS-Server)
   img/og-leaqizz.png    Vorschaubild für geteilte Links (1200 × 630)
-  preise/               Preisseite: Kostenlos und Abo im Vergleich (ohne Server und ohne Abo eine Vorschau)
+  preise/               Preisseite: Kostenlos, Monatsabo, Jahrespass im Vergleich (ohne Server und ohne Abo eine Vorschau)
 dev/serve.js            lokaler Entwicklungsserver
 dev/og/                 Quelle des Vorschaubilds; neu erzeugen mit python3 dev/og/render.py
 dev/avatar/             Teile-Bogen der Avatare; neu erzeugen mit python3 dev/avatar/render.py
@@ -135,9 +135,9 @@ test/                   Tests (node:test)
 server/                 Spielserver: Fastify, WebSocket (ws), PostgreSQL (Drizzle)
   src/games/            Spiele verwalten, sichern, wiederherstellen; WebSocket-Zugang
   src/results.js        Ergebnisse vergangener Live-Spiele (aus dem gesicherten Endstand)
-  src/billing/          Abo: Angebot, PayPal, Simulation, Kündigen und Widerrufen, Mails
+  src/billing/          Tarife: Angebot, PayPal (Abo und Bestellung), Simulation, Kündigen, Widerrufen, Erinnerung, Mails
   seiten/               Seiten nur für den Serverbetrieb (Datenschutz, AGB, Widerrufsbelehrung, Kündigen, Widerrufen)
-  scripts/paypal-plan.js Abo-Plan und Benachrichtigung bei PayPal anlegen
+  scripts/paypal-plan.js Plan fürs Monatsabo und Benachrichtigung bei PayPal anlegen
   drizzle/              Datenbank-Migrationen (erzeugt, eingecheckt)
   scripts/lasttest.js   viele Spiele mit simulierten Handys gleichzeitig
 deploy/                 Docker Compose mit Caddy und PostgreSQL, Betriebsanleitung

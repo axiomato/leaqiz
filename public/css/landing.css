@@ -1616,10 +1616,15 @@ a {
   font-weight: 700;
 }
 
-/* ---------- Preise (D-58): zwei Modelle nebeneinander, Vergleich, Fragen ---------- */
+/* ---------- Preise (D-58 bis D-60): drei Tarife nebeneinander, Vergleich, Fragen ---------- */
 
 .prices {
   padding-block: var(--s-10) var(--s-12);
+}
+
+/* „Ausprobieren“ ist ein langes Wort: auf sehr schmalen Bildschirmen (320 px) mit der Breite mitgehen */
+.prices__title {
+  font-size: min(var(--t-5), 11.5vw);
 }
 
 .prices__lead {
@@ -1642,13 +1647,14 @@ a {
 
 .plans {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
   margin-top: var(--s-8);
-  max-width: 960px;
+  max-width: 1120px;
 }
 
 .plan {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
@@ -1658,10 +1664,23 @@ a {
   color: var(--ink);
 }
 
-/* Das Abo in der Farbe der richtigen Antwort, wie die Auflösung in der App */
+/* Der Jahrespass in der Farbe der richtigen Antwort, wie die Auflösung in der App */
 .plan--abo {
   background: var(--opt-0);
   color: #ffffff;
+}
+
+/* Hinweis auf die Ersparnis auf der oberen Kante, damit die Namen der Karten auf einer Linie bleiben */
+.plan__badge {
+  position: absolute;
+  top: 0;
+  left: var(--s-5);
+  transform: translateY(-50%);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--opt-0);
+  font-weight: 800;
 }
 
 .plan__name {
@@ -1669,14 +1688,16 @@ a {
   font-weight: 800;
 }
 
+/* Betrag, darunter die Einheit: in allen Karten gleich, egal wie breit der Betrag ist */
 .plan__price {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--s-1);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
 }
 
 .plan__amount {
+  white-space: nowrap;
   font-size: var(--t-4);
   font-weight: 850;
   font-stretch: 112%;
@@ -1727,6 +1748,16 @@ a {
   background: #e6ebf2;
 }
 
+/* Vorschau (ohne Server): Knöpfe sichtbar, aber gesperrt */
+.plan .btn[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.plan .btn--ghost[aria-disabled='true'] {
+  border-color: var(--muted);
+  color: var(--muted);
+}
+
 .plan--abo .btn[aria-disabled='true'] {
   background: rgba(255, 255, 255, 0.24);
   color: #ffffff;
@@ -1737,8 +1768,13 @@ a {
 }
 
 .compare-wrap {
-  max-width: 880px;
+  max-width: 1000px;
   overflow-x: auto;
+}
+
+.compare-wrap:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
 }
 
 .compare {
@@ -1761,15 +1797,21 @@ a {
 
 .compare thead th:not(:first-child),
 .compare td {
-  width: 9rem;
+  width: 11rem;
   text-align: center;
+}
+
+/* Laufzeit und Kündigen stehen als Text, nicht als Zeichen */
+.compare td.compare__text {
+  font-size: 0.875rem;
+  line-height: 1.35;
 }
 
 .compare tbody th {
   font-weight: 400;
 }
 
-/* Abo-Spalte leicht in der Antwortfarbe getönt */
+/* Jahrespass-Spalte leicht in der Antwortfarbe getönt */
 .compare th:last-child,
 .compare td:last-child {
   background: #e7f2f2;
@@ -1813,9 +1855,16 @@ a {
   font-weight: 700;
 }
 
-@media (max-width: 760px) {
+/* Unter 960 px stehen die Karten untereinander (drei Spalten wären zu schmal für die Beträge) */
+@media (max-width: 960px) {
   .plans {
     grid-template-columns: minmax(0, 1fr);
+    max-width: 36rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .plans {
     margin-top: var(--s-6);
   }
 
@@ -1832,9 +1881,31 @@ a {
     padding: var(--s-2) var(--s-1);
   }
 
+  /* Drei Tarif-Spalten passen auf 390 px ohne seitliches Scrollen */
+  .compare th,
+  .compare td {
+    padding: var(--s-1) 0.25rem;
+  }
+
   .compare thead th:not(:first-child),
   .compare td {
-    width: 5.5rem;
+    width: 4.875rem;
+  }
+
+  .compare thead th,
+  .compare tbody th,
+  .compare td.compare__text,
+  .compare__price td {
+    font-size: 0.8125rem;
+  }
+
+  /* Eine Größe für die ganze Tabelle auf dem Handy (13 px), damit die Typo-Skala nicht zerfasert */
+  .compare thead th {
+    letter-spacing: -0.01em;
+  }
+
+  .compare__sub {
+    font-size: 0.8125rem;
   }
 }
 

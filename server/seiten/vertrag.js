@@ -49,7 +49,7 @@
   function payload() {
     const body = { name: fields.name.value.trim(), email: fields.email.value.trim(), number: fields.number.value.trim() };
     if (!body.name) return fail('Bitte gib deinen Namen an.', fields.name);
-    if (!looksLikeEmail(body.email)) return fail('Bitte gib die E-Mail-Adresse an, mit der du das Abo abgeschlossen hast.', fields.email);
+    if (!looksLikeEmail(body.email)) return fail('Bitte gib die E-Mail-Adresse an, mit der du den Vertrag abgeschlossen hast.', fields.email);
     if (art === 'kuendigen') {
       body.art = form.querySelector('input[name="art"]:checked').value;
       const grund = document.getElementById('v-grund');
@@ -71,7 +71,7 @@
     const at = new Date(receivedAt);
     const rows = [
       ['Eingegangen am', `${dateFmt.format(at)} um ${timeFmt.format(at)} Uhr`],
-      ['Erklärung', art === 'kuendigen' ? 'Ich kündige mein leaqizz Abo.' : 'Ich widerrufe meinen Vertrag über das leaqizz Abo.'],
+      ['Erklärung', art === 'kuendigen' ? 'Ich kündige meinen Vertrag über leaqizz.' : 'Ich widerrufe meinen Vertrag über leaqizz.'],
       ['Name', content.name],
       ['E-Mail-Adresse', content.email],
     ];
@@ -101,7 +101,7 @@
     beleg.focus();
     document.getElementById('beleg-drucken').onclick = () => window.print();
     document.getElementById('beleg-speichern').onclick = () => {
-      const title = art === 'kuendigen' ? 'Kündigung leaqizz Abo' : 'Widerruf leaqizz Abo';
+      const title = art === 'kuendigen' ? 'Kündigung leaqizz' : 'Widerruf leaqizz';
       const text = [title, '', ...rows.map(([k, v]) => `${k}: ${v}`), ''].join('\r\n');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));

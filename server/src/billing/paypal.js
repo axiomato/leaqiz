@@ -1,6 +1,7 @@
-// PayPal Subscriptions (REST v1). Nur Server-zu-Server; Zugangsdaten aus der Konfiguration.
-// Die Wege sind der PayPal-Dokumentation entnommen; gegen die Sandbox geprüft ist dieser Teil
-// erst, wenn ein Entwicklerzugang eingetragen ist (deploy/README.md, Abschnitt „Abo“).
+// PayPal: Monatsabo über Subscriptions (REST v1), Jahrespass als einmalige Bestellung (Orders v2).
+// Nur Server-zu-Server; Zugangsdaten aus der Konfiguration. Die Wege sind der PayPal-Dokumentation
+// entnommen; gegen die Sandbox geprüft ist dieser Teil erst, wenn ein Entwicklerzugang eingetragen ist
+// (deploy/README.md, Abschnitt „Abo“).
 
 const BASE = { sandbox: 'https://api-m.sandbox.paypal.com', live: 'https://api-m.paypal.com' };
 
@@ -14,7 +15,17 @@ const STATUS = {
   EXPIRED: 'expired',
 };
 
+// Bestellung (Orders v2) → eigener Status
+const ORDER_STATUS = { CREATED: 'created', SAVED: 'created', PAYER_ACTION_REQUIRED: 'created', APPROVED: 'approved', COMPLETED: 'completed', VOIDED: 'voided' };
+const CAPTURE_STATUS = { COMPLETED: 'completed', PENDING: 'pending', DECLINED: 'declined', FAILED: 'declined', REFUNDED: 'completed', PARTIALLY_REFUNDED: 'completed' };
+
 const cents = (value) => Math.round(Number(value) * 100);
+const money = (cent) => ({ currency_code: 'EUR', value: (cent / 100).toFixed(2) });
+// Zahlungs-ID einer Erstattung oder Rückbuchung: Link „up“ zeigt auf die Zahlung
+const captureIdOf = (r) => {
+  const up = (r.links || []).find((l) => l.rel === 'up' && /\/captures\//.test(l.href || ''));
+  return up ? decodeURIComponent(up.href.split('/captures/')[1].split(/[/?]/)[0]) : null;
+};
 
 export class ProviderError extends Error {
   constructor(message, status) {
@@ -67,6 +78,16 @@ export function createPayPal({ environment, clientId, clientSecret, webhookId, p
     };
   }
 
+  function normalizeOrder(order) {
+    const unit = (order.purchase_units || [])[0] || {};
+    const c = ((unit.payments && unit.payments.captures) || [])[0];
+    return {
+      providerId: order.id,
+      status: ORDER_STATUS[order.status] || 'created',
+      capture: c ? { paymentId: c.id, status: CAPTURE_STATUS[c.status] || 'pending', grossCent: cents(c.amount && c.amount.value), currency: (c.amount && c.amount.currency_code) || 'EUR', at: c.create_time ? new Date(c.create_time) : null } : null,
+    };
+  }
+
   return {
     name: 'paypal',
     planId,
@@ -109,14 +130,46 @@ export function createPayPal({ environment, clientId, clientSecret, webhookId, p
       }
     },
 
-    // Erstattung einer Abo-Zahlung (Endpunkt laut PayPal-Doku für Sale-Transaktionen; in der Sandbox prüfen)
-    async refund(paymentId, grossCent, requestId) {
-      const data = await api(
+    // Jahrespass: einmalige Bestellung; die Lehrkraft stimmt auf der PayPal-Seite zu
+    async createOrder({ customId, amountCent, description, returnUrl, cancelUrl }) {
+      const order = await api(
         'POST',
-        `/v1/payments/sale/${encodeURIComponent(paymentId)}/refund`,
-        { amount: { total: (grossCent / 100).toFixed(2), currency: 'EUR' } },
-        { requestId },
+        '/v2/checkout/orders',
+        {
+          intent: 'CAPTURE',
+          purchase_units: [{ reference_id: customId, custom_id: customId, description: String(description).slice(0, 127), amount: money(amountCent) }],
+          payment_source: {
+            paypal: { experience_context: { brand_name: 'leaqizz', locale: 'de-DE', shipping_preference: 'NO_SHIPPING', user_action: 'PAY_NOW', return_url: returnUrl, cancel_url: cancelUrl } },
+          },
+        },
+        { requestId: customId },
       );
+      const approve = (order.links || []).find((l) => l.rel === 'payer-action' || l.rel === 'approve');
+      if (!approve) throw new ProviderError('PayPal hat keinen Link zur Zustimmung geliefert.');
+      return { providerId: order.id, approveUrl: approve.href };
+    },
+
+    async getOrder(orderId) {
+      return normalizeOrder(await api('GET', `/v2/checkout/orders/${encodeURIComponent(orderId)}`));
+    },
+
+    // Zahlung einziehen. Schon eingezogen (422) → Stand abfragen.
+    async captureOrder(orderId, requestId) {
+      try {
+        return normalizeOrder(await api('POST', `/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {}, { requestId }));
+      } catch (err) {
+        if (err.status !== 422) throw err;
+        return normalizeOrder(await api('GET', `/v2/checkout/orders/${encodeURIComponent(orderId)}`));
+      }
+    },
+
+    // Erstattung: Monatsabo-Zahlungen sind Sale-Transaktionen (v1), der Jahrespass eine Capture (v2).
+    // Beide Endpunkte laut PayPal-Doku; in der Sandbox prüfen.
+    async refund(paymentId, grossCent, requestId, { plan = 'monat' } = {}) {
+      const data =
+        plan === 'jahr'
+          ? await api('POST', `/v2/payments/captures/${encodeURIComponent(paymentId)}/refund`, { amount: money(grossCent) }, { requestId })
+          : await api('POST', `/v1/payments/sale/${encodeURIComponent(paymentId)}/refund`, { amount: { total: (grossCent / 100).toFixed(2), currency: 'EUR' } }, { requestId });
       return { refundId: data.id };
     },
 
@@ -156,6 +209,17 @@ export function createPayPal({ environment, clientId, clientSecret, webhookId, p
           return { ...base, kind: 'refund', paymentId: r.sale_id, refundId: r.id, grossCent: Math.abs(cents(r.amount && r.amount.total)), currency: (r.amount && r.amount.currency) || 'EUR', at: new Date(r.create_time || Date.now()) };
         case 'PAYMENT.SALE.REVERSED':
           return { ...base, kind: 'reversal', paymentId: r.id, grossCent: Math.abs(cents(r.amount && r.amount.total)), currency: (r.amount && r.amount.currency) || 'EUR', at: new Date(r.create_time || Date.now()) };
+        // Jahrespass (Orders v2). Felder laut Doku, in der Sandbox prüfen.
+        case 'CHECKOUT.ORDER.APPROVED':
+          return { ...base, kind: 'order', providerId: r.id };
+        case 'PAYMENT.CAPTURE.COMPLETED': {
+          const orderId = r.supplementary_data && r.supplementary_data.related_ids && r.supplementary_data.related_ids.order_id;
+          return { ...base, kind: 'payment', providerId: orderId || null, paymentId: r.id, grossCent: cents(r.amount && r.amount.value), currency: (r.amount && r.amount.currency_code) || 'EUR', at: new Date(r.create_time || Date.now()) };
+        }
+        case 'PAYMENT.CAPTURE.REFUNDED':
+          return { ...base, kind: 'refund', paymentId: captureIdOf(r), refundId: r.id, grossCent: Math.abs(cents(r.amount && r.amount.value)), currency: (r.amount && r.amount.currency_code) || 'EUR', at: new Date(r.create_time || Date.now()) };
+        case 'PAYMENT.CAPTURE.REVERSED':
+          return { ...base, kind: 'reversal', paymentId: captureIdOf(r) || r.id, grossCent: Math.abs(cents(r.amount && r.amount.value)), currency: (r.amount && r.amount.currency_code) || 'EUR', at: new Date(r.create_time || Date.now()) };
         default:
           return { ...base, kind: 'other' };
       }

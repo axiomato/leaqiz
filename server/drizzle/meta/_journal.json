@@ -29,6 +29,20 @@
       "when": 1795456207734,
       "tag": "0003_abo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795507025631,
+      "tag": "0004_tarife",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795507027071,
+      "tag": "0005_tarife_erste_laufzeit_weg",
+      "breakpoints": true
     }
   ]
 }
