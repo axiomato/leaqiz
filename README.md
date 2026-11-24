@@ -128,10 +128,12 @@ public/                 die veröffentlichte Seite
   js/avatar.js          Avatare: schräge Wesen aus sechs Zahlen, gezeichnet als SVG
   js/config.js          Vermittlungsserver (leer = öffentlicher PeerJS-Server)
   img/og-leaqizz.png    Vorschaubild für geteilte Links (1200 × 630)
+  img/runde/            Motive „So läuft eine Runde“ (erzeugt aus dev/motive/, nicht von Hand ändern)
   preise/               Preisseite: Kostenlos, Monatsabo, Jahrespass im Vergleich (ohne Server und ohne Abo eine Vorschau)
 dev/serve.js            lokaler Entwicklungsserver
 dev/og/                 Quelle des Vorschaubilds; neu erzeugen mit python3 dev/og/render.py
 dev/avatar/             Teile-Bogen der Avatare; neu erzeugen mit python3 dev/avatar/render.py
+dev/motive/             Motive der Bildsprache aus den Avatar-Teilen; neu erzeugen mit node dev/motive/erzeugen.js (--check prüft)
 test/                   Tests (node:test)
 server/                 Spielserver: Fastify, WebSocket (ws), PostgreSQL (Drizzle)
   src/games/            Spiele verwalten, sichern, wiederherstellen; WebSocket-Zugang

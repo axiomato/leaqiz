@@ -1295,6 +1295,20 @@ a {
   color: var(--muted-on-dark);
 }
 
+/* Motiv je Schritt (Bildsprache, D-62): Wesen auf heller Tafel, so trägt die Ink-Kontur auf dem dunklen Grund */
+.step__bild {
+  margin-bottom: var(--s-1);
+  padding: var(--s-1);
+  border-radius: var(--radius-m);
+  background: var(--paper);
+}
+
+.step__bild img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 /* Einsatz im Unterricht */
 .cases {
   display: grid;
@@ -2163,6 +2177,10 @@ a {
 
   .ask__tile {
     min-height: 72px;
+  }
+
+  .step__bild {
+    max-width: 15rem;
   }
 
   .ask__reveal {
