@@ -80,12 +80,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-      # Versionsnummer an CSS/JS hängen, damit Browser nach jedem Deploy die neuen Dateien laden
-      - name: Cache-Busting
-        run: find public -name '*.html' -exec sed -i "s/?v=dev/?v=${GITHUB_SHA::7}/g" {} +
+      # Website mit Versionsnummer an CSS/JS; mit Variable PAGES_ZIEL nur die Weiterleitung (D-61)
+      - name: Website oder Weiterleitung zusammenstellen
+        env:
+          PAGES_ZIEL: ${{ vars.PAGES_ZIEL }}
+        run: SHA="${GITHUB_SHA::7}" bash deploy/site/zusammenstellen.sh _site
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
 
@@ -126,9 +128,11 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
-      - name: Cache-Busting
-        run: find public -name '*.html' -exec sed -i "s/?v=dev/?v=${GITHUB_SHA::7}/g" {} +
-      - name: Website ins öffentliche Repo schieben
+      - name: Website oder Weiterleitung zusammenstellen
+        env:
+          PAGES_ZIEL: ${{ vars.PAGES_ZIEL }}
+        run: SHA="${GITHUB_SHA::7}" bash deploy/site/zusammenstellen.sh _site
+      - name: Ins öffentliche Repo schieben
         env:
           SITE_REPO: ${{ vars.SITE_REPO }}
           SITE_TOKEN: ${{ secrets.SITE_TOKEN }}
@@ -137,7 +141,7 @@ jobs:
           git clone --depth 1 "https://x-access-token:${SITE_TOKEN}@github.com/${SITE_REPO}.git" site
           # Alles außer .git ersetzen: gelöschte Dateien verschwinden auch drüben
           find site -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -a public/. site/
+          cp -a _site/. site/
           cp deploy/site/README.md LICENSE site/
           # Ohne Jekyll ausliefern (Dateien genau so, wie sie sind)
           touch site/.nojekyll

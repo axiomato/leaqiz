@@ -112,6 +112,24 @@ Erst einschalten, wenn **AGB und Widerrufsbelehrung** von einer Fachperson stehe
 
 Lokal ohne PayPal: `LEAQIZ_ZAHLUNG=simulation LEAQIZ_ABO=ja` – die Zustimmungsseite ist dann `/abo/simulation/`.
 
+## Zum Start: GitHub Pages leitet weiter (D-61)
+
+Nach dem Start auf der eigenen Domain dient dieses Repo nur noch zum Pflegen und Entwickeln. GitHub Pages zeigt
+dann keine Website mehr, sondern leitet jede Adresse unter `https://axiomato.github.io/leaqiz/` auf die Domain um,
+mit Pfad und Abfrage (`…/leaqiz/host/` → `https://leaqizz.com/host/`). Auch die Weiterleitung trägt `noindex, nofollow`.
+
+1. Erst wenn `https://leaqizz.com` läuft: im Repo unter **Settings → Secrets and variables → Actions → Variables**
+   die Variable `PAGES_ZIEL` mit dem Wert `https://leaqizz.com` anlegen (ohne Schrägstrich am Ende).
+2. Lauf starten: **Actions → Tests und GitHub Pages → Run workflow**, oder der nächste Push erledigt es.
+3. Prüfen: `https://axiomato.github.io/leaqiz/lehrkraefte/` landet auf `https://leaqizz.com/lehrkraefte/`.
+   GitHub Pages speichert bis zu 10 Minuten zwischen.
+
+Zurück zur Website: Variable löschen, Lauf starten. Die Seiten liegen in `deploy/weiterleitung/`,
+zusammengestellt von `deploy/site/zusammenstellen.sh`.
+
+Wird das Repo später privat, nimmt GitHub Free die Pages-Seite vom Netz und die Weiterleitung endet. Soll sie
+bleiben, vorher die Aufteilung unten ausführen: Das öffentliche Repo enthält dann nur die zwei Weiterleitungsseiten.
+
 ## Privates Code-Repo, öffentliches Seiten-Repo
 
 Der Quellcode liegt privat in `axiomato/leaqiz-quellcode`. Öffentlich ist nur die fertige Website in

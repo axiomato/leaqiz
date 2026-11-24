@@ -57,6 +57,7 @@ Leinwand und Handys ──► WebSocket /ws über Port 443 (kein Relais, kein Pe
 - Spiele überstehen Neuladen der Leinwand und Neustart des Servers.
 - Live-Spiele starten nur angemeldete Lehrkräfte: Anmeldelink per Mail oder Passkey (Better Auth, `public/js/account.js`). Schüler:innen brauchen kein Konto.
 - Tarife (D-58, D-60, eingebaut, noch aus): **Monatsabo** 4,99 € im Monat (kündbar zum Ende des bezahlten Monats) und **Jahrespass** 47,88 € für zwölf Monate (endet von selbst, Erinnerung 14 Tage vorher, Verlängern schließt an). Mit `LEAQIZ_ABO=ja` starten Live-Spiele nur mit einem der beiden; Demo, Editor und Quizze im Konto bleiben kostenlos. Zahlung über PayPal, Kündigen und Widerrufen ohne Anmeldung (`/vertraege-kuendigen/`, `/vertrag-widerrufen/`, Links im Fuß jeder Seite). Lokal ohne PayPal: `LEAQIZ_ZAHLUNG=simulation`.
+- Nach dem Start leitet GitHub Pages nur noch auf die eigene Domain weiter (D-61): Repo-Variable `PAGES_ZIEL`, Schritte in `deploy/README.md`.
 - Betrieb: `deploy/README.md`. Zielarchitektur und Entscheidungen: Projekt „Kahoot! Nachbau“, `claude/leaqiz-architektur.md`.
 
 ## Grenzen des Prototyps
@@ -141,6 +142,7 @@ server/                 Spielserver: Fastify, WebSocket (ws), PostgreSQL (Drizzl
   drizzle/              Datenbank-Migrationen (erzeugt, eingecheckt)
   scripts/lasttest.js   viele Spiele mit simulierten Handys gleichzeitig
 deploy/                 Docker Compose mit Caddy und PostgreSQL, Betriebsanleitung
+  weiterleitung/        GitHub Pages nach dem Start: Weiterleitung auf die eigene Domain
 ```
 
 Das Vorschaubild ist in Spielerseite, Spielleitung und Landingpage mit absoluter Adresse
