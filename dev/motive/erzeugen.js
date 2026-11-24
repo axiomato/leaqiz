@@ -7,13 +7,12 @@
 // Jedes Motiv hat zwei Ebenen gleicher Größe: <name>-buehne.svg (Boden, Requisiten, Funkeln) und
 // <name>-wesen.svg (die Wesen mit allem, was sie halten). Die Seite legt sie übereinander und lässt nur
 // die Wesen einmal hüpfen. Motive ohne Bühne bestehen nur aus der Wesen-Ebene.
-// Motive mit `posen` (Hero) schreiben je Pose eine Datei <name>-<pose>.svg; die Seite blendet zwischen ihnen um.
 // Korrekturen gehören hierher, nie in die SVG-Dateien. test/motive.test.js prüft beides.
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const { wesen, punkt, hand, farbe, req, svg, linie, aufkleber, ANTWORT, WHITE, INK, SUN, PINK, HELLBLAU, SW } = require('./wesen.js');
+const { wesen, punkt, hand, farbe, req, svg, linie, ANTWORT, WHITE, INK, SUN, PINK, HELLBLAU, SW } = require('./wesen.js');
 
 const kreis = (x, y, s, k) => `<circle cx="${x}" cy="${y}" r="${4.5 * s}" fill="${k}" stroke="${INK}" stroke-width="${2.5 * s}"/>`;
 
@@ -154,30 +153,6 @@ const jahrespass = {
   wesen: () => wesen({ form: 'ei', augen: 'lachen', mund: 'luecke', extra: 'krone', farbe: 'butter', x: 60, y: 116, groesse: 92, arme: 'hoch' }),
 };
 
-// ---------- Hero: die Klasse um die Demo (inline-SVG in lehrkraefte/index.html, D-64) ----------
-// Steht als SVG direkt in der Seite, damit Augen, Mund, Hut und Arme sich einzeln bewegen. Der Generator
-// schreibt den Block zwischen die Marken <!-- hero-wesen:anfang --> und <!-- hero-wesen:ende -->.
-// Reihenfolge = Tiefe: Ei hinten, Blob vorn, Zipfel sitzt auf der Leinwand.
-const HERO_SEITE = path.join(__dirname, '..', '..', 'public', 'lehrkraefte', 'index.html');
-const HERO_WESEN = [
-  { name: 'ei', form: 'ei', farbe: 'minze', extra: 'tolle', augenJubel: 'lachen', mundJubel: 'zunge', neigung: 4, arme: true },
-  { name: 'blob', form: 'blob', farbe: 'flieder', extra: 'antenne', augen: 'glubsch', mundJubel: 'oh', neigung: -3 },
-  { name: 'zipfel', form: 'zipfel', farbe: 'aprikose', augenJubel: 'lachen', mundJubel: 'luecke', neigung: -5, arme: true },
-];
-const { figur } = require('./wesen.js');
-function heroBlock() {
-  const fans = HERO_WESEN.map(
-    (w) =>
-      `              <span class="fan fan--${w.name}"><span class="fan__k">` +
-      `<svg class="fan__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" focusable="false">` +
-      `${figur(w)}</svg></span></span>`,
-  );
-  return ['<!-- hero-wesen:anfang (dev/motive/erzeugen.js, nicht von Hand ändern) -->',
-    '            <div class="klasse" aria-hidden="true">', ...fans, '            </div>',
-    '            <!-- hero-wesen:ende -->'].join('\n');
-}
-const HERO_MUSTER = /<!-- hero-wesen:anfang[\s\S]*?<!-- hero-wesen:ende -->/;
-
 // Name (relativ zu public/img/) → Motiv
 const MOTIVE = {
   'runde/quiz-waehlen': quizWaehlen,
@@ -200,10 +175,6 @@ const ORDNER = [...new Set(Object.keys(MOTIVE).map((n) => n.split('/')[0]))];
 function erzeugen() {
   const dateien = {};
   for (const [name, m] of Object.entries(MOTIVE)) {
-    if (m.posen) {
-      for (const [pose, zeichnen] of Object.entries(m.posen)) dateien[`${name}-${pose}.svg`] = zeichnen();
-      continue;
-    }
     if (m.buehne) dateien[`${name}-buehne.svg`] = svg(m.b, m.h, m.buehne());
     dateien[`${name}-wesen.svg`] = svg(m.b, m.h, m.wesen());
   }
@@ -247,22 +218,10 @@ if (require.main === module) {
       console.log(`entfernt: public/img/${f}`);
     }
   }
-  const seite = fs.readFileSync(HERO_SEITE, 'utf8');
-  if (!HERO_MUSTER.test(seite)) throw new Error('Marken hero-wesen fehlen in lehrkraefte/index.html');
-  const neu = seite.replace(HERO_MUSTER, heroBlock());
-  if (neu !== seite) {
-    if (nurPruefen) {
-      fehler++;
-      console.error('weicht ab: Hero-Wesen in public/lehrkraefte/index.html');
-    } else {
-      fs.writeFileSync(HERO_SEITE, neu);
-      console.log('public/lehrkraefte/index.html  Hero-Wesen geschrieben');
-    }
-  }
   if (nurPruefen) {
     console.log(fehler ? `${fehler} Abweichung(en): node dev/motive/erzeugen.js` : 'Alle Motive entsprechen dem Generator.');
     process.exit(fehler ? 1 : 0);
   }
 }
 
-module.exports = { erzeugen, uebrig, heroBlock, HERO_MUSTER, MOTIVE };
+module.exports = { erzeugen, uebrig, MOTIVE };
