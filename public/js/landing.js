@@ -110,10 +110,13 @@
       timers.forEach(clearTimeout);
       timers = [];
       running = false;
+      demo.classList.remove('is-running');
     }
 
     function round() {
       running = true;
+      // Die Wesen vor der Leinwand hüpfen bei der Auflösung nur, solange die Demo läuft (D-63)
+      demo.classList.add('is-running');
       resetRound();
       setStep('question');
       // 1) Tippen auf B: Ring, dann wächst das Feld zum ganzen Bildschirm

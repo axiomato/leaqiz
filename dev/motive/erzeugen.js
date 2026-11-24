@@ -7,12 +7,13 @@
 // Jedes Motiv hat zwei Ebenen gleicher Größe: <name>-buehne.svg (Boden, Requisiten, Funkeln) und
 // <name>-wesen.svg (die Wesen mit allem, was sie halten). Die Seite legt sie übereinander und lässt nur
 // die Wesen einmal hüpfen. Motive ohne Bühne bestehen nur aus der Wesen-Ebene.
+// Motive mit `posen` (Hero) schreiben je Pose eine Datei <name>-<pose>.svg; die Seite blendet zwischen ihnen um.
 // Korrekturen gehören hierher, nie in die SVG-Dateien. test/motive.test.js prüft beides.
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const { wesen, punkt, hand, farbe, req, svg, linie, ANTWORT, WHITE, INK, SUN, PINK, HELLBLAU, SW } = require('./wesen.js');
+const { wesen, punkt, hand, farbe, req, svg, linie, aufkleber, ANTWORT, WHITE, INK, SUN, PINK, HELLBLAU, SW } = require('./wesen.js');
 
 const kreis = (x, y, s, k) => `<circle cx="${x}" cy="${y}" r="${4.5 * s}" fill="${k}" stroke="${INK}" stroke-width="${2.5 * s}"/>`;
 
@@ -153,6 +154,30 @@ const jahrespass = {
   wesen: () => wesen({ form: 'ei', augen: 'lachen', mund: 'luecke', extra: 'krone', farbe: 'butter', x: 60, y: 116, groesse: 92, arme: 'hoch' }),
 };
 
+// ---------- Hero: die Klasse vor der Leinwand (120 × 120, Fuß bei 60/111, D-63) ----------
+// Steht auf dunklem Grund ohne Tafel, deshalb mit Aufkleber-Rand. Je Wesen zwei Posen gleicher Größe:
+// ruhig (schaut zu) und die Reaktion auf die Auflösung. Zwei jubeln, eines staunt („Oh“: jede Antwort zählt).
+const fan = (w) => () => svg(120, 120, aufkleber(wesen({ x: 60, y: 111, ...w })));
+
+const heroZipfel = {
+  posen: {
+    ruhig: fan({ form: 'zipfel', farbe: 'aprikose', augen: 'punkte', mund: 'laecheln', groesse: 94, neigung: -3 }),
+    jubel: fan({ form: 'zipfel', farbe: 'aprikose', augen: 'lachen', mund: 'luecke', groesse: 94, neigung: -6, arme: 'hoch' }),
+  },
+};
+const heroBlob = {
+  posen: {
+    ruhig: fan({ form: 'blob', farbe: 'flieder', extra: 'antenne', augen: 'glubsch', mund: 'laecheln', groesse: 86, neigung: 2 }),
+    oh: fan({ form: 'blob', farbe: 'flieder', extra: 'antenne', augen: 'glubsch', mund: 'oh', groesse: 86, neigung: 5 }),
+  },
+};
+const heroEi = {
+  posen: {
+    ruhig: fan({ form: 'ei', farbe: 'minze', extra: 'tolle', augen: 'punkte', mund: 'laecheln', groesse: 92, neigung: 3 }),
+    jubel: fan({ form: 'ei', farbe: 'minze', extra: 'tolle', augen: 'lachen', mund: 'zunge', groesse: 92, neigung: 7, arme: 'hoch' }),
+  },
+};
+
 // Name (relativ zu public/img/) → Motiv
 const MOTIVE = {
   'runde/quiz-waehlen': quizWaehlen,
@@ -166,6 +191,9 @@ const MOTIVE = {
   'momente/exit-ticket': exitTicket,
   'momente/konferenz': konferenz,
   'preise/jahrespass': jahrespass,
+  'hero/zipfel': heroZipfel,
+  'hero/blob': heroBlob,
+  'hero/ei': heroEi,
 };
 
 const ZIEL = path.join(__dirname, '..', '..', 'public', 'img');
@@ -175,6 +203,10 @@ const ORDNER = [...new Set(Object.keys(MOTIVE).map((n) => n.split('/')[0]))];
 function erzeugen() {
   const dateien = {};
   for (const [name, m] of Object.entries(MOTIVE)) {
+    if (m.posen) {
+      for (const [pose, zeichnen] of Object.entries(m.posen)) dateien[`${name}-${pose}.svg`] = zeichnen();
+      continue;
+    }
     if (m.buehne) dateien[`${name}-buehne.svg`] = svg(m.b, m.h, m.buehne());
     dateien[`${name}-wesen.svg`] = svg(m.b, m.h, m.wesen());
   }

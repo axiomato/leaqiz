@@ -217,9 +217,19 @@ const req = {
   },
 };
 
+// Aufkleber-Rand für dunklen Grund ohne Tafel (Hero, D-63): dieselbe Zeichnung darunter in Papier,
+// jede Linie um `rand` breiter. Die Ink-Kontur bleibt die einzige Linie, der Rand trennt sie vom Grund.
+const PAPIER = '#f4f6f9';
+function aufkleber(inhalt, rand = 7) {
+  const rand_ = inhalt
+    .replace(/stroke-width="([\d.]+)"/g, (_, w) => `stroke-width="${r(+w + rand)}"`)
+    .replace(/(fill|stroke)="(?!none")[^"]*"/g, (_, a) => `${a}="${PAPIER}"`);
+  return `<g stroke-linejoin="round">${rand_}</g>${inhalt}`;
+}
+
 // Dekoratives SVG: eingebunden als <img alt="">, deshalb ohne Titel
 function svg(b, h, inhalt) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${b} ${h}" width="${b}" height="${h}">${inhalt}</svg>\n`;
 }
 
-module.exports = { wesen, punkt, hand, farbe, schrift, req, svg, linie, ANTWORT, INK, WHITE, SUN, PINK, HELLBLAU, SW };
+module.exports = { wesen, punkt, hand, farbe, schrift, req, svg, linie, aufkleber, ANTWORT, INK, WHITE, SUN, PINK, HELLBLAU, PAPIER, SW };

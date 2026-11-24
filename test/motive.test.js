@@ -18,6 +18,7 @@ const SEITE = {
   runde: 'lehrkraefte/index.html',
   landing: 'lehrkraefte/index.html',
   momente: 'lehrkraefte/index.html',
+  hero: 'lehrkraefte/index.html',
   preise: 'preise/index.html',
 };
 
@@ -51,5 +52,11 @@ test('Jedes Motiv steht auf seiner Seite, dekorativ und mit festen Maßen', () =
     assert.match(tag[0], /alt=""/, `${datei}: dekoratives Bild braucht alt=""`);
     assert.match(tag[0], /width="\d+" height="\d+"/, `${datei}: Breite und Höhe fehlen (Layoutsprung)`);
     if (datei.endsWith('-wesen.svg')) assert.match(tag[0], /class="motiv__wesen"/, `${datei}: Wesen-Ebene ohne Klasse motiv__wesen`);
+    // Hero (D-63): ruhige Pose und Reaktion liegen übereinander, sofort sichtbar (nicht lazy)
+    if (datei.startsWith('hero/')) {
+      const klasse = datei.endsWith('-ruhig.svg') ? 'fan__ruhig' : 'fan__jubel';
+      assert.match(tag[0], new RegExp(`class="${klasse}"`), `${datei}: Pose ohne Klasse ${klasse}`);
+      assert.doesNotMatch(tag[0], /loading="lazy"/, `${datei}: steht im ersten Bildschirm, nicht lazy laden`);
+    }
   }
 });

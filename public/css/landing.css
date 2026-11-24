@@ -863,6 +863,62 @@ a {
   z-index: 5;
 }
 
+/* Die Klasse vor der Leinwand (Bildsprache, D-63): drei Wesen stehen links vom Handy auf derselben
+   Grundlinie. Eigene Ebene über der Szene, damit sie beim Ausblenden am Rundenende stehen bleiben.
+   Je Wesen zwei Posen übereinander; bei der Auflösung (data-step reveal, board) wechselt die Pose,
+   zeitgleich mit dem Hüpfer. Ohne Skript, bei Pause und „Bewegung reduzieren“ zeigt die Demo die
+   Auflösung, die Wesen jubeln dann still. Auftritt beim Laden: reines CSS, läuft einmal. */
+.klasse {
+  position: absolute;
+  inset: 0 0 auto;
+  aspect-ratio: 1 / 0.86;
+  container-type: inline-size;
+  pointer-events: none;
+}
+
+.fan {
+  --fan-w: 32cqw;
+  position: absolute;
+  bottom: calc(var(--fan-w) * -9 / 120);
+  width: var(--fan-w);
+  transform-origin: 50% 92%;
+}
+
+.fan--1 { left: -1cqw; --fan-d: 200ms; }
+.fan--2 { left: 19.5cqw; --fan-d: 280ms; }
+.fan--3 { left: 40cqw; --fan-d: 360ms; }
+
+.fan__k {
+  display: block;
+  position: relative;
+  transform-origin: 50% 92%;
+}
+
+.fan__k img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.fan__jubel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+}
+
+.demo[data-step='reveal'] .fan__jubel,
+.demo[data-step='board'] .fan__jubel {
+  opacity: 1;
+  transition: opacity 0s var(--fan-d);
+}
+
+.demo[data-step='reveal'] .fan__ruhig,
+.demo[data-step='board'] .fan__ruhig {
+  opacity: 0;
+  transition: opacity 0s var(--fan-d);
+}
+
 .demo__pause {
   display: inline-flex;
   align-items: center;
@@ -1332,6 +1388,27 @@ a {
   .case.is-in:nth-child(2) .motiv__wesen { animation-delay: 150ms; }
   .case.is-in:nth-child(3) .motiv__wesen { animation-delay: 300ms; }
   .case.is-in:nth-child(4) .motiv__wesen { animation-delay: 450ms; }
+
+  /* Hero (D-63): Auftritt einmal beim Laden; Hüpfer bei jeder Auflösung, nur solange die Demo läuft
+     (landing.js setzt .is-running; Pause, außer Sicht und „Bewegung reduzieren“ nehmen es weg) */
+  .fan {
+    animation: fan-rein 760ms var(--ease-out) 300ms both;
+  }
+
+  .fan--2 { animation-delay: 420ms; }
+  .fan--3 { animation-delay: 540ms; }
+
+  .demo.is-running[data-step='reveal'] .fan__k {
+    animation: motiv-hupf 720ms var(--ease-out) var(--fan-d) both;
+  }
+}
+
+@keyframes fan-rein {
+  0% { opacity: 0; transform: scale(0.3); }
+  40% { opacity: 1; transform: translateY(-10%) scale(0.97, 1.05); }
+  65% { transform: translateY(0) scale(1.06, 0.94); }
+  82% { transform: translateY(-2.5%); }
+  100% { opacity: 1; transform: none; }
 }
 
 @keyframes motiv-hupf {
