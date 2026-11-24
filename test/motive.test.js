@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const { readFileSync, existsSync } = require('node:fs');
 const { join } = require('node:path');
 
-const { erzeugen, uebrig } = require('../dev/motive/erzeugen.js');
+const { erzeugen, uebrig, heroBlock, HERO_MUSTER } = require('../dev/motive/erzeugen.js');
 
 const PUBLIC = join(__dirname, '..', 'public');
 const IMG = join(PUBLIC, 'img');
@@ -18,7 +18,6 @@ const SEITE = {
   runde: 'lehrkraefte/index.html',
   landing: 'lehrkraefte/index.html',
   momente: 'lehrkraefte/index.html',
-  hero: 'lehrkraefte/index.html',
   preise: 'preise/index.html',
 };
 
@@ -52,11 +51,22 @@ test('Jedes Motiv steht auf seiner Seite, dekorativ und mit festen Maßen', () =
     assert.match(tag[0], /alt=""/, `${datei}: dekoratives Bild braucht alt=""`);
     assert.match(tag[0], /width="\d+" height="\d+"/, `${datei}: Breite und Höhe fehlen (Layoutsprung)`);
     if (datei.endsWith('-wesen.svg')) assert.match(tag[0], /class="motiv__wesen"/, `${datei}: Wesen-Ebene ohne Klasse motiv__wesen`);
-    // Hero (D-63): ruhige Pose und Reaktion liegen übereinander, sofort sichtbar (nicht lazy)
-    if (datei.startsWith('hero/')) {
-      const klasse = datei.endsWith('-ruhig.svg') ? 'fan__ruhig' : 'fan__jubel';
-      assert.match(tag[0], new RegExp(`class="${klasse}"`), `${datei}: Pose ohne Klasse ${klasse}`);
-      assert.doesNotMatch(tag[0], /loading="lazy"/, `${datei}: steht im ersten Bildschirm, nicht lazy laden`);
-    }
   }
+});
+
+// Hero (D-63, D-64): Wesen als inline-SVG, damit Augen, Mund, Hut und Arme sich bewegen
+test('Hero-Wesen stehen so in der Seite, wie der Generator sie zeichnet', () => {
+  const seite = readFileSync(join(PUBLIC, 'lehrkraefte/index.html'), 'utf8');
+  const block = seite.match(HERO_MUSTER);
+  assert.ok(block, 'Marken hero-wesen fehlen');
+  assert.equal(block[0], heroBlock(), 'weicht ab (node dev/motive/erzeugen.js)');
+  assert.match(block[0], /<div class="klasse" aria-hidden="true">/, 'Wesen müssen für Screenreader verborgen sein');
+  assert.equal((block[0].match(/<svg /g) || []).length, 3, 'drei Wesen');
+  for (const verboten of [/<script/i, /<style/i, /\sstyle=/i, /<text/i, /<image/i, /href=/i, /\son[a-z]+=/i, /url\(/i]) {
+    assert.doesNotMatch(block[0], verboten, `Hero-Wesen: ${verboten}`);
+  }
+  for (const teil of ['p-ruhig', 'p-jubel', 'w-wipp', 'w-blink', 'w-mund', 'w-extra', 'w-arm-l', 'w-arm-r']) {
+    assert.match(block[0], new RegExp(`class="${teil}"`), `bewegliches Teil fehlt: ${teil}`);
+  }
+  assert.ok(Buffer.byteLength(block[0]) <= 30 * 1024, 'Hero-Wesen über 30 KB');
 });

@@ -154,29 +154,29 @@ const jahrespass = {
   wesen: () => wesen({ form: 'ei', augen: 'lachen', mund: 'luecke', extra: 'krone', farbe: 'butter', x: 60, y: 116, groesse: 92, arme: 'hoch' }),
 };
 
-// ---------- Hero: die Klasse vor der Leinwand (120 × 120, Fuß bei 60/111, D-63) ----------
-// Steht auf dunklem Grund ohne Tafel, deshalb mit Aufkleber-Rand. Je Wesen zwei Posen gleicher Größe:
-// ruhig (schaut zu) und die Reaktion auf die Auflösung. Zwei jubeln, eines staunt („Oh“: jede Antwort zählt).
-const fan = (w) => () => svg(120, 120, aufkleber(wesen({ x: 60, y: 111, ...w })));
-
-const heroZipfel = {
-  posen: {
-    ruhig: fan({ form: 'zipfel', farbe: 'aprikose', augen: 'punkte', mund: 'laecheln', groesse: 94, neigung: -3 }),
-    jubel: fan({ form: 'zipfel', farbe: 'aprikose', augen: 'lachen', mund: 'luecke', groesse: 94, neigung: -6, arme: 'hoch' }),
-  },
-};
-const heroBlob = {
-  posen: {
-    ruhig: fan({ form: 'blob', farbe: 'flieder', extra: 'antenne', augen: 'glubsch', mund: 'laecheln', groesse: 86, neigung: 2 }),
-    oh: fan({ form: 'blob', farbe: 'flieder', extra: 'antenne', augen: 'glubsch', mund: 'oh', groesse: 86, neigung: 5 }),
-  },
-};
-const heroEi = {
-  posen: {
-    ruhig: fan({ form: 'ei', farbe: 'minze', extra: 'tolle', augen: 'punkte', mund: 'laecheln', groesse: 92, neigung: 3 }),
-    jubel: fan({ form: 'ei', farbe: 'minze', extra: 'tolle', augen: 'lachen', mund: 'zunge', groesse: 92, neigung: 7, arme: 'hoch' }),
-  },
-};
+// ---------- Hero: die Klasse um die Demo (inline-SVG in lehrkraefte/index.html, D-64) ----------
+// Steht als SVG direkt in der Seite, damit Augen, Mund, Hut und Arme sich einzeln bewegen. Der Generator
+// schreibt den Block zwischen die Marken <!-- hero-wesen:anfang --> und <!-- hero-wesen:ende -->.
+// Reihenfolge = Tiefe: Ei hinten, Blob vorn, Zipfel sitzt auf der Leinwand.
+const HERO_SEITE = path.join(__dirname, '..', '..', 'public', 'lehrkraefte', 'index.html');
+const HERO_WESEN = [
+  { name: 'ei', form: 'ei', farbe: 'minze', extra: 'tolle', augenJubel: 'lachen', mundJubel: 'zunge', neigung: 4, arme: true },
+  { name: 'blob', form: 'blob', farbe: 'flieder', extra: 'antenne', augen: 'glubsch', mundJubel: 'oh', neigung: -3 },
+  { name: 'zipfel', form: 'zipfel', farbe: 'aprikose', augenJubel: 'lachen', mundJubel: 'luecke', neigung: -5, arme: true },
+];
+const { figur } = require('./wesen.js');
+function heroBlock() {
+  const fans = HERO_WESEN.map(
+    (w) =>
+      `              <span class="fan fan--${w.name}"><span class="fan__k">` +
+      `<svg class="fan__svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" focusable="false">` +
+      `${figur(w)}</svg></span></span>`,
+  );
+  return ['<!-- hero-wesen:anfang (dev/motive/erzeugen.js, nicht von Hand ändern) -->',
+    '            <div class="klasse" aria-hidden="true">', ...fans, '            </div>',
+    '            <!-- hero-wesen:ende -->'].join('\n');
+}
+const HERO_MUSTER = /<!-- hero-wesen:anfang[\s\S]*?<!-- hero-wesen:ende -->/;
 
 // Name (relativ zu public/img/) → Motiv
 const MOTIVE = {
@@ -191,9 +191,6 @@ const MOTIVE = {
   'momente/exit-ticket': exitTicket,
   'momente/konferenz': konferenz,
   'preise/jahrespass': jahrespass,
-  'hero/zipfel': heroZipfel,
-  'hero/blob': heroBlob,
-  'hero/ei': heroEi,
 };
 
 const ZIEL = path.join(__dirname, '..', '..', 'public', 'img');
@@ -250,10 +247,22 @@ if (require.main === module) {
       console.log(`entfernt: public/img/${f}`);
     }
   }
+  const seite = fs.readFileSync(HERO_SEITE, 'utf8');
+  if (!HERO_MUSTER.test(seite)) throw new Error('Marken hero-wesen fehlen in lehrkraefte/index.html');
+  const neu = seite.replace(HERO_MUSTER, heroBlock());
+  if (neu !== seite) {
+    if (nurPruefen) {
+      fehler++;
+      console.error('weicht ab: Hero-Wesen in public/lehrkraefte/index.html');
+    } else {
+      fs.writeFileSync(HERO_SEITE, neu);
+      console.log('public/lehrkraefte/index.html  Hero-Wesen geschrieben');
+    }
+  }
   if (nurPruefen) {
     console.log(fehler ? `${fehler} Abweichung(en): node dev/motive/erzeugen.js` : 'Alle Motive entsprechen dem Generator.');
     process.exit(fehler ? 1 : 0);
   }
 }
 
-module.exports = { erzeugen, uebrig, MOTIVE };
+module.exports = { erzeugen, uebrig, heroBlock, HERO_MUSTER, MOTIVE };

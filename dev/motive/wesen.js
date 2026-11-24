@@ -227,9 +227,44 @@ function aufkleber(inhalt, rand = 7) {
   return `<g stroke-linejoin="round">${rand_}</g>${inhalt}`;
 }
 
+// Wesen mit beweglichen Teilen für inline-SVG (Hero, D-64). Ruhe- und Jubel-Pose liegen in einer Zeichnung,
+// die Seite blendet .p-ruhig/.p-jubel um und bewegt .w-wipp (Fuß), .w-blink (Augen), .w-mund, .w-extra (Hut),
+// .w-arm-l/.w-arm-r (Schulter). Jede bewegliche Gruppe hat ihren Drehpunkt im eigenen Ursprung (0 0).
+function figur({ form, farbe: f, extra = 'ohne', augen = 'punkte', augenJubel = augen, mund = 'laecheln', mundJubel = mund, neigung = 0, groesse = 92, arme = false }) {
+  const F = teil(FORMS, form);
+  const X = teil(EXTRAS, extra);
+  const k = farbe(f);
+  const [fx, fy] = F.face;
+  const [tx, ty, ta] = F.top;
+  const um = (x, y, cls, inhalt) =>
+    `<g transform="translate(${x} ${y})"><g class="${cls}"><g transform="translate(${-x} ${-y})">${inhalt}</g></g></g>`;
+  const arm = (seite, sx, d, hx, hy) => um(sx, 66, `w-arm-${seite}`, linie(d) + hand(hx, hy, k));
+  const armeJubel = arme
+    ? `<g class="p-jubel">${arm('l', 27, 'M27 66Q12 56 10 38', 10, 36)}${arm('r', 73, 'M73 66Q88 56 90 38', 90, 36)}</g>`
+    : '';
+  const hut = X.svg() ? `<g transform="translate(${tx} ${ty}) rotate(${ta})"><g class="w-extra">${X.svg()}</g></g>` : '';
+  const ort = (dy) => `translate(${fx} ${fy}) scale(1.2) translate(0 ${dy})`;
+  const eyes = (id) => teil(EYES, id).svg();
+  const mouth = (id) => teil(MOUTHS, id).svg();
+  const augenTeil =
+    augenJubel === augen
+      ? `<g transform="${ort(-6)}"><g class="w-blink">${eyes(augen)}</g></g>`
+      : `<g transform="${ort(-6)}"><g class="p-ruhig"><g class="w-blink">${eyes(augen)}</g></g><g class="p-jubel">${eyes(augenJubel)}</g></g>`;
+  const mundTeil =
+    `<g transform="${ort(10)}"><g class="p-ruhig"><g class="w-mund">${mouth(mund)}</g></g>` +
+    `<g class="p-jubel">${mouth(mundJubel)}</g></g>`;
+  const s = groesse / 100;
+  const innen =
+    `<g transform="rotate(${neigung}) scale(${r(s)}) translate(-50 -91)">` +
+    armeJubel + (X.back ? hut : '') +
+    `<path d="${F.d}" fill="${k}" stroke="${INK}" stroke-width="${SW}" stroke-linejoin="round"/>` +
+    (X.back ? '' : hut) + augenTeil + mundTeil + '</g>';
+  return `<g transform="translate(60 111)"><g class="w-wipp">${aufkleber(innen)}</g></g>`;
+}
+
 // Dekoratives SVG: eingebunden als <img alt="">, deshalb ohne Titel
 function svg(b, h, inhalt) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${b} ${h}" width="${b}" height="${h}">${inhalt}</svg>\n`;
 }
 
-module.exports = { wesen, punkt, hand, farbe, schrift, req, svg, linie, aufkleber, ANTWORT, INK, WHITE, SUN, PINK, HELLBLAU, PAPIER, SW };
+module.exports = { wesen, figur, punkt, hand, farbe, schrift, req, svg, linie, aufkleber, ANTWORT, INK, WHITE, SUN, PINK, HELLBLAU, PAPIER, SW };

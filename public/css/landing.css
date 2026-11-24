@@ -863,11 +863,11 @@ a {
   z-index: 5;
 }
 
-/* Die Klasse vor der Leinwand (Bildsprache, D-63): drei Wesen stehen links vom Handy auf derselben
-   Grundlinie. Eigene Ebene über der Szene, damit sie beim Ausblenden am Rundenende stehen bleiben.
-   Je Wesen zwei Posen übereinander; bei der Auflösung (data-step reveal, board) wechselt die Pose,
-   zeitgleich mit dem Hüpfer. Ohne Skript, bei Pause und „Bewegung reduzieren“ zeigt die Demo die
-   Auflösung, die Wesen jubeln dann still. Auftritt beim Laden: reines CSS, läuft einmal. */
+/* Die Klasse um die Demo (Bildsprache, D-63, D-64). Komposition auf Drittel- und Goldlinien statt in einer
+   Reihe: Blob groß im Vordergrund auf der linken Drittellinie, Ei kleiner und weiter hinten nahe der
+   Goldlinie, Zipfel sitzt oben links auf der Leinwand. Drei Tiefen, eine Diagonale.
+   Inline-SVG (dev/motive/erzeugen.js), damit Augen, Mund, Hut und Arme sich einzeln bewegen.
+   Eigene Ebene über der Szene; nur der Zipfel blendet mit der Leinwand aus, weil er auf ihr sitzt. */
 .klasse {
   position: absolute;
   inset: 0 0 auto;
@@ -877,44 +877,45 @@ a {
 }
 
 .fan {
-  --fan-w: 32cqw;
   position: absolute;
-  bottom: calc(var(--fan-w) * -9 / 120);
   width: var(--fan-w);
-  transform-origin: 50% 92%;
+  /* Fußpunkt liegt bei 111 von 120 Einheiten: --fan-boden ist die Höhe des Fußes über dem Szenenboden */
+  bottom: calc(var(--fan-boden) - var(--fan-w) * 9 / 120);
+  left: calc(var(--fan-x) - var(--fan-w) / 2);
 }
 
-.fan--1 { left: -1cqw; --fan-d: 200ms; }
-.fan--2 { left: 19.5cqw; --fan-d: 280ms; }
-.fan--3 { left: 40cqw; --fan-d: 360ms; }
+.fan--ei { --fan-w: 26cqw; --fan-x: 58cqw; --fan-boden: 10cqw; --fan-d: 260ms; }
+.fan--blob { --fan-w: 38cqw; --fan-x: 30cqw; --fan-boden: 0cqw; --fan-d: 180ms; }
+.fan--zipfel { --fan-w: 20cqw; --fan-x: 10cqw; --fan-boden: 82cqw; --fan-d: 360ms; transition: opacity 300ms ease; }
 
-.fan__k {
-  display: block;
-  position: relative;
-  transform-origin: 50% 92%;
-}
-
-.fan__k img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.fan__jubel {
-  position: absolute;
-  top: 0;
-  left: 0;
+.demo[data-step='reset'] .fan--zipfel {
   opacity: 0;
 }
 
-.demo[data-step='reveal'] .fan__jubel,
-.demo[data-step='board'] .fan__jubel {
+.fan__k {
+  display: block;
+  transform-origin: 50% 92%;
+}
+
+.fan__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.fan .p-jubel {
+  opacity: 0;
+}
+
+.demo[data-step='reveal'] .fan .p-jubel,
+.demo[data-step='board'] .fan .p-jubel {
   opacity: 1;
   transition: opacity 0s var(--fan-d);
 }
 
-.demo[data-step='reveal'] .fan__ruhig,
-.demo[data-step='board'] .fan__ruhig {
+.demo[data-step='reveal'] .fan .p-ruhig,
+.demo[data-step='board'] .fan .p-ruhig {
   opacity: 0;
   transition: opacity 0s var(--fan-d);
 }
@@ -1389,18 +1390,70 @@ a {
   .case.is-in:nth-child(3) .motiv__wesen { animation-delay: 300ms; }
   .case.is-in:nth-child(4) .motiv__wesen { animation-delay: 450ms; }
 
-  /* Hero (D-63): Auftritt einmal beim Laden; Hüpfer bei jeder Auflösung, nur solange die Demo läuft
-     (landing.js setzt .is-running; Pause, außer Sicht und „Bewegung reduzieren“ nehmen es weg) */
+  /* Hero (D-63, D-64): Auftritt einmal beim Laden (reines CSS). Danach leise Bewegung, solange die Demo
+     läuft (landing.js setzt .is-running; Pause, außer Sicht und „Bewegung reduzieren“ nehmen es weg):
+     Wippen, Blinzeln, Hut schwingt, Mund bewegt sich; bei der Auflösung Hüpfer und winkende Arme.
+     Dauern bewusst ungleich, damit nichts im Takt läuft. */
   .fan {
-    animation: fan-rein 760ms var(--ease-out) 300ms both;
+    animation: fan-rein 760ms var(--ease-out) both;
   }
 
-  .fan--2 { animation-delay: 420ms; }
-  .fan--3 { animation-delay: 540ms; }
+  .fan--blob { animation-delay: 300ms; }
+  .fan--ei { animation-delay: 440ms; }
+  .fan--zipfel { animation-delay: 600ms; }
 
   .demo.is-running[data-step='reveal'] .fan__k {
     animation: motiv-hupf 720ms var(--ease-out) var(--fan-d) both;
   }
+
+  .demo.is-running .w-wipp { animation: fan-wipp 2.9s ease-in-out infinite; }
+  .demo.is-running .fan--ei .w-wipp { animation-duration: 3.4s; animation-delay: -1.1s; }
+  .demo.is-running .fan--zipfel .w-wipp { animation-duration: 2.5s; animation-delay: -0.6s; }
+
+  .demo.is-running .w-blink { animation: fan-blink 4.6s infinite; }
+  .demo.is-running .fan--ei .w-blink { animation-duration: 5.9s; animation-delay: -2.3s; }
+  .demo.is-running .fan--zipfel .w-blink { animation-duration: 3.8s; animation-delay: -1.4s; }
+
+  .demo.is-running .w-extra { animation: fan-schwingen 1.9s ease-in-out infinite alternate; }
+  .demo.is-running .fan--ei .w-extra { animation-duration: 2.6s; }
+
+  .demo.is-running .fan--zipfel .w-mund { animation: fan-plappern 5.2s infinite; }
+
+  .demo.is-running[data-step='reveal'] .w-arm-l,
+  .demo.is-running[data-step='board'] .w-arm-l { animation: fan-winken-l 340ms ease-in-out infinite alternate; }
+  .demo.is-running[data-step='reveal'] .w-arm-r,
+  .demo.is-running[data-step='board'] .w-arm-r { animation: fan-winken-r 340ms ease-in-out 170ms infinite alternate; }
+}
+
+@keyframes fan-wipp {
+  0%, 100% { transform: none; }
+  50% { transform: translateY(-2px) scale(0.985, 1.02); }
+}
+
+@keyframes fan-blink {
+  0%, 93%, 100% { transform: none; }
+  95.5% { transform: scaleY(0.1); }
+}
+
+@keyframes fan-schwingen {
+  from { transform: rotate(-7deg); }
+  to { transform: rotate(7deg); }
+}
+
+@keyframes fan-plappern {
+  0%, 70%, 100% { transform: none; }
+  73%, 79%, 85% { transform: scale(0.8, 0.55); }
+  76%, 82% { transform: none; }
+}
+
+@keyframes fan-winken-l {
+  from { transform: rotate(6deg); }
+  to { transform: rotate(-10deg); }
+}
+
+@keyframes fan-winken-r {
+  from { transform: rotate(-6deg); }
+  to { transform: rotate(10deg); }
 }
 
 @keyframes fan-rein {
