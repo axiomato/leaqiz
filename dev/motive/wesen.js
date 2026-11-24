@@ -33,6 +33,7 @@ const ARME = {
   hoch: (k) => linie('M27 66Q12 56 10 38') + linie('M73 66Q88 56 90 38') + hand(10, 36, k) + hand(90, 36, k),
   winken: (k) => linie('M73 66Q90 58 92 40') + hand(92, 38, k),
   tippen: () => linie('M73 70Q100 72 118 59'),
+  heben: () => linie('M73 72Q88 72 94 60'),
 };
 
 // Punkt im 100er-Raster eines Wesens (ohne Neigung) → Koordinate im Motiv
@@ -119,6 +120,84 @@ const req = {
     return (
       `<rect x="${r(x)}" y="${r(y)}" width="${r(b)}" height="${r(h)}" rx="${r(h * 0.22)}" fill="${WHITE}" stroke="${INK}" stroke-width="${SW}"/>` +
       schrift(ziffern, x + b / 2, y + h / 2, h * 0.42, INK, h * 0.08)
+    );
+  },
+  // Leinwand an der Wand (ohne Fuß): Balken je Antwort, Buchstabe darüber
+  leinwand(x, y, b, werte) {
+    const h = b * 0.62;
+    const pad = b * 0.09;
+    const g = b * 0.05;
+    const bw = (b - 2 * pad - 3 * g) / 4;
+    const basis = y + h - pad;
+    const hoch = h - 2 * pad - b * 0.1;
+    let s = `<rect x="${r(x)}" y="${r(y)}" width="${r(b)}" height="${r(h)}" rx="${r(b * 0.05)}" fill="${WHITE}" stroke="${INK}" stroke-width="${SW}"/>`;
+    ANTWORT.forEach((a, i) => {
+      const bh = hoch * werte[i];
+      const bx = x + pad + i * (bw + g);
+      s +=
+        `<rect x="${r(bx)}" y="${r(basis - bh)}" width="${r(bw)}" height="${r(bh)}" rx="${r(b * 0.02)}" fill="${a.hex}"/>` +
+        schrift(a.b, bx + bw / 2, basis - bh - b * 0.06, b * 0.05, INK);
+    });
+    return s;
+  },
+  // Heftstapel: drei Hefte, leicht verschoben, Rücken links
+  hefte(x, y, b, farben) {
+    const h = b * 0.14;
+    return farben
+      .map((f, i) => {
+        const dy = y - (i + 1) * h;
+        const dx = x + [0, 5, -3][i % 3];
+        const w = [1.5, -1.5, 1][i % 3];
+        return (
+          `<g transform="rotate(${w} ${r(dx + b / 2)} ${r(dy + h / 2)})">` +
+          `<rect x="${r(dx)}" y="${r(dy)}" width="${r(b)}" height="${r(h)}" rx="4" fill="${f}" stroke="${INK}" stroke-width="${SW}"/>` +
+          linie(`M${r(dx + b * 0.12)} ${r(dy + 4)}V${r(dy + h - 4)}`, 2.5) +
+          '</g>'
+        );
+      })
+      .join('');
+  },
+  // Tür mit Füllung und Klinke
+  tuer(x, y, b, h, f) {
+    return (
+      `<rect x="${r(x)}" y="${r(y)}" width="${r(b)}" height="${r(h)}" rx="6" fill="${f}" stroke="${INK}" stroke-width="${SW}"/>` +
+      `<rect x="${r(x + b * 0.16)}" y="${r(y + h * 0.08)}" width="${r(b * 0.68)}" height="${r(h * 0.36)}" rx="4" fill="none" stroke="${INK}" stroke-width="2.5"/>` +
+      linie(`M${r(x + b * 0.14)} ${r(y + h * 0.56)}h${r(b * 0.18)}`, SW)
+    );
+  },
+  // Ticket mit zwei Einkerbungen und Abrisslinie (Maße im Raster des Wesens)
+  ticket(x, y, b, h, f) {
+    const k = h * 0.18;
+    const m = y + h / 2;
+    return (
+      `<path d="M${x} ${y}H${x + b}V${r(m - k)}A${r(k)} ${r(k)} 0 0 0 ${x + b} ${r(m + k)}V${y + h}H${x}V${r(m + k)}A${r(k)} ${r(k)} 0 0 0 ${x} ${r(m - k)}Z" fill="${f}" stroke="${INK}" stroke-width="${SW}" stroke-linejoin="round"/>` +
+      `<path d="M${r(x + b * 0.68)} ${y + 3}V${y + h - 3}" stroke="${INK}" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 3"/>` +
+      linie(`M${r(x + b * 0.14)} ${r(y + h * 0.36)}h${r(b * 0.4)}M${r(x + b * 0.14)} ${r(y + h * 0.64)}h${r(b * 0.26)}`, 2.5)
+    );
+  },
+  // Namensschild auf der Brust (Raster des Wesens)
+  namensschild(x, y, b) {
+    const h = b * 0.38;
+    return (
+      `<rect x="${x}" y="${y}" width="${b}" height="${r(h)}" rx="3" fill="${WHITE}" stroke="${INK}" stroke-width="2.5"/>` +
+      linie(`M${r(x + b * 0.2)} ${r(y + h / 2)}h${r(b * 0.6)}`, 2.5)
+    );
+  },
+  umschlag(x, y, b) {
+    const h = b * 0.68;
+    return (
+      `<rect x="${x}" y="${y}" width="${b}" height="${r(h)}" rx="${r(b * 0.08)}" fill="${WHITE}" stroke="${INK}" stroke-width="${SW}" stroke-linejoin="round"/>` +
+      linie(`M${x + 2} ${y + 3}L${r(x + b / 2)} ${r(y + h * 0.58)}L${x + b - 2} ${y + 3}`) +
+      `<circle cx="${r(x + b / 2)}" cy="${r(y + h * 0.58)}" r="${r(b * 0.1)}" fill="${ANTWORT[3].hex}" stroke="${INK}" stroke-width="2.5"/>`
+    );
+  },
+  kaffee(x, y, b) {
+    const h = b * 1.05;
+    return (
+      linie(`M${r(x + b * 0.3)} ${r(y - b * 0.12)}q-6 -8 0 -16M${r(x + b * 0.6)} ${r(y - b * 0.12)}q-6 -8 0 -16`, 3) +
+      `<path d="M${x + b} ${r(y + h * 0.25)}h${r(b * 0.18)}a${r(b * 0.2)} ${r(b * 0.2)} 0 0 1 0 ${r(b * 0.42)}h-${r(b * 0.18)}" fill="none" stroke="${INK}" stroke-width="${SW}" stroke-linejoin="round"/>` +
+      `<path d="M${x} ${y}H${x + b}V${r(y + h * 0.78)}Q${x + b} ${r(y + h)} ${r(x + b * 0.78)} ${r(y + h)}H${r(x + b * 0.22)}Q${x} ${r(y + h)} ${x} ${r(y + h * 0.78)}Z" fill="${WHITE}" stroke="${INK}" stroke-width="${SW}" stroke-linejoin="round"/>` +
+      `<path d="M${r(x + b * 0.18)} ${r(y + h * 0.45)}h${r(b * 0.64)}" stroke="${PINK}" stroke-width="5" stroke-linecap="round"/>`
     );
   },
   funkeln(x, y, s = 1.5, f = SUN) {

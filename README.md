@@ -128,7 +128,7 @@ public/                 die veröffentlichte Seite
   js/avatar.js          Avatare: schräge Wesen aus sechs Zahlen, gezeichnet als SVG
   js/config.js          Vermittlungsserver (leer = öffentlicher PeerJS-Server)
   img/og-leaqizz.png    Vorschaubild für geteilte Links (1200 × 630)
-  img/runde/            Motive „So läuft eine Runde“ (erzeugt aus dev/motive/, nicht von Hand ändern)
+  img/{runde,momente,landing,preise}/ Motive der Bildsprache, je Bühne und Wesen (erzeugt aus dev/motive/, nicht von Hand ändern)
   preise/               Preisseite: Kostenlos, Monatsabo, Jahrespass im Vergleich (ohne Server und ohne Abo eine Vorschau)
 dev/serve.js            lokaler Entwicklungsserver
 dev/og/                 Quelle des Vorschaubilds; neu erzeugen mit python3 dev/og/render.py

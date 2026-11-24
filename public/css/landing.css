@@ -1295,7 +1295,54 @@ a {
   color: var(--muted-on-dark);
 }
 
-/* Motiv je Schritt (Bildsprache, D-62): Wesen auf heller Tafel, so trägt die Ink-Kontur auf dem dunklen Grund */
+/* Motive (Bildsprache, D-62): Bühne und Wesen als zwei gleich große Ebenen übereinander.
+   Die Wesen hüpfen einmal, wenn das Motiv ins Bild kommt (landing.js, preise.js setzen .is-in);
+   bei „Bewegung reduzieren“ stehen sie still. Ohne Skript steht alles wie im Endzustand. */
+.motiv {
+  position: relative;
+}
+
+.motiv img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.motiv .motiv__wesen:not(:first-child) {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.motiv__wesen {
+  transform-origin: 50% 92%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .motiv.is-in .motiv__wesen,
+  .steps.is-in .motiv__wesen,
+  .case.is-in .motiv__wesen {
+    animation: motiv-hupf 720ms var(--ease-out) both;
+  }
+
+  /* Im Ablauf hüpft jedes Wesen, wenn seine Nummer aufleuchtet */
+  .steps.is-in .step:nth-child(2) .motiv__wesen { animation-delay: 330ms; }
+  .steps.is-in .step:nth-child(3) .motiv__wesen { animation-delay: 660ms; }
+  .steps.is-in .step:nth-child(4) .motiv__wesen { animation-delay: 990ms; }
+  .case.is-in:nth-child(2) .motiv__wesen { animation-delay: 150ms; }
+  .case.is-in:nth-child(3) .motiv__wesen { animation-delay: 300ms; }
+  .case.is-in:nth-child(4) .motiv__wesen { animation-delay: 450ms; }
+}
+
+@keyframes motiv-hupf {
+  0% { transform: none; }
+  30% { transform: translateY(-7%) scale(0.98, 1.03); }
+  55% { transform: translateY(0) scale(1.03, 0.97); }
+  75% { transform: translateY(-1.5%); }
+  100% { transform: none; }
+}
+
+/* Im dunklen Ablauf: Wesen auf heller Tafel, so trägt die Ink-Kontur */
 .step__bild {
   margin-bottom: var(--s-1);
   padding: var(--s-1);
@@ -1303,10 +1350,15 @@ a {
   background: var(--paper);
 }
 
-.step__bild img {
-  display: block;
-  width: 100%;
-  height: auto;
+/* Motiv neben der Überschrift einer Sektion */
+.section__head--motiv {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  column-gap: var(--s-4);
+}
+
+.section__motiv {
+  width: clamp(6.5rem, 22vw, 15rem);
 }
 
 /* Einsatz im Unterricht */
@@ -1318,12 +1370,26 @@ a {
 
 .case {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-content: start;
   gap: var(--s-2);
   padding: var(--s-4);
   border-radius: var(--radius-m);
   background: var(--surface);
   border-top: 8px solid var(--c, var(--opt-0));
+}
+
+/* Kleines Motiv oben rechts, der Text darunter über die ganze Breite */
+.case > p {
+  grid-column: 1 / -1;
+}
+
+.case__motiv {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  width: 9rem;
+  margin: calc(-1 * var(--s-2)) calc(-1 * var(--s-2)) 0 0;
 }
 
 .case:nth-child(2) { --c: var(--opt-1); }
@@ -1682,6 +1748,14 @@ a {
 .plan--abo {
   background: var(--opt-0);
   color: #ffffff;
+}
+
+/* Wesen mit Krone oben rechts im Jahrespass (Bildsprache, D-62); die Kante gehört dem Hinweis auf die Ersparnis */
+.plan__motiv {
+  position: absolute;
+  top: var(--s-3);
+  right: var(--s-4);
+  width: 4rem;
 }
 
 /* Hinweis auf die Ersparnis auf der oberen Kante, damit die Namen der Karten auf einer Linie bleiben */
@@ -2181,6 +2255,20 @@ a {
 
   .step__bild {
     max-width: 15rem;
+  }
+
+  .case__motiv {
+    width: 6.5rem;
+  }
+
+  /* Auf dem Handy steht das Motiv über der Überschrift, damit sie ihre Breite behält */
+  .section__head--motiv {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .section__motiv {
+    order: -1;
+    width: 8rem;
   }
 
   .ask__reveal {

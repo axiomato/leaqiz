@@ -252,6 +252,9 @@
 
   once($('#steps'), 'is-in', 0.4);
   once($('#podium'), 'is-in', 0.5, 'is-waiting');
+  // Motive (D-62): die Wesen hüpfen einmal, im Ablauf mit der Nummer (CSS), sonst je Motiv beim Hineinscrollen
+  $$('.case').forEach((el) => once(el, 'is-in', 0.5));
+  $$('.section__motiv').forEach((el) => once(el, 'is-in', 0.6));
 
   // ---------- Unterstützen: Betrag → Link zur Bezahlseite ----------
 
