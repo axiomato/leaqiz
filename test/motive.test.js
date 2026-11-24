@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const { readFileSync, existsSync } = require('node:fs');
 const { join } = require('node:path');
 
-const { erzeugen, uebrig } = require('../dev/motive/erzeugen.js');
+const { erzeugen, uebrig, seitenMitWesen, wesenInline } = require('../dev/motive/erzeugen.js');
 
 const PUBLIC = join(__dirname, '..', 'public');
 const IMG = join(PUBLIC, 'img');
@@ -50,6 +50,23 @@ test('Jedes Motiv steht auf seiner Seite, dekorativ und mit festen Maßen', () =
     assert.ok(tag, `${seite} zeigt ${datei} nicht`);
     assert.match(tag[0], /alt=""/, `${datei}: dekoratives Bild braucht alt=""`);
     assert.match(tag[0], /width="\d+" height="\d+"/, `${datei}: Breite und Höhe fehlen (Layoutsprung)`);
-    if (datei.endsWith('-wesen.svg')) assert.match(tag[0], /class="motiv__wesen"/, `${datei}: Wesen-Ebene ohne Klasse motiv__wesen`);
+  }
+});
+
+// Wesen-Ebenen stehen inline in der Seite (D-65), damit Augen, Mund, Hut und Körper sich leise bewegen
+test('Wesen-Ebenen stehen so in den Seiten, wie der Generator sie zeichnet', () => {
+  for (const [datei, inhalt] of Object.entries(seitenMitWesen())) {
+    assert.equal(readFileSync(join(PUBLIC, datei), 'utf8'), inhalt, `weicht ab: ${datei} (node dev/motive/erzeugen.js)`);
+  }
+  for (const [name, block] of Object.entries(wesenInline())) {
+    const seite = readFileSync(join(PUBLIC, SEITE[name.split('/')[0]]), 'utf8');
+    const i = seite.indexOf(`<!-- motiv:${name} -->`);
+    const vorher = seite.lastIndexOf('<div', i);
+    assert.match(seite.slice(vorher, i), /class="[^"]*motiv[^"]*" aria-hidden="true"/, `${name}: Wesen nicht für Screenreader verborgen`);
+    for (const verboten of [/<script/i, /<style/i, /\sstyle=/i, /<text/i, /<image/i, /href=/i, /\son[a-z]+=/i, /url\(/i]) {
+      assert.doesNotMatch(block, verboten, `${name}: ${verboten}`);
+    }
+    for (const teil of ['w-wipp', 'w-blink', 'w-mund']) assert.match(block, new RegExp(`class="${teil}`), `${name}: ${teil} fehlt`);
+    assert.ok(Buffer.byteLength(block) <= 20 * 1024, `${name}: über 20 KB`);
   }
 });

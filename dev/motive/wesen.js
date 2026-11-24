@@ -42,6 +42,8 @@ function punkt({ x, y, groesse = 100 }, gx, gy) {
   return [r(x + s * (gx - 50)), r(y + s * (gy - 91))];
 }
 
+// Bewegliche Teile (D-65): .w-wipp (Drehpunkt Fuß), .w-blink (Augenlinie), .w-mund (Mundmitte), .w-extra (Hutansatz).
+// Jede Gruppe hat ihren Drehpunkt im eigenen Ursprung (0 0); die Seite bewegt sie per CSS.
 function wesen({ form, augen = 'punkte', mund = 'laecheln', extra = 'ohne', farbe: f = 'butter', x, y, groesse = 100, neigung = 0, arme, vorne }) {
   const F = teil(FORMS, form);
   const X = teil(EXTRAS, extra);
@@ -49,19 +51,20 @@ function wesen({ form, augen = 'punkte', mund = 'laecheln', extra = 'ohne', farb
   const [fx, fy] = F.face;
   const [tx, ty, ta] = F.top;
   const s = groesse / 100;
-  const hut = X.svg() ? `<g transform="translate(${tx} ${ty}) rotate(${ta})">${X.svg()}</g>` : '';
+  const hut = X.svg() ? `<g transform="translate(${tx} ${ty}) rotate(${ta})"><g class="w-extra">${X.svg()}</g></g>` : '';
   const gesicht =
     `<g transform="translate(${fx} ${fy}) scale(1.2)">` +
-    `<g transform="translate(0 -6)">${teil(EYES, augen).svg()}</g><g transform="translate(0 10)">${teil(MOUTHS, mund).svg()}</g></g>`;
+    `<g transform="translate(0 -6)"><g class="w-blink">${teil(EYES, augen).svg()}</g></g>` +
+    `<g transform="translate(0 10)"><g class="w-mund">${teil(MOUTHS, mund).svg()}</g></g></g>`;
   return (
-    `<g transform="translate(${r(x)} ${r(y)}) rotate(${neigung}) scale(${r(s)}) translate(-50 -91)">` +
+    `<g transform="translate(${r(x)} ${r(y)})"><g class="w-wipp"><g transform="rotate(${neigung}) scale(${r(s)}) translate(-50 -91)">` +
     (arme ? ARME[arme](k) : '') +
     (X.back ? hut : '') +
     `<path d="${F.d}" fill="${k}" stroke="${INK}" stroke-width="${r(Math.max(SW, 2 / s))}" stroke-linejoin="round"/>` +
     (X.back ? '' : hut) +
     gesicht +
     (vorne ? vorne(k) : '') +
-    `</g>`
+    `</g></g></g>`
   );
 }
 

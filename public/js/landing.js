@@ -256,6 +256,15 @@
   $$('.case').forEach((el) => once(el, 'is-in', 0.5));
   $$('.section__motiv').forEach((el) => once(el, 'is-in', 0.6));
 
+  // Leise Bewegung der Wesen (D-65): bei jedem Hineinscrollen einmal, höchstens 5 s (CSS)
+  if (!reduced() && 'IntersectionObserver' in window) {
+    const lebendig = new IntersectionObserver(
+      (entries) => entries.forEach((e) => e.target.classList.toggle('is-lebt', e.isIntersecting)),
+      { threshold: 0.5 },
+    );
+    $$('.motiv').forEach((el) => lebendig.observe(el));
+  }
+
   // ---------- Unterstützen: Betrag → Link zur Bezahlseite ----------
 
   const donate = $('#donate');

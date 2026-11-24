@@ -17,6 +17,9 @@
     { threshold: 0.6 },
   );
   io.observe(motiv);
+  // Leise Bewegung (D-65): bei jedem Hineinscrollen einmal, höchstens 5 s (CSS)
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  new IntersectionObserver((entries) => motiv.classList.toggle('is-lebt', entries[0].isIntersecting), { threshold: 0.6 }).observe(motiv);
 })();
 
 (function () {

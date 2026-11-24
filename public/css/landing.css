@@ -1302,7 +1302,8 @@ a {
   position: relative;
 }
 
-.motiv img {
+.motiv img,
+.motiv svg {
   display: block;
   width: 100%;
   height: auto;
@@ -1332,6 +1333,50 @@ a {
   .case.is-in:nth-child(2) .motiv__wesen { animation-delay: 150ms; }
   .case.is-in:nth-child(3) .motiv__wesen { animation-delay: 300ms; }
   .case.is-in:nth-child(4) .motiv__wesen { animation-delay: 450ms; }
+}
+
+/* Leise Bewegung (D-65, Nutzer: „die feinen Animationen … bitte immer verwenden“): Wippen, Blinzeln,
+   Hut schwingt, Mund bewegt sich. Läuft, wenn ein Motiv ins Bild kommt (landing.js, preise.js setzen
+   .is-lebt), höchstens 5 s lang (WCAG 2.2.2) und endet im Ruhezustand; beim nächsten Hineinscrollen
+   wieder. Takt-Klassen t1–t5 verteilen die Dauern, damit nichts gleichzeitig blinzelt. */
+@media (prefers-reduced-motion: no-preference) {
+  .is-lebt .w-wipp { animation: wesen-wipp 2.4s ease-in-out 2 both; }
+  .is-lebt .w-blink { animation: wesen-blink 4.6s 1 both; }
+  .is-lebt .w-extra { animation: wesen-schwingen 2.3s ease-in-out 2 both; }
+  .is-lebt .t2 .w-mund,
+  .is-lebt .t4 .w-mund { animation: wesen-plappern 4.8s 1 both; }
+
+  .is-lebt .t2.w-wipp { animation-duration: 2.2s; animation-delay: 0.3s; }
+  .is-lebt .t3.w-wipp { animation-duration: 1.6s; animation-iteration-count: 3; }
+  .is-lebt .t4.w-wipp { animation-duration: 2.3s; animation-delay: 0.15s; }
+  .is-lebt .t5.w-wipp { animation-duration: 1.5s; animation-iteration-count: 3; animation-delay: 0.2s; }
+  .is-lebt .t2 .w-blink { animation-duration: 3.4s; }
+  .is-lebt .t3 .w-blink { animation-duration: 4.9s; }
+  .is-lebt .t4 .w-blink { animation-duration: 2.8s; }
+  .is-lebt .t5 .w-blink { animation-duration: 4.1s; }
+  .is-lebt .t3 .w-extra { animation-duration: 1.6s; animation-iteration-count: 3; }
+}
+
+@keyframes wesen-wipp {
+  0%, 100% { transform: none; }
+  50% { transform: translateY(-1.5px) scale(0.99, 1.015); }
+}
+
+@keyframes wesen-blink {
+  0%, 52%, 60%, 100% { transform: none; }
+  56% { transform: scaleY(0.1); }
+}
+
+@keyframes wesen-schwingen {
+  0%, 100% { transform: none; }
+  25% { transform: rotate(-7deg); }
+  75% { transform: rotate(7deg); }
+}
+
+@keyframes wesen-plappern {
+  0%, 55%, 100% { transform: none; }
+  60%, 68%, 76% { transform: scale(0.85, 0.55); }
+  64%, 72% { transform: none; }
 }
 
 @keyframes motiv-hupf {

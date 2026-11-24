@@ -4,9 +4,10 @@
 //   node dev/motive/erzeugen.js           schreibt die SVG-Dateien
 //   node dev/motive/erzeugen.js --check   meldet Dateien, die vom Generator abweichen oder übrig sind (Exit 1)
 //
-// Jedes Motiv hat zwei Ebenen gleicher Größe: <name>-buehne.svg (Boden, Requisiten, Funkeln) und
-// <name>-wesen.svg (die Wesen mit allem, was sie halten). Die Seite legt sie übereinander und lässt nur
-// die Wesen einmal hüpfen. Motive ohne Bühne bestehen nur aus der Wesen-Ebene.
+// Jedes Motiv hat zwei Ebenen gleicher Größe: <name>-buehne.svg (Boden, Requisiten, Funkeln) als Datei und
+// die Wesen-Ebene (die Wesen mit allem, was sie halten) als inline-SVG in der Seite, zwischen den Marken
+// <!-- motiv:<name> --> und <!-- /motiv:<name> -->. Inline, damit Augen, Mund, Hut und Körper sich leise
+// bewegen (D-65). Die Seite legt die Ebenen übereinander. Motive ohne Bühne bestehen nur aus der Wesen-Ebene.
 // Korrekturen gehören hierher, nie in die SVG-Dateien. test/motive.test.js prüft beides.
 'use strict';
 
@@ -176,9 +177,45 @@ function erzeugen() {
   const dateien = {};
   for (const [name, m] of Object.entries(MOTIVE)) {
     if (m.buehne) dateien[`${name}-buehne.svg`] = svg(m.b, m.h, m.buehne());
-    dateien[`${name}-wesen.svg`] = svg(m.b, m.h, m.wesen());
   }
   return dateien;
+}
+
+// Seite je Motiv-Ordner; die Wesen-Ebene steht dort inline
+const SEITEN = {
+  runde: 'lehrkraefte/index.html',
+  landing: 'lehrkraefte/index.html',
+  momente: 'lehrkraefte/index.html',
+  preise: 'preise/index.html',
+};
+
+// Wesen-Ebene als inline-SVG. Jedes Wesen bekommt eine Takt-Klasse t1–t5 (seitenweit reihum),
+// damit Blinzeln und Wippen nicht gleichzeitig laufen.
+function wesenInline() {
+  const bloecke = {};
+  let n = 0;
+  for (const [name, m] of Object.entries(MOTIVE)) {
+    const inhalt = m.wesen().replace(/class="w-wipp"/g, () => `class="w-wipp t${(n++ % 5) + 1}"`);
+    bloecke[name] =
+      `<!-- motiv:${name} --><svg class="motiv__wesen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${m.b} ${m.h}" ` +
+      `width="${m.b}" height="${m.h}" focusable="false">${inhalt}</svg><!-- /motiv:${name} -->`;
+  }
+  return bloecke;
+}
+const blockMuster = (name) => new RegExp(`<!-- motiv:${name.replace('/', '\\/')} -->[\\s\\S]*?<!-- \\/motiv:${name.replace('/', '\\/')} -->`);
+
+// Seiteninhalt mit den aktuellen Wesen-Ebenen (Datei → neuer Inhalt)
+function seitenMitWesen() {
+  const bloecke = wesenInline();
+  const neu = {};
+  for (const [name, block] of Object.entries(bloecke)) {
+    const datei = SEITEN[name.split('/')[0]];
+    neu[datei] ??= fs.readFileSync(path.join(__dirname, '..', '..', 'public', datei), 'utf8');
+    const muster = blockMuster(name);
+    if (!muster.test(neu[datei])) throw new Error(`Marke motiv:${name} fehlt in ${datei}`);
+    neu[datei] = neu[datei].replace(muster, () => block);
+  }
+  return neu;
 }
 
 // SVG-Dateien in den Motiv-Ordnern, die der Generator nicht (mehr) erzeugt
@@ -218,10 +255,21 @@ if (require.main === module) {
       console.log(`entfernt: public/img/${f}`);
     }
   }
+  for (const [datei, inhalt] of Object.entries(seitenMitWesen())) {
+    const ziel = path.join(__dirname, '..', '..', 'public', datei);
+    if (fs.readFileSync(ziel, 'utf8') === inhalt) continue;
+    if (nurPruefen) {
+      fehler++;
+      console.error(`weicht ab: Wesen-Ebenen in public/${datei}`);
+    } else {
+      fs.writeFileSync(ziel, inhalt);
+      console.log(`public/${datei}  Wesen-Ebenen geschrieben`);
+    }
+  }
   if (nurPruefen) {
     console.log(fehler ? `${fehler} Abweichung(en): node dev/motive/erzeugen.js` : 'Alle Motive entsprechen dem Generator.');
     process.exit(fehler ? 1 : 0);
   }
 }
 
-module.exports = { erzeugen, uebrig, MOTIVE };
+module.exports = { erzeugen, uebrig, wesenInline, seitenMitWesen, blockMuster, SEITEN, MOTIVE };
