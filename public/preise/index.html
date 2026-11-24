@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <meta name="referrer" content="no-referrer" />
+    <!-- Suchmaschinen dauerhaft gesperrt (Festlegung Nutzer: gilt für alle GitHub-Pages-Projekte) -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#121826" />
+    <title>Preise | leaqizz</title>
+    <meta name="description" content="leaqizz kostenlos ausprobieren: Quizze bauen und die Demo spielen. Live mit den Handys der Klasse im Abo für 3,99 € im Monat." />
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="../fonts/archivo-wdth.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="../css/landing.css?v=dev" />
+  </head>
+  <!-- Preise (D-58). Beträge stehen in server/src/billing/angebot.js; server/test/preise.test.js prüft, dass diese Seite dieselben nennt.
+       Ohne Server oder ohne eingeschaltetes Abo zeigt die Seite eine Vorschau (js/preise.js). -->
+  <body class="lp">
+    <a class="skip" href="#main">Zum Inhalt springen</a>
+
+    <header class="top tone-ink">
+      <div class="wrap top__inner">
+        <a class="wordmark" href="../lehrkraefte/" aria-label="leaqizz Startseite">leaqizz</a>
+        <nav class="top__nav" aria-label="Seitenbereiche">
+          <a href="#vergleich">Im Vergleich</a>
+          <a href="#fragen">Fragen</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="prices tone-ink" aria-labelledby="prices-title">
+        <div class="wrap">
+          <h1 class="h1 prices__title" id="prices-title">Ausprobieren kostet nichts.</h1>
+          <p class="lead prices__lead">Quizze bauen und die Demo spielen ist kostenlos. Für Runden mit den Handys deiner Klasse brauchst du das Abo.</p>
+          <p class="prices__preview" id="preise-vorschau">Vorschau: So sieht das Abo aus, sobald leaqizz auf leaqizz.com startet. Bis dahin ist alles kostenlos.</p>
+
+          <div class="plans">
+            <article class="plan" aria-labelledby="plan-free">
+              <h2 class="plan__name" id="plan-free">Kostenlos</h2>
+              <p class="plan__price"><span class="plan__amount">0 €</span> <span class="plan__unit">dauerhaft</span></p>
+              <p class="plan__total">Ohne Zahlungsdaten. Für die Demo brauchst du nicht einmal ein Konto.</p>
+              <ul class="checks plan__list">
+                <li>Quizze bauen und bearbeiten</li>
+                <li>Demo mit acht simulierten Mitspielenden</li>
+                <li>Quizze im Konto, auf allen Geräten</li>
+              </ul>
+              <div class="plan__cta">
+                <a class="btn btn--ghost" href="../host/?start=demo">Demo starten</a>
+              </div>
+            </article>
+
+            <article class="plan plan--abo" aria-labelledby="plan-abo">
+              <h2 class="plan__name" id="plan-abo">Abo</h2>
+              <p class="plan__price"><span class="plan__amount">3,99 €</span> <span class="plan__unit">im Monat</span></p>
+              <p class="plan__total"><strong>47,88 € für das erste Jahr</strong>, im Voraus bezahlt. Danach monatlich 3,99 €, jederzeit mit einem Monat Frist kündbar. Preise inklusive 19 % Umsatzsteuer.</p>
+              <p class="plan__also">Alles aus „Kostenlos“, dazu:</p>
+              <ul class="checks plan__list">
+                <li>Live-Spiele mit den Handys deiner Klasse</li>
+                <li>Ergebnisse 30 Tage im Konto, Export als CSV</li>
+                <li>Kündigen ohne Anmeldung, über den Link unten auf jeder Seite</li>
+              </ul>
+              <div class="plan__cta">
+                <a class="btn btn--primary" id="abo-cta" role="link" aria-disabled="true" aria-describedby="abo-cta-note">Abo abschließen</a>
+                <p class="plan__note small" id="abo-cta-note">Startet mit leaqizz.com. Bezahlt wird über PayPal.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section tone-white" id="vergleich" aria-labelledby="compare-title">
+        <div class="wrap">
+          <div class="section__head">
+            <h2 class="h2" id="compare-title">Im Vergleich</h2>
+          </div>
+          <div class="compare-wrap">
+            <table class="compare">
+              <caption class="visually-hidden">Was in „Kostenlos“ und im Abo enthalten ist</caption>
+              <thead>
+                <tr>
+                  <th scope="col"><span class="visually-hidden">Funktion</span></th>
+                  <th scope="col">Kostenlos</th>
+                  <th scope="col">Abo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Quizze bauen und bearbeiten</th>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Quizze im Konto, auf allen Geräten</th>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Demo mit acht simulierten Mitspielenden</th>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Live-Spiel mit den Handys der Klasse</th>
+                  <td><span class="mark mark--no" aria-hidden="true"></span><span class="visually-hidden">nicht enthalten</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Ergebnisse 30 Tage im Konto, Export als CSV</th>
+                  <td><span class="mark mark--no" aria-hidden="true"></span><span class="visually-hidden">nicht enthalten</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Schüler:innen ohne Konto und ohne App</th>
+                  <td><span class="mark mark--none" aria-hidden="true">–</span><span class="visually-hidden">entfällt, die Demo spielt ohne Klasse</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                </tr>
+                <tr>
+                  <th scope="row">Keine Werbung, kein Tracking</th>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                  <td><span class="mark mark--yes" aria-hidden="true"></span><span class="visually-hidden">enthalten</span></td>
+                </tr>
+                <tr class="compare__price">
+                  <th scope="row">Preis</th>
+                  <td>0 €</td>
+                  <td>3,99 € im Monat<span class="compare__sub">erstes Jahr 47,88 € im Voraus</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section tone-paper" id="fragen" aria-labelledby="faq-title">
+        <div class="wrap">
+          <div class="section__head">
+            <h2 class="h2" id="faq-title">Fragen zum Abo</h2>
+          </div>
+          <div class="faq">
+            <details>
+              <summary>Warum zahle ich das erste Jahr im Voraus?</summary>
+              <p>So bleibt der Preis bei 3,99 € im Monat. Nach dem ersten Jahr läuft das Abo monatlich weiter, und du kannst jederzeit mit einem Monat Frist kündigen.</p>
+            </details>
+            <details>
+              <summary>Wie kündige ich?</summary>
+              <p>Über „Verträge hier kündigen“ unten auf jeder Seite, ohne Anmeldung. Im ersten Jahr endet das Abo zum Ende des Jahres, danach zum Ende des bezahlten Monats.</p>
+            </details>
+            <details>
+              <summary>Kann ich es mir noch anders überlegen?</summary>
+              <p>Ja. Innerhalb von 14 Tagen widerrufst du über „Vertrag widerrufen“, ohne Begründung. Du bekommst dein Geld zurück, abzüglich der Tage, die du es schon genutzt hast.</p>
+            </details>
+            <details>
+              <summary>Wie bezahle ich?</summary>
+              <p>Über PayPal. Deine Zahlungsdaten gibst du nur bei PayPal ein, leaqizz sieht sie nicht.</p>
+            </details>
+            <details>
+              <summary>Was passiert mit meinen Quizzen, wenn das Abo endet?</summary>
+              <p>Sie bleiben in deinem Konto. Du kannst sie weiter bearbeiten und die Demo spielen. Nur Live-Spiele startest du dann nicht mehr.</p>
+            </details>
+            <details>
+              <summary>Gibt es Lizenzen für ganze Schulen?</summary>
+              <p>Noch nicht. Das Abo gilt für dich als Lehrkraft.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot tone-ink">
+      <div class="wrap">
+        <div class="foot__row">
+          <nav aria-label="Weitere Seiten">
+            <a href="../lehrkraefte/">Für Lehrkräfte</a>
+            <a href="../host/">Zur App</a>
+            <a href="../impressum/">Impressum</a>
+            <a href="../datenschutz/">Datenschutz</a>
+          </nav>
+          <p class="small">leaqizz · 2026</p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="../js/config.js?v=dev"></script>
+    <script src="../js/preise.js?v=dev"></script>
+  </body>
+</html>

@@ -1616,6 +1616,228 @@ a {
   font-weight: 700;
 }
 
+/* ---------- Preise (D-58): zwei Modelle nebeneinander, Vergleich, Fragen ---------- */
+
+.prices {
+  padding-block: var(--s-10) var(--s-12);
+}
+
+.prices__lead {
+  margin-top: var(--s-3);
+  max-width: 40ch;
+}
+
+.prices__preview {
+  margin-top: var(--s-4);
+  max-width: 52ch;
+  padding: var(--s-2) var(--s-3);
+  border: 2px solid var(--muted-on-dark);
+  border-radius: var(--radius-s);
+  font-weight: 700;
+}
+
+.prices__preview[hidden] {
+  display: none;
+}
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+  margin-top: var(--s-8);
+  max-width: 960px;
+}
+
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+/* Das Abo in der Farbe der richtigen Antwort, wie die Auflösung in der App */
+.plan--abo {
+  background: var(--opt-0);
+  color: #ffffff;
+}
+
+.plan__name {
+  font-size: var(--t-1);
+  font-weight: 800;
+}
+
+.plan__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--s-1);
+}
+
+.plan__amount {
+  font-size: var(--t-4);
+  font-weight: 850;
+  font-stretch: 112%;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.plan__unit {
+  font-weight: 700;
+}
+
+.plan__total {
+  max-width: 44ch;
+  color: var(--muted);
+}
+
+.plan--abo .plan__total {
+  color: #ffffff;
+}
+
+.plan__also {
+  margin-top: var(--s-1);
+  font-weight: 700;
+}
+
+.plan__list {
+  margin-top: var(--s-1);
+}
+
+.plan--abo .checks li::before {
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='%230f6e74' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 80% no-repeat;
+}
+
+.plan__cta {
+  display: grid;
+  gap: var(--s-1);
+  justify-items: start;
+  margin-top: auto;
+  padding-top: var(--s-3);
+}
+
+.plan--abo .btn--primary {
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.plan--abo .btn--primary:hover {
+  background: #e6ebf2;
+}
+
+.plan--abo .btn[aria-disabled='true'] {
+  background: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+.plan--abo :focus-visible {
+  outline-color: #ffffff;
+}
+
+.compare-wrap {
+  max-width: 880px;
+  overflow-x: auto;
+}
+
+.compare {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.compare th,
+.compare td {
+  padding: var(--s-2);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.compare thead th {
+  font-weight: 800;
+  border-bottom: 2px solid var(--ink);
+}
+
+.compare thead th:not(:first-child),
+.compare td {
+  width: 9rem;
+  text-align: center;
+}
+
+.compare tbody th {
+  font-weight: 400;
+}
+
+/* Abo-Spalte leicht in der Antwortfarbe getönt */
+.compare th:last-child,
+.compare td:last-child {
+  background: #e7f2f2;
+}
+
+.compare__price th,
+.compare__price td {
+  font-weight: 800;
+  border-bottom: 0;
+}
+
+.compare__sub {
+  display: block;
+  margin-top: var(--s-1);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.mark {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  vertical-align: middle;
+}
+
+.mark--yes {
+  background: var(--opt-0) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 80% no-repeat;
+}
+
+.mark--no {
+  border: 2px solid var(--muted);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 12h10' fill='none' stroke='%23556072' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") center / 90% no-repeat;
+}
+
+.mark--none {
+  width: auto;
+  height: auto;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .plans {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: var(--s-6);
+  }
+
+  .plan {
+    padding: var(--s-4) var(--s-3);
+  }
+
+  .plan__amount {
+    font-size: var(--t-3);
+  }
+
+  .compare th,
+  .compare td {
+    padding: var(--s-2) var(--s-1);
+  }
+
+  .compare thead th:not(:first-child),
+  .compare td {
+    width: 5.5rem;
+  }
+}
+
 /* ---------- Verträge: Fuß-Links, Kündigen, Widerrufen (nur Serverbetrieb) ---------- */
 
 /* Vom Server ans Ende jeder Seite gesetzt (§ 312k, § 356a BGB) */

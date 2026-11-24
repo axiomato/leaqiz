@@ -7,6 +7,8 @@
   const session = store('session');
   const LIB_KEY = 'leaqiz.quizzes';
   const GAME_KEY = 'leaqiz.hostGame';
+  // Von der Preisseite zum Abo: nach der Anmeldung direkt zum Angebot (gilt 30 Minuten)
+  const AFTER_LOGIN_KEY = 'leaqiz.nachAnmeldung';
   const TIME_LIMITS = [5, 10, 20, 30, 45, 60, 90, 120, 240];
 
   const root = document.getElementById('app');
@@ -920,7 +922,7 @@
     const privacy = h('p', { class: 'hint' }, 'Wir speichern deine E-Mail-Adresse für dein Konto und schicken dir nur Anmeldelinks. ', h('a', { href: '../datenschutz/', text: 'Mehr zum Datenschutz' }));
     accountView(
       h('h1', { text: 'Anmelden' }),
-      h('p', { class: 'hint', text: reason === 'live' ? 'Für Live-Spiele brauchst du ein Konto. Ein Link per Mail genügt, ein Passwort gibt es nicht.' : 'Ein Link per Mail genügt, ein Passwort gibt es nicht.' }),
+      h('p', { class: 'hint', text: reason === 'live' ? 'Für Live-Spiele brauchst du ein Konto. Ein Link per Mail genügt, ein Passwort gibt es nicht.' : reason === 'abo' ? 'Für das Abo brauchst du ein Konto. Ein Link per Mail genügt, ein Passwort gibt es nicht.' : 'Ein Link per Mail genügt, ein Passwort gibt es nicht.' }),
       form,
       privacy,
       passkeyBlock,
@@ -949,6 +951,15 @@
   }
 
   async function afterLogin() {
+    const next = local.get(AFTER_LOGIN_KEY);
+    if (next) {
+      local.remove(AFTER_LOGIN_KEY);
+      if (next.to === 'abo' && Date.now() - next.at < 30 * 60_000 && aboEnabled()) {
+        await renderAbo();
+        toast('Du bist angemeldet.');
+        return;
+      }
+    }
     if (Account.passkeySupported() && (await Account.passkeys()).length === 0) {
       renderPasskeyOffer();
       return;
@@ -1087,7 +1098,7 @@
         h('li', { text: 'Kündigen: über „Verträge hier kündigen“, ohne Anmeldung' }),
         h('li', { text: 'Bezahlen über PayPal. Nur für Kundinnen und Kunden in Deutschland.' }),
       ),
-      h('p', { class: 'hint' }, 'Es gelten die ', h('a', { href: '/agb/', text: 'AGB' }), ' und die ', h('a', { href: '/widerrufsbelehrung/', text: 'Widerrufsbelehrung' }), '. ', h('a', { href: '../datenschutz/', text: 'Datenschutz' })),
+      h('p', { class: 'hint' }, 'Es gelten die ', h('a', { href: '/agb/', text: 'AGB' }), ' und die ', h('a', { href: '/widerrufsbelehrung/', text: 'Widerrufsbelehrung' }), '. ', h('a', { href: '../datenschutz/', text: 'Datenschutz' }), ' · ', h('a', { href: '/preise/', text: 'Kostenlos und Abo im Vergleich' })),
       form,
     );
   }
@@ -2170,6 +2181,14 @@
     }
     // Rückkehr vom Zahlungsanbieter (/abo/zurueck/ leitet hierher)
     const aboReturn = params.get('abo');
+    // Von der Preisseite: „Abo abschließen“
+    if (aboReturn === 'start') {
+      history.replaceState(null, '', location.pathname);
+      if (!aboEnabled()) return renderLibrary();
+      if (me) return renderAbo();
+      local.set(AFTER_LOGIN_KEY, { to: 'abo', at: Date.now() });
+      return renderLogin({ reason: 'abo' });
+    }
     if (aboReturn) {
       history.replaceState(null, '', location.pathname);
       const messages = {

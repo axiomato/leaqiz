@@ -127,6 +127,7 @@ public/                 die veröffentlichte Seite
   js/avatar.js          Avatare: schräge Wesen aus sechs Zahlen, gezeichnet als SVG
   js/config.js          Vermittlungsserver (leer = öffentlicher PeerJS-Server)
   img/og-leaqizz.png    Vorschaubild für geteilte Links (1200 × 630)
+  preise/               Preisseite: Kostenlos und Abo im Vergleich (ohne Server und ohne Abo eine Vorschau)
 dev/serve.js            lokaler Entwicklungsserver
 dev/og/                 Quelle des Vorschaubilds; neu erzeugen mit python3 dev/og/render.py
 dev/avatar/             Teile-Bogen der Avatare; neu erzeugen mit python3 dev/avatar/render.py
